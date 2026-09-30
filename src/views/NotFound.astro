@@ -1,80 +1,193 @@
 ---
-// 404 (§3, §4.6). SCAFFOLD (F0-shell) — owner S6 (motion/sections/nf.ts: the digits weigh 100 → 900 with the
-// pointer; breathe 300 ↔ 700 without one; static 600 under reduced motion). The digits are the only centred
-// element on the site. Workers serves the nearest 404.html (/404.html, /en/404.html).
+// 404 (§3, §4.6, §5.3 #nf) — S6. Workers serves the nearest 404.html (/404.html, /en/404.html).
+//
+// No record here, so no light (site law 1): the page carries no glimmer at all (the HUD reads 0). What it does
+// carry is an EMPTY LANE, the hero figure's lane with nothing on it: a hairline with end ticks under the digits.
+// With JS (lite/full, motion full) the time front scans it from the left (law 2) and lights nothing; its head is
+// grey, never amber. The digits are the only centred element on the site (§2.3); they are Geist Mono (fixed
+// advance), so motion/sections/nf.ts may change their weight without moving anything: they follow the pointer's x
+// (100 → 900), breathe 300 ↔ 700 without a hover pointer, and rest at 600 under reduced motion, in the static tier
+// and without JS. The digits are aria-hidden; the h1 and <title> say what happened.
 import Base from '../layouts/Base.astro';
-import Section from '../components/ui/Section.astro';
 import Arrow from '../components/ui/Arrow.astro';
+import Display from '../components/ui/Display.astro';
+import Section from '../components/ui/Section.astro';
 import { localeOf, localePath, tl, ts } from '../components/chrome/i18n';
 
 const locale = localeOf(Astro);
+const code = [...ts('nf.code', locale)];
 const [home, gt, fr] = tl('nf.links', locale);
 const links = [
   { href: localePath(locale, '/'), text: home },
   { href: localePath(locale, '/glimmertown/'), text: gt },
   { href: localePath(locale, '/frontier/'), text: fr },
-].filter((l) => l.text);
+].filter((l): l is { href: string; text: string } => Boolean(l.text));
 ---
 <Base page="nf">
-  <Section id="nf" motion="nf" labelledby="nf-title" class="nf">
-    <p class="nf-code" aria-hidden="true" data-nf-digits>{ts('nf.code', locale)}</p>
-    <h1 id="nf-title" class="nf-title t-m">{ts('nf.title', locale)}</h1>
-    <p class="nf-body t-lede measure">{ts('nf.body', locale)}</p>
-    <ul role="list" class="nf-links">
-      {
-        links.map((l) => (
-          <li>
-            <a class="link nf-link" href={l.href}>
-              {l.text}
-              {' '}
-              <Arrow dir="right" />
-            </a>
-          </li>
-        ))
-      }
-    </ul>
+  <Section id="nf" motion="nf" labelledby="nf-title" flush>
+    <div class="nf">
+      <div class="nf-stage" aria-hidden="true">
+        <p class="nf-code" data-nf-code>{code.map((ch) => <span class="nf-d" data-nf-d>{ch}</span>)}</p>
+        <div class="nf-lane">
+          <span class="nf-rule" data-nf-rule></span>
+          <span class="nf-tick nf-tick--a"></span>
+          <span class="nf-tick nf-tick--b"></span>
+          <span class="nf-head" data-nf-head></span>
+        </div>
+      </div>
+      <div class="nf-text">
+        <Display k="nf.title" as="h1" size="m" id="nf-title" class="nf-title" />
+        <p class="nf-body t-lede measure">{ts('nf.body', locale)}</p>
+        <ul role="list" class="nf-links">
+          {
+            links.map((l) => (
+              <li>
+                <a class="link nf-link" href={l.href}>
+                  {l.text}
+                  {' '}
+                  <Arrow dir="right" />
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
   </Section>
 </Base>
 
 <style>
-  /* the Section root is another component: scoped styles do not reach it, so target it by id */
-  :global(#nf) {
-    min-height: calc(100svh - var(--header-h));
-    display: flex;
-    align-items: center;
-    padding-top: calc(var(--header-h) + var(--s-8));
+  /* The page is one screen: the header is fixed over it, so the stage clears it and centres in what is left. */
+  .nf {
+    min-height: 100svh;
+    display: grid;
+    align-content: center;
+    gap: clamp(var(--s-7), 7svh, var(--s-9));
+    padding-block: calc(var(--header-h) + var(--s-6)) var(--s-8);
+  }
+
+  /* ---- the digits: Geist Mono, centred, sitting on the empty lane --------------------------------- */
+  .nf-stage {
+    display: grid;
+    justify-items: center;
   }
   .nf-code {
-    --w-rest: 600;
+    margin: 0;
     font-family: var(--ff-mono);
-    font-size: clamp(7rem, 3rem + 20vw, 22rem);
-    font-weight: var(--w-rest);
-    line-height: 0.9;
-    letter-spacing: -0.04em;
+    font-size: clamp(7.5rem, 2.5rem + 22vw, 23rem);
+    font-weight: 600;
+    line-height: 0.74;
+    letter-spacing: -0.06em;
     text-align: center;
     color: var(--fg);
     font-variant-numeric: tabular-nums lining-nums;
   }
-  .nf-title {
-    margin-top: var(--s-8);
+  .nf-d {
+    display: inline-block;
+  }
+  /* tracking trails each glyph: without it on the last digit the box matches the ink, so centring is optical */
+  .nf-d:last-child {
+    letter-spacing: 0;
+  }
+
+  /* ---- the empty lane: a hairline between two end ticks, no points on it ------------------------ */
+  .nf-lane {
+    position: relative;
+    justify-self: stretch;
+    height: 1px;
+    margin-top: clamp(var(--s-4), 2.4svh, var(--s-6));
+  }
+  .nf-rule {
+    position: absolute;
+    inset: 0;
+    background: var(--line);
+    transform-origin: 0 50%;
+  }
+  .nf-tick {
+    position: absolute;
+    top: -4px;
+    width: 1px;
+    height: 9px;
+    background: var(--fg-3);
+  }
+  .nf-tick--a {
+    left: 0;
+  }
+  .nf-tick--b {
+    right: 0;
+  }
+  /* the scan head: grey (there is nothing to light), hidden at rest; nf.ts moves and shows it */
+  .nf-head {
+    position: absolute;
+    top: -2.5px;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    border-radius: 50%;
+    background: var(--fg-2);
+    opacity: 0;
+  }
+  /* before-state for the scan (lite/full, motion full, JS on) — fail-open after 2.5s (§5.1) */
+  :global(html[data-js][data-motion='full']:not([data-tier='static'])) .nf-rule {
+    transform: scaleX(0);
+    animation: nf-open 0s linear 2.5s forwards;
+  }
+  @keyframes nf-open {
+    to {
+      transform: none;
+    }
+  }
+
+  /* ---- words and ways out: flush left (§2.3) ------------------------------------------------------ */
+  .nf-text {
+    display: grid;
+    gap: var(--s-5);
+    justify-items: start;
+  }
+  .nf-text :global(.nf-title) {
+    width: 100%;
+    color: var(--fg);
   }
   .nf-body {
-    margin-top: var(--s-5);
+    margin: 0;
     color: var(--fg-2);
   }
   .nf-links {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--s-3) var(--s-6);
-    margin-top: var(--s-7);
+    gap: var(--s-2) var(--s-7);
+    margin: var(--s-3) 0 0;
     padding: 0;
     list-style: none;
   }
   .nf-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.3em;
+    gap: 0.35em;
     min-height: var(--hit);
     font-size: var(--fs-lede);
+  }
+
+  @media (max-width: 639.98px) {
+    .nf-links {
+      flex-direction: column;
+      gap: 0;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .nf-rule,
+    .nf-tick {
+      background: CanvasText;
+    }
+    .nf-head {
+      display: none;
+    }
+  }
+  @media print {
+    .nf-lane {
+      display: none;
+    }
   }
 </style>

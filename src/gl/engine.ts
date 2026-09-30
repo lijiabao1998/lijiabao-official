@@ -115,6 +115,8 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
   let lastDraw = 0;
   let lastChange = 0;
   let layoutDirty = 2;
+  /** last in-tick rect read: visible anchors are re-validated at ≤ 2 Hz even when no event fired */
+  let lastLayoutRead = 0;
   let canvasDirty = true;
   let needClear = false;
   let programsPending = false;
@@ -493,8 +495,14 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
       if (p & 1) change = true;
     }
 
-    const readLayout = layoutDirty > 0;
+    // Events (scroll, resize, fonts, observers) raise layoutDirty. Content ABOVE an anchor can still move it
+    // without any of them firing — e.g. a web-font swap before the engine mounted, or the intro's end — which
+    // left the first-view record drawn ~3 lanes below its labels until the first scroll. So while anything
+    // draws, visible anchors are also re-read every 500 ms; only a real move forces a redraw.
+    const forced = layoutDirty > 0;
+    const readLayout = forced || start - lastLayoutRead > 500;
     if (layoutDirty > 0) layoutDirty--;
+    if (readLayout) lastLayoutRead = start;
     let vis = false;
     let anim = false;
     ptrMoving = false;
@@ -502,8 +510,7 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
       const a = atts[i] as Att;
       if (!a.vis || !a.ready || !a.def) continue;
       vis = true;
-      if (readLayout) {
-        readRect(a.el, a.rect);
+      if (readLayout && (readRect(a.el, a.rect) || forced)) {
         if (a.rect.width !== a.w || a.rect.height !== a.h) {
           a.w = a.rect.width;
           a.h = a.rect.height;
@@ -800,7 +807,35 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
       });
       const fineMq = mq(MQ.fine);
       fineMq.addEventListener('change', updatePointerMode);
+      const relayout = (): void => {
+        layoutDirty = 2;
+        if (anyVisible()) wake();
+      };
+      // Layout can settle after the engine mounts without a scroll/resize (fonts, images, the intro ending).
+      // Re-read on those moments; when the loop is asleep (reduced motion, a still frame) a 1 Hz check catches
+      // anything else — ≤ 2 getBoundingClientRect calls, and a wake only when an anchor really moved.
+      void document.fonts?.ready.then(relayout);
+      const probeRect = newRect();
+      const settleTimer = window.setInterval(() => {
+        if (document.hidden || destroyed || lost || broken) return;
+        for (let i = 0; i < atts.length; i++) {
+          const a = atts[i] as Att;
+          if (!a.vis || !a.ready) continue;
+          probeRect.x = a.rect.x;
+          probeRect.y = a.rect.y;
+          probeRect.width = a.rect.width;
+          probeRect.height = a.rect.height;
+          if (readRect(a.el, probeRect)) {
+            relayout();
+            return;
+          }
+        }
+      }, 1000);
       offs = [
+        () => window.clearInterval(settleTimer),
+        listen(window, 'load', relayout),
+        listen(document, 'lj:intro-done', relayout),
+        listen(document, 'astro:page-load', relayout),
         () => fineMq.removeEventListener('change', updatePointerMode),
         watchLoss(canvas, onLost, onRestored),
         watchLayout(

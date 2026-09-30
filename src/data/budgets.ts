@@ -44,8 +44,10 @@ export const budgets = {
    * RFC integration 2026-10-01: 9 → 16. Measured after merging S1/S3/S4: engine 7.5, field 2.1, inspect 2.2,
    * portrait 2.0, grid 1.6 (incl. gen/grid) = 15.6 KB. The spec's 9 was a pre-build estimate; a page only
    * fetches its own scenes (home ≈ 13.4, GlimmerTown ≈ 9.3). Cut order §10 #2 (inspect) would save 2.2.
+   * Polish integration 2026-10-01: 16 → 17. P1 (soft glimmers, swarm scatter, lite DPR step) + P3 (visible-only
+   * probe on every GL page, retries) together measured 16.1 KB.
    */
-  gl: 16,
+  gl: 17,
   bins: {
     commits: 18,
     /** raw */

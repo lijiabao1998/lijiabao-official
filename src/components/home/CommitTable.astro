@@ -1,6 +1,43 @@
 ---
-// STUB (F0-shell) — owner S1 replaces this file. Sub-component of Hero (#fig-record table) (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// CommitTable — the complete screen-reader path of figure#fig-record (spec §3, §6.1, §8): the 19 repos with
+// their default-branch commit counts and first / latest commit dates (Asia/Taipei), total in the footer.
+// Row headers are the lane labels of the figure. On the ordinal axis (no snapshot) the date columns show "—".
+import DataTable from '@ui/DataTable.astro';
+import { facts } from '@data/facts';
+import { REPOS } from '@data/repos';
+import { laneRecords, type SnapshotLike } from '@gl/gen/lanes';
+import { fmtDate } from '@gl/gen/time-axis';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const snap = Object.values(
+  import.meta.glob<SnapshotLike>('../../data/snapshot.json', { eager: true, import: 'default' }),
+)[0];
+const rec = laneRecords(snap, Object.fromEntries(REPOS.map((r) => [r.id, r.commits])));
+const timed = rec.mode === 'time';
+const byId = new Map(REPOS.map((r) => [r.id, r]));
+
+const rows = rec.lanes.map((l) => {
+  const repo = byId.get(l.id);
+  const n = l.minutes.length;
+  const first = timed && n ? fmtDate(l.minutes[0] as number) : null;
+  const latest = timed && n ? fmtDate(l.minutes[n - 1] as number) : null;
+  return [
+    { text: l.repo, href: repo?.url, short: l.short },
+    ts(`repo.${l.id}.name`, locale),
+    repo?.commits ?? n,
+    first,
+    latest,
+  ];
+});
+const total = facts['commits.total'].value as number;
+const foot = [[ts('hero.table.total', locale), '', total, '', '']];
 ---
+<DataTable
+  id="hero-table"
+  caption="hero.table.caption"
+  colsKey="hero.table.cols"
+  rows={rows}
+  foot={foot}
+  numeric={[2]}
+/>

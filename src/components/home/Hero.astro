@@ -1,52 +1,320 @@
 ---
-// STUB (F0-shell) — owner S1 replaces the internals. Keep the contract: <Section id="hero" motion="hero">
-// holding the page's only h1 (name small + hero line display), then sub, meta, quick links, figure#fig-record
-// (GL field, DATA) and the scroll cue (§3 row 1). motion.css already holds the §5.2 intro before-states:
-// [data-weigh="scan"], [data-intro-line], [data-intro-rise], [data-intro-dot].
+// #hero (spec §3 row 1, §5.2, §5.3): the page's only h1 — the name, small, then the owner's line at --fs-xl
+// fit to its authored lines — over a hairline baseline; then the sub, meta and quick links; then the record:
+// figure#fig-record, every default-branch commit on its repo lane (GL `field`, DATA), with the 19-row table.
+//
+// Text before light (site law 6): the h1 is real HTML at rest weight and paints in the first frame (the LCP);
+// nothing here waits for WebGL. The §5.2 intro (motion/intro.ts) only runs on a first, full-motion, non-static
+// visit: CSS before-states in motion.css ([data-weigh="scan"], [data-intro-line], [data-intro-rise],
+// [data-intro-dot]) with a 2.5s fail-open. Latin (/en/) starts the intro at rest weight so a narrower dim face
+// can never re-wrap the line (weight-safety rule, §2.2); intro.ts then locks each glyph in a rest-width slot.
+//
+// The rule is line 1's baseline (ideographic for CJK, alphabetic for Latin) and the scan head's track. Its
+// position uses the same fit arithmetic as <Display> (`--n` = longest line in em, font-size =
+// min(--fs-xl, 100cqi / --n)), so it holds with no JS.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
 import T from '@ui/T.astro';
-import { localeOf, localePath } from '../chrome/i18n';
+import Figure from '@ui/Figure.astro';
+import HeroField from './HeroField.astro';
+import CommitTable from './CommitTable.astro';
+import { SNAPSHOT } from '@data/facts';
+import { fitUnits, isSegs, linesOf, plain, tNarrow } from '@i18n/t';
+import { laneRecords, type SnapshotLike } from '@gl/gen/lanes';
+import { localeOf, localePath, ts, tv } from '../chrome/i18n';
 
 const locale = localeOf(Astro);
+
+// ---- fit numbers for the baseline rule (mirrors ui/Display.astro; CJK tracking at xl is 0) ------------------
+const line = tv('hero.line', locale);
+const authored = Array.isArray(line) && !isSegs(line);
+const lines = line === null ? [] : linesOf(line);
+const n = authored ? Math.max(...lines.map((l) => fitUnits(l))) : 0;
+const narrow = authored ? tNarrow('hero.line', locale) : null;
+const nn = narrow ? Math.max(...narrow.map((l) => fitUnits(l))) : n;
+
+/** Latin (a single string): the widest line of the best two-line split, so ≥ 640px it sets on two balanced lines. */
+function twoLineUnits(text: string): number {
+  const words = text.split(/\s+/).filter(Boolean);
+  const w = words.map((x) => fitUnits(x));
+  const sp = fitUnits(' ');
+  const width = (a: number, b: number) => w.slice(a, b).reduce((s, v) => s + v, 0) + Math.max(0, b - a - 1) * sp;
+  let best = width(0, words.length);
+  for (let k = 1; k < words.length; k++) best = Math.min(best, Math.max(width(0, k), width(k, words.length)));
+  return Math.round(best * 1.02 * 100) / 100;
+}
+const free = !authored && line !== null ? twoLineUnits(plain(line)) : 0;
+const lineVars = authored ? `--hn:${n};--hnn:${nn}` : `--hn:${free};--hnn:${free}`;
+
+// ---- the figure caption: the ordinal fallback says so (spec §6.1) ------------------------------------------
+const snap = Object.values(
+  import.meta.glob<SnapshotLike>('../../data/snapshot.json', { eager: true, import: 'default' }),
+)[0];
+const timed = laneRecords(snap, {}).mode === 'time';
 ---
-<Section id="hero" motion="hero" labelledby="hero-title">
-  <h1 id="hero-title" class="hero-h1">
-    <T k="hero.name" class="hero-name t-s" />
-    <Display k="hero.line" size="xl" animate hole weigh="scan" />
-  </h1>
-  <T k="hero.sub" as="p" class="hero-sub t-lede measure" />
-  <p class="hero-meta t-label c-fg-3">
-    <T k="hero.meta.repos" />
-    <span aria-hidden="true">{' · '}</span>
-    <T k="hero.meta.snapshot" />
+<Section id="hero" motion="hero" labelledby="hero-title" flush class="hero">
+  <div class="hero-head">
+    <T k="hero.eyebrow" as="p" class="hero-eyebrow t-label" />
+    <h1 id="hero-title" class="hero-h1">
+      <T k="hero.name" class="hero-name" />
+      <span class:list={['hero-line', authored ? 'hero-line--fit' : 'hero-line--free']} style={lineVars}>
+        <Display k="hero.line" size="xl" animate hole weigh="scan" class="hero-display" />
+        <span class="hero-rule" data-intro-line aria-hidden="true"></span>
+        <span class="hero-dot" data-intro-dot aria-hidden="true"></span>
+      </span>
+    </h1>
+  </div>
+
+  <div class="hero-row">
+    <div class="hero-mask hero-sub-box">
+      <T k="hero.sub" as="p" class="hero-sub t-lede" data-intro-rise data-gl-hole />
+    </div>
+    <div class="hero-aside">
+      <div class="hero-mask">
+        <p class="hero-meta t-label" data-intro-rise>
+          <T k="hero.meta.repos" /><span aria-hidden="true">{' · '}</span><T k="hero.meta.snapshot" />
+        </p>
+      </div>
+      <div class="hero-mask">
+        <p class="hero-quick" data-intro-rise>
+          <a class="link hero-quick-link" href={localePath(locale, '/glimmertown/')}><T k="hero.quick.gt" /></a>
+          <a class="link hero-quick-link" href={localePath(locale, '/frontier/')}><T k="hero.quick.fr" /></a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <Figure
+    id="fig-record"
+    kind="DATA"
+    title="hero.fig.title"
+    legend="hero.fig.legend"
+    legendAmber={1}
+    caption={timed ? 'hero.fig.caption' : 'hero.fig.ordinal'}
+    table={CommitTable}
+    interactive
+    date={SNAPSHOT.asOf}
+    class="hero-fig"
+    stageClass="hero-stage"
+  >
+    <HeroField />
+    {timed && <T k="hero.fig.note" as="p" slot="foot" class="hero-note t-small" />}
+  </Figure>
+
+  <p class="hero-end">
+    <a class="link hero-cue t-label" href="#work"><T k="hero.cue" /></a>
   </p>
-  <p class="hero-quick cluster">
-    <a class="link" href={localePath(locale, '/glimmertown/')}><T k="hero.quick.gt" /></a>
-    <a class="link" href={localePath(locale, '/frontier/')}><T k="hero.quick.fr" /></a>
-  </p>
+
+  <button type="button" class="intro-skip" data-intro-skip hidden>{ts('a11y.intro.skip', locale)}</button>
 </Section>
 
 <style>
+  .hero {
+    min-height: 100svh;
+    padding-top: calc(var(--header-h) + clamp(20px, 4svh, 56px));
+    padding-bottom: clamp(48px, 8svh, 96px);
+  }
+
+  /* ---- name + line -------------------------------------------------------------------------------- */
+  .hero-eyebrow {
+    color: var(--fg-3);
+    margin-bottom: var(--s-4);
+  }
   .hero-h1 {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-4);
-    margin-top: var(--s-8);
+    display: block;
+    margin: 0;
   }
-  /* T / Display are child components: reach their roots with :global() */
   .hero-h1 :global(.hero-name) {
+    display: block;
+    font-family: var(--ff-display);
+    font-size: var(--fs-s);
+    font-weight: 500;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
     color: var(--fg-2);
+    margin-bottom: clamp(12px, 2.2svh, 28px);
   }
-  :global(.hero-sub) {
-    margin-top: var(--s-7);
+  .hero-h1:lang(zh) :global(.hero-name) {
+    letter-spacing: 0.02em;
+    line-height: 1.25;
+  }
+
+  /* The line's box is an inline-size container of the same width as <Display>, so the rule can use the
+     same 100cqi / --n arithmetic. --hfs = the rendered font-size of the display line. */
+  .hero-line {
+    position: relative;
+    display: block;
+    container-type: inline-size;
+  }
+  .hero-line :global(.hero-display) {
+    color: var(--fg);
+  }
+  .hero-line--fit :global(.display__set--wide .display__line + .display__line),
+  .hero-line--fit :global(.display__set--narrow .display__line:nth-child(2)) {
+    margin-top: 0.14em;
+  }
+  /* Latin ≥ 640px: two balanced lines filling the measure (the dictionary holds one string) */
+  @media (min-width: 640px) {
+    .hero-line--free :global(.display) {
+      --fs: min(var(--fs-xl), 100cqi / var(--hn));
+    }
+  }
+
+  /* The rule is the line's baseline, in em of the display size (--hfs): CJK stands on the ideographic
+     baseline (em-box bottom, 0.99em into a 1.04 line); Latin on Geist's alphabetic baseline (0.814em into a
+     0.92 line), descenders crossing it as on ruled paper. Measured in the browser, not guessed. */
+  .hero-rule,
+  .hero-dot {
+    --hfs: min(var(--fs-xl), 100cqi / var(--hn));
+    --base: 0.99;
+    position: absolute;
+    left: 0;
+    pointer-events: none;
+  }
+  .hero-line--free .hero-rule,
+  .hero-line--free .hero-dot {
+    --base: 0.814;
+  }
+  .hero-rule {
+    z-index: -1; /* behind the glyphs (inside #main's stacking context, still above the canvas) */
+    right: 0;
+    top: calc(var(--hfs) * var(--base));
+    height: 1px;
+    background: var(--line-ui);
+    transform-origin: 0 50%;
+  }
+  .hero-dot {
+    top: calc(var(--hfs) * var(--base) - 2.5px);
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    border-radius: 50%;
+    background: var(--glim);
+    box-shadow: 0 0 0 3px rgb(255 181 71 / 0.14);
+    will-change: transform, opacity;
+  }
+  @media (max-width: 639.98px) {
+    .hero-line--fit .hero-rule,
+    .hero-line--fit .hero-dot {
+      --hfs: min(var(--fs-xl), 100cqi / var(--hnn));
+    }
+    .hero-line--free .hero-rule,
+    .hero-line--free .hero-dot {
+      --hfs: var(--fs-xl);
+    }
+  }
+  /* Latin: the intro starts at rest (a dim face is narrower and could re-wrap the line) */
+  :global(html[data-intro]:lang(en)) .hero-line :global([data-weigh='scan']) {
+    font-variation-settings: normal;
+    animation: none;
+  }
+
+  /* ---- sub, meta, quick links --------------------------------------------------------------------- */
+  .hero-row {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--gap);
+    row-gap: var(--s-5);
+    align-items: end;
+    margin-top: clamp(28px, 5svh, 64px);
+  }
+  .hero-sub-box {
+    grid-column: 1 / -1;
+  }
+  .hero-aside {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: var(--s-3);
+  }
+  @media (min-width: 640px) {
+    .hero-sub-box {
+      grid-column: 1 / span 5;
+    }
+    .hero-aside {
+      grid-column: 6 / -1;
+      justify-items: start;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hero-sub-box {
+      grid-column: 1 / span 6;
+    }
+    .hero-aside {
+      grid-column: 8 / -1;
+    }
+  }
+  .hero-row :global(.hero-sub) {
+    max-width: 30em;
     color: var(--fg-2);
   }
   .hero-meta {
-    margin-top: var(--s-5);
+    color: var(--fg-3);
   }
   .hero-quick {
-    margin-top: var(--s-5);
-    gap: var(--s-5);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-5);
+  }
+  .hero-quick-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit);
+  }
+  /* masks: clip only while the intro holds a line below its box (fail-open in motion.css) */
+  :global(html[data-intro]) .hero-mask {
+    overflow: clip;
+  }
+
+  /* ---- the record ----------------------------------------------------------------------------------- */
+  .hero :global(.hero-fig) {
+    margin-top: clamp(32px, 5svh, 80px);
+  }
+  .hero :global(.hero-note) {
+    color: var(--fg-3);
+    max-width: 38em;
+  }
+  .hero-end {
+    margin-top: var(--s-6);
+  }
+  .hero-cue {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit);
+    color: var(--fg-2);
+  }
+
+  /* ---- intro skip: visually hidden until focused; intro.ts moves it right after the skip link ---- */
+  .intro-skip {
+    position: fixed;
+    z-index: 100;
+    top: 8px;
+    left: var(--gutter);
+    min-height: var(--hit);
+    padding: 10px 14px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-ui);
+    color: var(--fg);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.04em;
+  }
+  .intro-skip:not(:focus-visible) {
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  @media (forced-colors: active) {
+    .hero-rule {
+      background: CanvasText;
+    }
+    .hero-dot {
+      display: none;
+    }
   }
 </style>

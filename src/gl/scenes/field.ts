@@ -5,11 +5,13 @@
 // lane or drifting up on scroll are never cut by the scissor; HeroField.astro sets the same insets in CSS.
 // Handles (motion/intro.ts, motion/sections/hero.ts): set('uScan' | 'uScroll' | 'uPicked', v), pick(x, y),
 // step(dir). Defaults: uScan 1.1 (lit: repeat visits and the no-intro path), uScroll 0, uPicked -1.
+// Look: gen/glimmer.ts FIELD_LOOK (one soft gaussian glimmer per record; /posters/field.svg draws the same).
 
 import type { Frame, RecordRef, SceneDef, StepDir, Tier } from '../types';
 import { program, POINT_FRAG, type Program } from '../core/program';
 import VERT from '../shaders/field.vert?raw';
 import { LANES, ROWS, shaHex } from '../gen/lanes';
+import { FIELD_LOOK, SIGMA } from '../gen/glimmer';
 import {
   clearLive,
   decode,
@@ -24,8 +26,6 @@ import {
 
 /** Anchor overhang around the plot band, CSS px (= HeroField.astro `.field-anchor` insets). */
 export const PAD = { x: 16, top: 32, bottom: 8 } as const;
-/** Base point diameter, CSS px (the latest commit of a lane +1.5, the picked record +3, full-tier halo +2). */
-const SIZE = 2.25;
 
 interface ManifestEntry {
   url: string;
@@ -49,7 +49,7 @@ interface Locs {
   scroll: Loc;
   halo: Loc;
   picked: Loc;
-  size: Loc;
+  look: Loc;
   pointer: Loc;
   holes: Loc;
   holeCount: Loc;
@@ -87,7 +87,7 @@ function lookup(p: Program): Locs {
     scroll: u('uScroll'),
     halo: u('uHalo'),
     picked: u('uPicked'),
-    size: u('uSize'),
+    look: u('uLook'),
     pointer: u('uPointer'),
     holes: u('uHoles'),
     holeCount: u('uHoleCount'),
@@ -190,7 +190,8 @@ const def: SceneDef<FieldData> = {
     gl.uniform1f(L.scroll, num(P.uScroll, 0));
     gl.uniform1f(L.halo, f.halo);
     gl.uniform1f(L.picked, num(P.uPicked, -1));
-    gl.uniform1f(L.size, SIZE);
+    const size = f.tier === 'full' ? FIELD_LOOK.size.full : FIELD_LOOK.size.lite;
+    gl.uniform4f(L.look, size, FIELD_LOOK.peak, SIGMA, FIELD_LOOK.latest);
     gl.uniform3f(L.pointer, f.pointer[0], f.pointer[1], f.pointer[2]);
     gl.uniform4fv(L.holes, f.holes);
     gl.uniform1i(L.holeCount, f.holeCount);

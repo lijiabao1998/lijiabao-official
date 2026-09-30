@@ -8,6 +8,7 @@
 //   carries no light;
 // - a breath of ≤ 0.6px along the row and a faint twinkle keep the glimmers alive.
 // Rim points of the round glasses (edge byte 255) turn amber as they settle: light comes from the left.
+// Each point is one soft glimmer (point.frag, gen/glimmer.ts), fuller and brighter with the tone it samples.
 precision highp float;
 
 layout(location = 0) in vec2 aXY;   // baseline position, 0..1 of the frame
@@ -15,7 +16,9 @@ layout(location = 1) in vec2 aLE;   // tone 0..1, edge 0..1 (1 = accent)
 
 uniform vec2 uView;      // anchor size, CSS px
 uniform vec4 uRect;      // the frame inside the anchor: x, y, w, h (CSS px)
-uniform vec3 uLook;      // point size range (CSS px) and the alpha of the darkest point
+uniform vec4 uLook;      // gen/portrait.ts LOOK: size range (CSS px), alpha of the darkest point, peak alpha
+uniform float uSigma;    // core σ per unit of size (gen/glimmer.ts SIGMA)
+uniform mediump float uHalo; // 1 in full; also read by point.frag (mediump): precisions must match to link
 uniform float uDpr;
 uniform float uTime;
 uniform float uAssemble;
@@ -24,6 +27,7 @@ uniform vec4 uPulse;     // x, y, t0, strength
 
 out float vA;
 out float vAmber;
+out vec2 vS;             // point.frag: sprite size and core σ, device px
 
 void main() {
   float s = fract(sin(dot(aXY, vec2(12.9898, 78.233))) * 43758.5453 + aLE.x * 7.13);
@@ -44,8 +48,13 @@ void main() {
   float q = (length(p - uPulse.xy) - pt * 600.) / 24.;
   a += uPulse.w * t * .5 * exp(-q * q) * exp(-pt * 2.);
 
-  vA = a;
-  vAmber = step(.999, aLE.y) * t;
+  float amber = step(.999, aLE.y) * t;
+  vA = a * mix(uLook.w, 1., amber);
+  vAmber = amber;
+  // the sprite reaches 2.4σ, or 5.6σ to hold the full tier's halo
+  float sig = mix(uLook.x, uLook.y, aLE.x) * uSigma;
+  float spr = 2. * sig * (2.4 + 3.2 * uHalo);
   gl_Position = vec4((p / uView * 2. - 1.) * vec2(1, -1), 0, 1);
-  gl_PointSize = mix(uLook.x, uLook.y, aLE.x) * uDpr;
+  gl_PointSize = spr * uDpr;
+  vS = vec2(spr, sig) * uDpr;
 }

@@ -49,9 +49,12 @@ const IDS: readonly string[] = ['field', 'portrait', 'grid'];
 /** Pointer reach around an anchor (§5.4: within 120px). */
 const REACH = 120;
 
-/** DPR caps (§6.0): full 1.75 desktop / 1.5 mobile; lite 1. */
+/**
+ * DPR caps (§6.0): full 1.75 desktop / 1.5 mobile; lite 1.5 (was 1: on a 2× screen a 1× canvas smears the soft
+ * glimmers; the guard's first lite step drops it back to 1 if frames run slow).
+ */
 function capFor(t: Tier): number {
-  return t === 'full' ? (mq(MQ.mobile).matches ? 1.5 : 1.75) : 1;
+  return t === 'full' ? (mq(MQ.mobile).matches ? 1.5 : 1.75) : 1.5;
 }
 
 interface Att {

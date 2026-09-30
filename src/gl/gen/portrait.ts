@@ -36,13 +36,16 @@ export const PT = {
 } as const;
 
 /**
- * The look at rest, shared by the scene (uniforms) and the poster: point size in CSS px = mix(size[0], size[1], lum)
- * — smaller in full, where three times the points would otherwise merge into dashes — and alpha = mix(a0, 1, lum).
+ * The look at rest, shared by the scene (uniforms) and the poster. Every point is a soft glimmer (gen/glimmer.ts:
+ * a gaussian, σ = SIGMA × size): size in CSS px = mix(size[0], size[1], lum), so the highlights
+ * (face, shirt, glasses) are fuller and the dark hair and coat stay fine and sparse — smaller in full, where three
+ * times the points share the frame — and alpha = peak × mix(alpha0, 1, lum). Accent points burn at 1.
  */
 export const LOOK = {
-  lite: [1.0, 2.4],
-  full: [0.9, 2.1],
+  lite: [1.8, 3.6],
+  full: [1.6, 3.2],
   alpha0: 0.3,
+  peak: { lite: 0.7, full: 0.6 },
 } as const;
 
 /** Points drawn per tier (spec §6.2 counts). */

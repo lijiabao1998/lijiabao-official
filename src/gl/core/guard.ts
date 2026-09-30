@@ -4,7 +4,8 @@
 // 30 Hz-capped display — Safari low-power — is not mistaken for jank). The refresh interval is calibrated from
 // idle ticks at mount (nothing drawn yet), then tracks the fastest frame seen. Slow for 2s → one step down:
 //   full: DPR → 1, halo off, portrait halved (prefix), then demote to lite ('tier.demoted')
-//   lite: portrait halved, then freeze if the EMA stays above 24ms ('tier.frozen')
+//   lite: DPR → 1 (lite renders at ≤ 1.5 so the soft glimmers stay crisp on 2× screens), portrait halved, then
+//         freeze if the EMA stays above 24ms ('tier.frozen')
 // DATA scenes never subsample (k stays 1). It never promotes; the probe does that, once, before any demotion.
 
 import type { Tier } from '../types';
@@ -12,7 +13,7 @@ import type { Tier } from '../types';
 export type GuardStep = 'dpr' | 'halo' | 'half' | 'demote' | 'freeze';
 
 const FULL: readonly GuardStep[] = ['dpr', 'halo', 'half', 'demote'];
-const LITE: readonly GuardStep[] = ['half', 'freeze'];
+const LITE: readonly GuardStep[] = ['dpr', 'half', 'freeze'];
 
 export class Guard {
   private ema = 16.7;

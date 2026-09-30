@@ -1,6 +1,414 @@
 ---
-// STUB (F0-shell) — owner S1 replaces this file. Sub-component of Hero (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// HeroField — the inside of figure#fig-record (spec §3 row 1, §6.1, §5.4): 19 repo lanes on 20 rows (DOM labels
+// in the left gutter), the plot band (lane rules, the axis break, the GL anchor with its poster), the time axis
+// (DOM ticks) and the inspect readout. Rendered inside <Figure interactive>'s stage.
+//
+// Tiers: the poster (/posters/field.svg, same generators as the scene) is the whole figure in the static tier,
+// with no JS, on GL loss and under forced colours; GL draws the same dots at the same places once live.
+// During the §5.2 intro the poster starts unlit (10%) and a second, lit copy is revealed left → right by the
+// scan (`--field-scan`), so a late engine still sees light arrive from the left; both fail open at 2.5s.
+// DOM contract: [data-gl-scene="field"][data-gl-src="field"] (engine anchor, overhangs the band by
+// gl/scenes/field.ts PAD), [data-field-plot] (band; data-latest-x/y = GlimmerTown's latest commit, the intro's
+// landing point), [data-field-readout], [data-field-live], data-i18n-readout / -open (runtime copy templates),
+// data-commit-url / data-repo-url (GitHub URL templates from src/data/links.ts).
+import { facts, type RepoName } from '@data/facts';
+import { commitUrl, repoUrl } from '@data/links';
+import { REPOS } from '@data/repos';
+import { LANES, laneRecords, pointOf, ROWS, type SnapshotLike } from '@gl/gen/lanes';
+import { BREAK, TICKS } from '@gl/gen/time-axis';
+import { localeOf, tpl, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const snap = Object.values(
+  import.meta.glob<SnapshotLike>('../../data/snapshot.json', { eager: true, import: 'default' }),
+)[0];
+const rec = laneRecords(
+  snap,
+  Object.fromEntries(REPOS.map((r) => [r.id, r.commits])),
+);
+if (rec.count !== facts['commits.total'].value) throw new Error('[HeroField] record count differs from facts.ts');
+const timed = rec.mode === 'time';
+
+// GlimmerTown's latest commit: where the intro's scan head comes to rest (the amber point of the first lane).
+const gt = rec.lanes[0];
+const land = gt && gt.minutes.length ? pointOf(rec.mode, gt, gt.minutes.length - 1) : { x: 1, y: 0.5 };
+
+const rows = Array.from({ length: ROWS }, (_, row) => LANES.find((l) => l.row === row) ?? null);
+const POSTER = '/posters/field.svg';
+const accountTick = TICKS.find((t) => t.account);
+/** wrap a note between words only, never inside a date */
+const words = (s: string) => s.split(/\s+/).filter(Boolean);
+// URL templates for the runtime readout (the scene and motion code carry no URLs)
+const commitTpl = commitUrl('{repo}' as RepoName, '{sha}');
+const repoTpl = repoUrl('{repo}' as RepoName);
 ---
+<div
+  class="field"
+  data-field
+  data-axis={rec.mode}
+  data-i18n-readout={tpl('fig.readout.commit', locale, ['repo', 'date', 'sha'])}
+  data-i18n-open={ts('fig.readout.open', locale)}
+  data-commit-url={commitTpl}
+  data-repo-url={repoTpl}
+>
+  <ol class="field-lanes" role="list" aria-hidden="true">
+    {
+      rows.map((l) =>
+        l ? (
+          <li class="field-lane" data-lane={LANES.indexOf(l)}>
+            <span class="lane-long">{l.repo}</span>
+            <span class="lane-short">{l.short}</span>
+          </li>
+        ) : (
+          <li class="field-lane field-lane--spacer" />
+        ),
+      )
+    }
+  </ol>
+
+  <div
+    class="field-plot"
+    data-field-plot
+    data-latest-x={land.x.toFixed(5)}
+    data-latest-y={land.y.toFixed(5)}
+  >
+    <span class="field-rules field-rules--gt" aria-hidden="true"></span>
+    <span class="field-rules field-rules--fr" aria-hidden="true"></span>
+    <div class="field-anchor" data-gl-scene="field" data-gl-src="field">
+      <img class="poster field-poster" src={POSTER} alt="" width="1000" height="200" decoding="async" />
+      <img class="field-lit" src={POSTER} alt="" width="1000" height="200" decoding="async" aria-hidden="true" />
+    </div>
+    <a class="field-readout" data-field-readout data-gl-hole data-parity-ignore tabindex="-1" rel="noopener">
+      <span class="field-readout-text" data-field-readout-text></span>
+      <span class="field-readout-open" data-field-readout-open></span>
+    </a>
+  </div>
+
+  <div class="field-axis">
+    {
+      timed ? (
+        <Fragment>
+          <span class="axis-line" aria-hidden="true" />
+          <span class="axis-break" style={`--x:${((BREAK[0] + BREAK[1]) / 2).toFixed(4)}`} aria-hidden="true" />
+          {TICKS.map((t) => (
+            <span
+              class:list={['axis-tick', { 'axis-tick--minor': t.minor, 'axis-tick--end': t.x > 0.9 }]}
+              style={`--x:${t.x.toFixed(5)}`}
+              aria-hidden="true"
+            >
+              <time datetime={t.date}>{t.label}</time>
+            </span>
+          ))}
+          <span class="axis-note axis-note--break" style={`--x:${BREAK[0]}`}>
+            <span class="axis-break-mark" aria-hidden="true" />
+            {ts('hero.fig.break', locale)}
+          </span>
+          {accountTick && (
+            <span class="axis-note axis-note--account" style={`--x:${accountTick.x.toFixed(5)}`}>
+              {words(ts('hero.fig.tick.account', locale)).map((w, i) => (
+                <Fragment>{i > 0 && ' '}<span class="nw">{w}</span></Fragment>
+              ))}
+            </span>
+          )}
+        </Fragment>
+      ) : (
+        <span class="axis-note axis-note--ordinal">{ts('hero.fig.ordinal', locale)}</span>
+      )
+    }
+  </div>
+
+  <p class="sr-only" aria-live="polite" data-field-live data-parity-ignore></p>
+</div>
+
+<style>
+  .field {
+    --labels-gap: var(--s-4);
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--labels-gap);
+    padding-block: var(--s-4) var(--s-2);
+  }
+
+  /* ---- lane labels: real text, the row headers of the table below ------------------------------ */
+  .field-lanes {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .field-lane {
+    display: flex;
+    align-items: center;
+    height: var(--lane-h);
+    font-family: var(--ff-mono);
+    font-size: min(var(--fs-mono), var(--lane-h) * 0.72);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.02em;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--fg-3);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  .field-lane[data-active] {
+    color: var(--fg);
+  }
+  .lane-short {
+    display: none;
+  }
+  @media (max-width: 639.98px) {
+    .lane-long {
+      display: none;
+    }
+    .lane-short {
+      display: inline;
+    }
+  }
+
+  /* ---- the plot band: exactly 20 lanes; everything inside maps x ∈ [0, 1] to its width ---------- */
+  .field-plot {
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+    height: calc(var(--lane-h) * 20);
+  }
+  :global(html[data-tier]:not([data-tier='static'])) .field-plot {
+    cursor: crosshair;
+  }
+  /* lane rules: one hairline through the middle of every lane; broken where the axis is */
+  .field-rules {
+    position: absolute;
+    inset-inline: 0;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 calc(var(--lane-h) / 2 - 0.5px),
+      var(--line) calc(var(--lane-h) / 2 - 0.5px) calc(var(--lane-h) / 2 + 0.5px),
+      transparent calc(var(--lane-h) / 2 + 0.5px) var(--lane-h)
+    );
+    -webkit-mask-image: linear-gradient(90deg, #000 22%, transparent 22% 25%, #000 25%);
+    mask-image: linear-gradient(90deg, #000 22%, transparent 22% 25%, #000 25%);
+    pointer-events: none;
+  }
+  .field-rules--gt {
+    top: 0;
+    height: calc(var(--lane-h) * 3);
+  }
+  .field-rules--fr {
+    top: calc(var(--lane-h) * 4);
+    height: calc(var(--lane-h) * 16);
+  }
+  [data-axis='ordinal'] .field-rules {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  /* ---- the GL anchor: overhangs the band (= gl/scenes/field.ts PAD: x 16, top 32, bottom 8) ----- */
+  .field-anchor {
+    position: absolute;
+    inset: -32px -16px -8px;
+    pointer-events: none;
+  }
+  .field-anchor .field-poster,
+  .field-anchor .field-lit {
+    position: absolute;
+    inset: 32px 16px 8px;
+    width: calc(100% - 32px);
+    height: calc(100% - 40px);
+    max-width: none;
+    object-fit: fill;
+  }
+  .field-lit {
+    display: none;
+  }
+  /* §5.2 intro: records exist before they are lit — dim base, lit copy revealed by the scan */
+  :global(html[data-intro]) .field-anchor .field-poster {
+    opacity: 0.1;
+    animation: lj-failopen 0s linear 2.5s forwards;
+  }
+  :global(html[data-intro]) .field-anchor:not([data-gl-live]) .field-lit {
+    display: block;
+    clip-path: inset(0 calc((1 - var(--field-scan, 0)) * 100%) 0 0);
+    animation: lj-failopen 0s linear 2.5s forwards;
+  }
+  :global(html[data-gl='ok']) .field-anchor[data-gl-live] .field-lit,
+  :global(html[data-tier='static']) .field-lit {
+    display: none;
+  }
+
+  /* ---- readout: follows the inspected record; opaque, so no glimmer sits under its text ------- */
+  .field-readout {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    display: grid;
+    gap: 2px;
+    padding: 6px 10px 7px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-ui);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.02em;
+    line-height: 1.35;
+    white-space: nowrap;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums lining-nums;
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity var(--d-xs) var(--ease-rise),
+      visibility 0s linear var(--d-xs);
+    will-change: transform;
+  }
+  .field-readout[data-on] {
+    visibility: visible;
+    opacity: 1;
+    transition-delay: 0s;
+  }
+  .field-readout[data-on][data-touch] {
+    pointer-events: auto;
+  }
+  @media (max-width: 639.98px) {
+    .field-readout {
+      max-width: 100%;
+      white-space: normal;
+    }
+  }
+  .field-readout-open {
+    color: var(--fg-3);
+  }
+  .field-readout-open:empty {
+    display: none;
+  }
+  .field-readout:focus-visible {
+    outline-offset: 2px;
+  }
+
+  /* ---- time axis: DOM ticks, mono, --fg-3; shares the band's x mapping ------------------------- */
+  .field-axis {
+    grid-column: 2;
+    grid-row: 2;
+    position: relative;
+    height: calc(var(--fs-mono) * 3.4 + 14px);
+    margin-top: var(--s-2);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .axis-line {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: var(--line-ui);
+    -webkit-mask-image: linear-gradient(90deg, #000 22%, transparent 22% 25%, #000 25%);
+    mask-image: linear-gradient(90deg, #000 22%, transparent 22% 25%, #000 25%);
+  }
+  /* the break: "//" on the axis line, in the gap between the two segments */
+  .axis-break {
+    position: absolute;
+    top: -5px;
+    left: calc(var(--x) * 100%);
+    width: 9px;
+    height: 11px;
+    margin-left: -4.5px;
+    background:
+      linear-gradient(var(--fg-3), var(--fg-3)) 1px 0 / 1px 100% no-repeat,
+      linear-gradient(var(--fg-3), var(--fg-3)) 6px 0 / 1px 100% no-repeat;
+    transform: skewX(-24deg);
+  }
+  .axis-tick {
+    position: absolute;
+    top: 0;
+    left: calc(var(--x) * 100%);
+    padding-top: 10px;
+    white-space: nowrap;
+  }
+  .axis-tick::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 1px;
+    height: 6px;
+    background: var(--line-ui);
+  }
+  .axis-tick--end {
+    transform: translateX(-100%);
+  }
+  .axis-tick--end::before {
+    left: auto;
+    right: 0;
+  }
+  .axis-note {
+    position: absolute;
+    top: calc(var(--fs-mono) * 1.3 + 16px);
+    left: calc(var(--x) * 100%);
+    max-width: calc((1 - var(--x)) * 100%);
+    color: var(--fg-3);
+    white-space: nowrap;
+  }
+  .axis-note--break {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .axis-break-mark {
+    width: 9px;
+    height: 9px;
+    background:
+      linear-gradient(var(--fg-3), var(--fg-3)) 1px 0 / 1px 100% no-repeat,
+      linear-gradient(var(--fg-3), var(--fg-3)) 6px 0 / 1px 100% no-repeat;
+    transform: skewX(-24deg);
+  }
+  .axis-note--account::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 100%;
+    width: 1px;
+    height: 8px;
+    background: var(--line-ui);
+  }
+  .axis-note--account {
+    padding-left: 8px;
+  }
+  .nw {
+    white-space: nowrap;
+  }
+  .axis-note--ordinal {
+    --x: 0;
+    top: 10px;
+    white-space: normal;
+  }
+
+  @media (max-width: 959.98px) {
+    .axis-tick--minor {
+      display: none;
+    }
+  }
+  @media (max-width: 639.98px) {
+    .field {
+      --labels-gap: var(--s-3);
+    }
+    .axis-note--account {
+      white-space: normal;
+    }
+    .field-axis {
+      height: calc(var(--fs-mono) * 5 + 14px);
+    }
+  }
+
+  @media (forced-colors: active) {
+    .field-rules,
+    .axis-line {
+      background: CanvasText;
+      opacity: 0.4;
+    }
+  }
+</style>

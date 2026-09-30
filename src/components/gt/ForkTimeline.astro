@@ -1,6 +1,372 @@
 ---
-// STUB (F0-shell) — owner S4 replaces this file. Sub-component of GtLines (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
+// figure#fig-fork (§3 #gt-lines, §5.3, §6.4) — the fork timeline, SCHEMATIC, SVG (not GL).
+// Every date, ID and sentence comes from the dictionary (gt.tl.1 … gt.tl.5 = "date · text"); the SVG only places
+// them on an honest linear time axis (2026-07-12 → 2026-09-30). Three lanes, one city:
+//   main  ─ v1.0 ──── T420 ───────────────────────────────── T601   (the verified 2D build)
+//   lab             └╌╌╌ mobile line ╌╌╌ T531 ───────────── T701   (forked at T420, its own line since T531)
+//   3D                                               D000 ── D030   (opened 2026-09-24; not a fork)
+// The two 2D lines never merge back (gt.tl.note), so no merge path is drawn. Two drawings: a wide one (≥ 640px)
+// and a tall one (< 640px, time runs down). Both are aria-hidden; the <ol> below is the text of the figure.
+// motion/sections/gt-lines.ts reveals the lanes in time order (a clip front from the left / top) and pops each
+// node as the front passes it. Without motion everything is drawn (end state).
+import Figure from '@ui/Figure.astro';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+
+interface Ev {
+  date: string;
+  text: string;
+  day: number;
+  /** T###, D###, v#.# tokens in the text, in order */
+  ids: string[];
 }
+
+const DAY = 86_400_000;
+const toDay = (iso: string): number => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+
+const events: Ev[] = [1, 2, 3, 4, 5].map((n) => {
+  const s = ts(`gt.tl.${n}`, locale);
+  const i = s.indexOf(' · ');
+  if (i < 0 || !/^\d{4}-\d{2}-\d{2}$/.test(s.slice(0, i))) throw new Error(`[ForkTimeline] gt.tl.${n} is not "date · text"`);
+  const text = s.slice(i + 3);
+  return { date: s.slice(0, i), text, day: 0, ids: text.match(/\b[TD]\d{3}\b|\bv\d+\.\d+\b/g) ?? [] };
+});
+const first = events[0] as Ev;
+for (const e of events) e.day = Math.round((toDay(e.date) - toDay(first.date)) / DAY);
+
+const [eStart, eFork, eLab, e3d, eHead] = events as [Ev, Ev, Ev, Ev, Ev];
+const card = (e: Ev, re = /^[TD]\d{3}$|^v\d/): string => e.ids.find((x) => re.test(x)) ?? '';
+const heads = eHead.ids.filter((x) => /^[TD]\d{3}$/.test(x)); // main, lab, 3D — in the copy's order
+if (heads.length !== 3 || !card(eFork) || !card(eLab) || !card(e3d)) {
+  throw new Error('[ForkTimeline] could not read the node IDs from gt.tl.*');
+}
+const span = eHead.day;
+const md = (e: Ev): string => e.date.slice(5); // "07-12"
+const label = (e: Ev, id: string): string => `${md(e)} · ${id}`;
+
+// ── wide: viewBox 1000 × 210, time → x; the right 14% is the gutter for the head IDs ─────────────────
+const W = 1000;
+const H = 210;
+const X0 = 8;
+const X1 = 860;
+const LY = [40, 105, 170] as const; // main, lab, 3D
+const x = (d: number): number => Math.round((X0 + (d / span) * (X1 - X0)) * 10) / 10;
+const [xs, xf, xl, x3, xe] = [x(eStart.day), x(eFork.day), x(eLab.day), x(e3d.day), x(span)];
+const wide = {
+  main: `M${xs} ${LY[0]}H${xe}`,
+  pre: `M${xf} ${LY[0]}C${xf + 26} ${LY[0]} ${xf + 26} ${LY[1]} ${xf + 52} ${LY[1]}H${xl}`,
+  lab: `M${xl} ${LY[1]}H${xe}`,
+  d3: `M${x3} ${LY[2]}H${xe}`,
+};
+const wNodes = [
+  { cx: xs, cy: LY[0], head: false },
+  { cx: xf, cy: LY[0], head: false },
+  { cx: xl, cy: LY[1], head: false },
+  { cx: x3, cy: LY[2], head: false },
+  { cx: xe, cy: LY[0], head: true },
+  { cx: xe, cy: LY[1], head: true },
+  { cx: xe, cy: LY[2], head: true },
+];
+// labels are placed where the lanes leave room: the start below main (nothing there yet), the fork and T531
+// above their nodes, D000 below the bottom lane, the heads' IDs to the right and their shared date above main
+const wLabels = [
+  { cx: xs, cy: LY[0], text: label(eStart, card(eStart)), place: 'below start' },
+  { cx: xf, cy: LY[0], text: label(eFork, card(eFork)), place: 'above' },
+  { cx: xl, cy: LY[1], text: label(eLab, card(eLab)), place: 'above' },
+  { cx: x3, cy: LY[2], text: label(e3d, card(e3d)), place: 'below' },
+  { cx: xe, cy: LY[0], text: md(eHead), place: 'above' },
+  { cx: xe, cy: LY[0], text: heads[0] as string, place: 'right' },
+  { cx: xe, cy: LY[1], text: heads[1] as string, place: 'right' },
+  { cx: xe, cy: LY[2], text: heads[2] as string, place: 'right' },
+];
+
+// ── tall: viewBox 124 × 600 drawn 1:1, time → y; labels in the column to the right ───────────────────
+const TW = 124;
+const TH = 600;
+const Y0 = 14;
+const Y1 = 586;
+const LX = [18, 62, 106] as const;
+const y = (d: number): number => Math.round((Y0 + (d / span) * (Y1 - Y0)) * 10) / 10;
+const [ys, yf, yl, y3, ye] = [y(eStart.day), y(eFork.day), y(eLab.day), y(e3d.day), y(span)];
+const tall = {
+  main: `M${LX[0]} ${ys}V${ye}`,
+  pre: `M${LX[0]} ${yf}C${LX[0]} ${yf + 20} ${LX[1]} ${yf + 16} ${LX[1]} ${yf + 38}V${yl}`,
+  lab: `M${LX[1]} ${yl}V${ye}`,
+  d3: `M${LX[2]} ${y3}V${ye}`,
+};
+const tNodes = [
+  { cx: LX[0], cy: ys, head: false },
+  { cx: LX[0], cy: yf, head: false },
+  { cx: LX[1], cy: yl, head: false },
+  { cx: LX[2], cy: y3, head: false },
+  { cx: LX[0], cy: ye, head: true },
+  { cx: LX[1], cy: ye, head: true },
+  { cx: LX[2], cy: ye, head: true },
+];
+const tRows = [
+  { cy: ys, cx: LX[0], label: label(eStart, card(eStart)) },
+  { cy: yf, cx: LX[0], label: label(eFork, card(eFork)) },
+  { cy: yl, cx: LX[1], label: label(eLab, card(eLab)) },
+  { cy: y3, cx: LX[2], label: label(e3d, card(e3d)) },
+  { cy: ye, cx: LX[2], label: [md(eHead), ...heads].join(' · ') },
+];
+
+const lanes = [ts('gt.main.name', locale), ts('gt.lab.name', locale), ts('gt.3d.name', locale)];
+const pct = (v: number, of: number): string => `${Math.round((v / of) * 10000) / 100}%`;
 ---
+<Figure id="fig-fork" kind="SCHEMATIC" caption="gt.tl.note" class="ft">
+  <div class="ft-wide" data-ft="w" aria-hidden="true">
+    <ul class="ft-lanes" role="list">
+      {lanes.map((name, i) => <li class="ft-lane t-label" style={`top:${pct(LY[i] as number, H)}`}>{name}</li>)}
+    </ul>
+    <div class="ft-plot">
+      <svg class="ft-svg" viewBox={`0 0 ${W} ${H}`} width={W} height={H} focusable="false">
+        <defs>
+          <clipPath id="ft-clip-w"><rect data-ft-clip x="0" y="0" width={W} height={H}></rect></clipPath>
+        </defs>
+        <g class="ft-rules">
+          {LY.map((ly) => <path class="ft-rule" d={`M0 ${ly}H${W}`}></path>)}
+        </g>
+        <g clip-path="url(#ft-clip-w)">
+          <path class="ft-path ft-path--pre" d={wide.pre}></path>
+          <path class="ft-path" d={wide.main}></path>
+          <path class="ft-path" d={wide.lab}></path>
+          <path class="ft-path" d={wide.d3}></path>
+        </g>
+        {
+          wNodes.map((n) => (
+            <circle class:list={['ft-node', { 'ft-node--head': n.head }]} cx={n.cx} cy={n.cy} r="4.5" data-ft-node data-at={(n.cx / W).toFixed(4)}></circle>
+          ))
+        }
+      </svg>
+      {
+        wLabels.map((l) => (
+          <span
+            class:list={['ft-label', 't-mono', ...l.place.split(' ').map((p) => `ft-label--${p}`)]}
+            style={`left:${pct(l.cx, W)};top:${pct(l.cy, H)}`}
+            data-ft-label
+            data-at={(l.cx / W).toFixed(4)}
+          >
+            {l.text}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="ft-tall" data-ft="t" aria-hidden="true">
+    <ul class="ft-tlanes" role="list">
+      {lanes.map((name, i) => <li class="ft-tlane t-label" style={`left:${LX[i]}px`}>{name}</li>)}
+    </ul>
+    <div class="ft-tplot">
+      <svg class="ft-svg ft-svg--tall" viewBox={`0 0 ${TW} ${TH}`} width={TW} height={TH} focusable="false">
+        <defs>
+          <clipPath id="ft-clip-t"><rect data-ft-clip x="0" y="0" width={TW} height={TH}></rect></clipPath>
+        </defs>
+        <g class="ft-rules">
+          {tRows.map((r) => <path class="ft-rule" d={`M${r.cx} ${r.cy}H${TW}`}></path>)}
+        </g>
+        <g clip-path="url(#ft-clip-t)">
+          <path class="ft-path ft-path--pre" d={tall.pre}></path>
+          <path class="ft-path" d={tall.main}></path>
+          <path class="ft-path" d={tall.lab}></path>
+          <path class="ft-path" d={tall.d3}></path>
+        </g>
+        {
+          tNodes.map((n) => (
+            <circle class:list={['ft-node', { 'ft-node--head': n.head }]} cx={n.cx} cy={n.cy} r="4.5" data-ft-node data-at={(n.cy / TH).toFixed(4)}></circle>
+          ))
+        }
+      </svg>
+      {
+        tRows.map((r) => (
+          <span class="ft-trow t-mono" style={`top:${pct(r.cy, TH)}`} data-ft-label data-at={(r.cy / TH).toFixed(4)}>
+            {r.label}
+          </span>
+        ))
+      }
+    </div>
+  </div>
+
+  <ol slot="foot" class="ft-events" role="list">
+    {
+      events.map((e) => (
+        <li class="ft-event" data-rise>
+          <time class="ft-date t-label" datetime={e.date}>{e.date}</time>
+          <span class="ft-text">{e.text}</span>
+        </li>
+      ))
+    }
+  </ol>
+</Figure>
+
+<style>
+  /* ── wide drawing (≥ 640px) ─────────────────────────────────────────────────────────────── */
+  .ft-wide {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(5rem, 8rem) minmax(0, 1fr);
+    padding-block: var(--s-6) var(--s-5);
+  }
+  .ft-lanes,
+  .ft-tlanes {
+    position: relative;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ft-lane {
+    position: absolute;
+    left: 0;
+    right: var(--s-3);
+    transform: translateY(-50%);
+    color: var(--fg-2);
+    text-transform: none;
+    line-height: 1.2;
+  }
+  .ft-plot {
+    position: relative;
+  }
+  .ft-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .ft-rule {
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+  .ft-path {
+    fill: none;
+    stroke: var(--fg);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  /* the mobile line between T420 and T531: history the lab line grew from, before its own repo began */
+  .ft-path--pre {
+    stroke: var(--fg-3);
+    stroke-dasharray: 2 5;
+  }
+  .ft-node {
+    fill: var(--bg);
+    stroke: var(--fg);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+  }
+  /* each line's current head (2026-09-30): the one amber state on the figure */
+  .ft-node--head {
+    fill: var(--glim);
+    stroke: var(--glim);
+  }
+
+  .ft-label {
+    position: absolute;
+    white-space: nowrap;
+    color: var(--fg-2);
+    line-height: 1;
+    font-size: var(--fs-mono);
+  }
+  .ft-label--above {
+    transform: translate(-50%, calc(-100% - 12px));
+  }
+  .ft-label--below.ft-label--start {
+    transform: translate(-4px, 12px);
+  }
+  .ft-label--below {
+    transform: translate(-50%, 12px);
+  }
+  .ft-label--right {
+    transform: translate(12px, -50%);
+    color: var(--fg);
+  }
+
+  /* ── tall drawing (< 640px): time runs down ─────────────────────────────────────────────── */
+  .ft-tall {
+    display: none;
+  }
+  .ft-tlanes {
+    height: 3.2em;
+    margin-bottom: var(--s-2);
+  }
+  .ft-tlane {
+    position: absolute;
+    bottom: 0;
+    width: 44px;
+    transform: translateX(-50%);
+    text-align: center;
+    color: var(--fg-2);
+    text-transform: none;
+    line-height: 1.15;
+  }
+  .ft-tplot {
+    position: relative;
+  }
+  .ft-svg--tall {
+    width: 124px;
+  }
+  .ft-trow {
+    position: absolute;
+    left: 136px;
+    right: 0;
+    transform: translateY(-50%);
+    color: var(--fg);
+    line-height: 1.2;
+    font-size: var(--fs-mono);
+  }
+
+  @media (max-width: 639.98px) {
+    .ft-wide {
+      display: none;
+    }
+    .ft-tall {
+      display: block;
+      padding-block: var(--s-5);
+    }
+  }
+
+  /* ── the text of the figure ─────────────────────────────────────────────────────────────── */
+  .ft-events {
+    display: grid;
+    gap: var(--s-5) var(--gap);
+    margin: var(--s-5) 0 0;
+    padding: var(--s-5) 0 0;
+    list-style: none;
+    border-top: 1px solid var(--line);
+  }
+  .ft-event {
+    display: grid;
+    align-content: start;
+    gap: var(--s-2);
+    font-size: var(--fs-small);
+    color: var(--fg-2);
+  }
+  .ft-date {
+    color: var(--fg);
+  }
+  @media (min-width: 1024px) {
+    .ft-events {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 640px) and (max-width: 1023.98px) {
+    .ft-events {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (forced-colors: active) {
+    .ft-path,
+    .ft-node {
+      stroke: CanvasText;
+    }
+    .ft-node--head {
+      fill: CanvasText;
+    }
+  }
+</style>

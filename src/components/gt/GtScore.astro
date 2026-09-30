@@ -1,8 +1,98 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-score"> (§3 order, §9.3).
+// #gt-score (§3, §4.3) — SURPASS, self-assessed: the count of criteria in `docs/SURPASS.md` (a facts.ts number
+// with its source) and the originality red line, linked to the file so anyone can read the self-assessment.
+// Nothing here claims the game beats anything: the scorecard is the repo's own, marked done by itself.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Num from '@ui/Num.astro';
+import Arrow from '@ui/Arrow.astro';
+import { links } from '@data/links';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const url = links.docs.gtSurpass;
+/** "GlimmerTown · docs/SURPASS.md", read from the URL (links.ts is the one source of outbound links) */
+const [repoPart = '', path = ''] = url.replace(/^https:\/\/github\.com\/[^/]+\//, '').split('/blob/main/');
 ---
 <Section id="gt-score" labelledby="gt-score-title">
-  <Display k="gt.score.title" as="h2" size="m" id="gt-score-title" />
+  <div class="gs">
+    <Display k="gt.score.title" as="h2" size="m" id="gt-score-title" class="gs-title" />
+    <div class="gs-num" data-rise>
+      <!-- the number's source is the linked file below (law 4); the Num keeps its as-of date -->
+      <Num k="gt.surpass" asof numClass="gs-n" />
+    </div>
+    <div class="gs-text">
+      <T k="gt.score" as="p" class="gs-lead t-lede" data-rise />
+      <blockquote class="gs-red" data-rise>
+        <T k="gt.score.redline" as="p" />
+      </blockquote>
+      <a class="gs-link link t-mono" href={url} rel="noopener" data-rise>
+        {repoPart} · <code>{path}</code>
+        <span class="sr-only">{ts('a11y.external', locale)}</span>
+        <Arrow dir="up-right" />
+      </a>
+    </div>
+  </div>
 </Section>
+
+<style>
+  .gs {
+    display: grid;
+    gap: var(--s-7) var(--gap);
+  }
+  .gs-num :global(.gs-n) {
+    font-family: var(--ff-mono);
+    font-size: clamp(5rem, 2rem + 13vw, 15rem);
+    font-weight: 200;
+    line-height: 0.85;
+    letter-spacing: -0.06em;
+    color: var(--fg);
+  }
+  .gs-text {
+    display: grid;
+    align-content: start;
+    gap: var(--s-6);
+  }
+  .gs-lead {
+    max-width: var(--measure);
+    color: var(--fg);
+  }
+  .gs-lead :global(code) {
+    color: var(--fg-2);
+  }
+  .gs-red {
+    margin: 0;
+    padding-left: var(--s-5);
+    border-left: 1px solid var(--line-ui);
+    color: var(--fg-2);
+    max-width: var(--measure);
+  }
+  .gs-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    justify-self: start;
+    min-height: var(--hit);
+    color: var(--fg);
+  }
+  .gs-link code {
+    font-size: 1em;
+  }
+
+  @media (min-width: 1024px) {
+    .gs {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-items: end;
+    }
+    .gs-title {
+      grid-column: 1 / -1;
+    }
+    .gs-num {
+      grid-column: 1 / span 5;
+    }
+    .gs-text {
+      grid-column: 7 / -1;
+    }
+  }
+</style>

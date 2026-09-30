@@ -1,8 +1,178 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-3d" motion="gt-3d"> (§3 order, §9.3).
+// #gt-3d (§3, §4.3, §5.3) — one city, three times: the three modes with their status (build is active; lifetime and
+// archaeology are paused since the owner's 2026-09-25 decision), the exact cross-checks against the 2D code
+// (figure#fig-parity) and the incremental-rebuild GPU upload, drawn to scale from facts.ts.
+// The copy writes each mode as "name：description〔status〕"; the status word is shown by <Status> (same words,
+// glyph + text), so the bracket is not repeated.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Num from '@ui/Num.astro';
+import Status from '@ui/Status.astro';
+import ParityFigure from './ParityFigure.astro';
+import { fact } from '@data/facts';
+import type { StatusCode } from '@data/labs';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+
+const MODES: { k: string; code: StatusCode }[] = [
+  { k: 'gt.3d.build', code: 'active' },
+  { k: 'gt.3d.life', code: 'paused' },
+  { k: 'gt.3d.arch', code: 'paused' },
+];
+const modes = MODES.map((m) => {
+  const s = ts(m.k, locale).replace(/\s*[〔[][^〕\]]*[〕\]]\s*$/u, '');
+  const i = s.search(/[：:]/u);
+  if (i < 1) throw new Error(`[Gt3D] ${m.k} is not "name：description"`);
+  return { name: s.slice(0, i), desc: s.slice(i + 1).trim(), code: m.code };
+});
+
+// GPU upload per rebuild, before → after (D015). Both values are "about"; the bars are to scale (1 MB = 1000 KB).
+const beforeMb = fact('gt3d.gpuBeforeMb').value;
+const afterKb = fact('gt3d.gpuAfterKb').value;
+if (typeof beforeMb !== 'number' || typeof afterKb !== 'number') throw new Error('[Gt3D] GPU facts must be numbers');
+const ratio = Math.round((afterKb / (beforeMb * 1000)) * 10000) / 10000;
 ---
 <Section id="gt-3d" motion="gt-3d" labelledby="gt-3d-title">
   <Display k="gt.3d.title" as="h2" size="m" id="gt-3d-title" />
+
+  <ul class="g3-modes" role="list">
+    {
+      modes.map((m) => (
+        <li class:list={['g3-mode', `g3-mode--${m.code}`]} data-rise>
+          <h3 class="g3-name">{m.name}</h3>
+          <Status code={m.code} class="g3-status" />
+          <p class="g3-desc">{m.desc}</p>
+        </li>
+      ))
+    }
+  </ul>
+
+  <div class="g3-checks">
+    <div class="g3-parity">
+      <ParityFigure />
+    </div>
+
+    <figure class="g3-gpu" data-gpu>
+      <figcaption>
+        <T k="gt.3d.gpu" as="p" class="g3-gpu-cap" />
+      </figcaption>
+      <div class="gpu">
+        <div class="gpu-row">
+          <span class="gpu-track" aria-hidden="true"><span class="gpu-bar" style="--w:1" data-gpu-bar></span></span>
+          <Num k="gt3d.gpuBeforeMb" suffix=" MB" numClass="gpu-v" />
+        </div>
+        <div class="gpu-row">
+          <span class="gpu-track" aria-hidden="true"><span class="gpu-bar gpu-bar--after" style={`--w:${ratio}`} data-gpu-bar></span></span>
+          <Num k="gt3d.gpuAfterKb" suffix=" KB" source numClass="gpu-v" />
+        </div>
+      </div>
+    </figure>
+  </div>
 </Section>
+
+<style>
+  .g3-modes {
+    display: grid;
+    gap: var(--s-6) var(--gap);
+    margin: var(--s-8) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .g3-mode {
+    display: grid;
+    align-content: start;
+    gap: var(--s-3);
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line-ui);
+  }
+  /* the paused modes carry the same weight as the active one (law 5): only the status differs */
+  .g3-name {
+    font-family: var(--ff-body);
+    font-size: var(--fs-h3);
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .g3-name:lang(zh) {
+    letter-spacing: 0.04em;
+  }
+  .g3-desc {
+    max-width: 30em;
+    color: var(--fg-2);
+  }
+  .g3-desc::first-letter {
+    text-transform: uppercase;
+  }
+
+  .g3-checks {
+    display: grid;
+    gap: var(--s-9) var(--gap);
+    margin-top: var(--s-9);
+  }
+
+  .g3-gpu {
+    display: grid;
+    align-content: start;
+    gap: var(--s-6);
+    margin: 0;
+  }
+  .g3-gpu-cap {
+    max-width: 34em;
+    color: var(--fg-2);
+    font-size: var(--fs-small);
+  }
+  .gpu {
+    display: grid;
+    gap: var(--s-5);
+  }
+  .gpu-row {
+    display: grid;
+    gap: var(--s-2);
+  }
+  .gpu-track {
+    display: block;
+    height: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .gpu-bar {
+    display: block;
+    width: calc(var(--w) * 100%);
+    min-width: 2px;
+    height: 100%;
+    background: var(--fg);
+    transform-origin: 0 50%;
+  }
+  .gpu :global(.gpu-v) {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+
+  @media (min-width: 1024px) {
+    .g3-modes {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .g3-checks {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-items: start;
+    }
+    .g3-parity {
+      grid-column: 1 / span 7;
+    }
+    .g3-gpu {
+      grid-column: 9 / -1;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .gpu-bar {
+      background: CanvasText;
+      forced-color-adjust: none;
+    }
+  }
+</style>

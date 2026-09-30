@@ -1,9 +1,149 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-pass" motion="gt-pass"> (§3 order, §9.3).
-// figure#fig-pass: GL grid (DATA), pinned ≤ 150%, <LatticeCss count={12513} cols={112}> as the static poster.
+// #gt-pass (§3, §4.3, §5.3, §6.3) — figure#fig-pass: 12,513 PASS, one lit cell per passing check (DATA).
+// - GL scene `grid` draws into the stage (instanced diamonds); motion/sections/gt-pass.ts pins this block
+//   (desktop, ≤ 150%) and scrubs `uProgress` 0 → 1: cells ignite from the diamond's LEFT corner, the readout
+//   counts lit cells exactly (gl/gen/grid.ts litCount), and at 1.0 the legend and the table link rise.
+// - Static / no-JS / GL not live: the poster is the exact CSS lattice (ui/LatticeCss, 12,513 cells) — a faint
+//   base plus a lit copy revealed left → right by `--p` (1 by default: the end state).
+// - The table in <details> is the complete text path (§8).
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Figure from '@ui/Figure.astro';
+import LatticeCss from '@ui/LatticeCss.astro';
+import DataTable from '@ui/DataTable.astro';
+import { fact } from '@data/facts';
+import { COLS, COUNT } from '@gl/gen/grid';
+import { localeOf, numberFormat, tl, tpl } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+if (fact('gt.pass').value !== COUNT) {
+  throw new Error(`[GtPass] facts gt.pass (${fact('gt.pass').value}) ≠ gl/gen/grid COUNT (${COUNT})`);
+}
+
+// table rows: each item is "label · value" (split on the first ' · ')
+const rows = tl('gt.pass.table', locale).map((s) => {
+  const i = s.indexOf(' · ');
+  return i < 0 ? [s, null] : [s.slice(0, i), s.slice(i + 3)];
+});
+
+// readout "已點亮 {x}／12,513": the runtime writes only the number into [data-pass-x]
+const [litBefore = '', litAfter = ''] = tpl('gt.pass.lit', locale, ['x']).split('{x}');
+const total = numberFormat(locale).format(COUNT);
 ---
-<Section id="gt-pass" motion="gt-pass" labelledby="gt-pass-title">
-  <Display k="gt.pass.title" as="h2" size="m" id="gt-pass-title" />
+<Section id="gt-pass" motion="gt-pass" labelledby="gt-pass-title" bleed flush>
+  <div class="pp" data-pass-pin>
+    <div class="wrap pp-grid">
+      <div class="pp-copy">
+        <Display k="gt.pass.title" as="h2" size="m" id="gt-pass-title" />
+        <T k="gt.pass.lead" as="p" class="pp-lead" />
+        <p class="pp-readout" aria-hidden="true" data-parity-ignore>
+          <span class="pp-readout-t">{litBefore}</span><span class="pp-x" data-pass-x>{total}</span><span class="pp-readout-t">{litAfter}</span>
+        </p>
+      </div>
+
+      <div class="pp-fig">
+        <Figure
+          id="fig-pass"
+          kind="DATA"
+          unit="pass"
+          legend="gt.pass.legend"
+          scene="grid"
+          aspect="2 / 1"
+          table={DataTable}
+          tableProps={{ caption: 'gt.pass.table.caption', rows, id: 'fig-pass-table' }}
+        >
+          <div slot="poster" class="poster pp-poster" data-pass-poster>
+            <LatticeCss count={COUNT} cols={COLS} class="pp-lat" />
+            <LatticeCss count={COUNT} cols={COLS} class="pp-lat pp-lat--lit" />
+          </div>
+        </Figure>
+      </div>
+    </div>
+  </div>
 </Section>
+
+<style>
+  .pp {
+    position: relative;
+  }
+  .pp-grid {
+    display: grid;
+    gap: var(--s-7) var(--gap);
+    padding-block: var(--sec-pad);
+  }
+  .pp-lead {
+    max-width: var(--measure);
+    margin-top: var(--s-5);
+    color: var(--fg-2);
+  }
+  .pp-lead :global(code) {
+    color: var(--fg);
+  }
+
+  /* live readout (aria-hidden, parity-ignored): tabular digits in a fixed-width slot, so counting never reflows */
+  .pp-readout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 0.35em;
+    margin-top: var(--s-6);
+    font-family: var(--ff-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--fg-3);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.04em;
+  }
+  .pp-x {
+    display: inline-block;
+    min-width: 6ch;
+    font-size: var(--fs-h3);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+    text-align: end;
+  }
+
+  /* the stage is exactly 2:1: the diamond, the GL anchor and both lattices share one box */
+  .pp-poster {
+    --p: 1;
+  }
+  .pp-poster :global(.pp-lat) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+  .pp-poster :global(.pp-lat:not(.pp-lat--lit)) {
+    opacity: 0.14;
+  }
+  .pp-poster :global(.pp-lat--lit) {
+    clip-path: inset(0 calc((1 - var(--p)) * 100%) 0 0);
+  }
+
+  @media (min-width: 1024px) {
+    /* one viewport while pinned: copy on the left, the diamond on the right, all of it on screen */
+    .pp {
+      display: flex;
+      align-items: center;
+      min-height: 100svh;
+    }
+    .pp-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-items: end;
+      width: 100%;
+      padding-block: calc(var(--header-h) + var(--s-7)) var(--s-8);
+    }
+    .pp-copy {
+      grid-column: 1 / span 4;
+      padding-bottom: var(--s-9);
+    }
+    .pp-fig {
+      grid-column: 5 / -1;
+    }
+    /* the stage is 2:1, so its height follows the width: cap the width by the viewport height */
+    .pp-fig :global(#fig-pass) {
+      width: min(100%, calc((100svh - var(--header-h) - 260px) * 2));
+      margin-inline-start: auto;
+    }
+  }
+</style>

@@ -1,8 +1,219 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-open"> (§3 order, §9.3).
+// #gt-open (§3, §4.3, §9.6) — what you can open, each with its file weight. Demos are LINKED, never iframed or
+// embedded; the heavy lab game (a single multi-MB file whose full download can time out) says so before you click,
+// and is never prefetched. The main line has no public demo: its row points to the README that explains self-hosting.
+// Copy rows read "name · description · weight ↗"; the trailing ↗ is drawn by <Arrow> (the link says "external" to
+// screen readers), weights ("… MB") are set in mono.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import Arrow from '@ui/Arrow.astro';
+import { links } from '@data/links';
+import { REPOS } from '@data/repos';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const external = ts('a11y.external', locale);
+const noArrow = (s: string): string => s.replace(/\s*↗\s*$/u, '');
+
+/** Split a string into runs, marking file weights ("8.70 MB") so they can be set in mono. */
+const WEIGHT = /(\d+(?:[.,]\d+)?\s?MB)/u;
+const runs = (s: string): { text: string; weight: boolean }[] =>
+  s
+    .split(WEIGHT)
+    .filter(Boolean)
+    .map((text) => ({ text, weight: WEIGHT.test(text) }));
+
+const ROWS: { k: string; href: string; heavy?: boolean }[] = [
+  { k: 'gt.open.3d', href: links.demos.gt3d },
+  { k: 'gt.open.shots', href: links.demos.gtlabShots },
+  { k: 'gt.open.lab', href: links.demos.gtlab, heavy: true },
+  { k: 'gt.open.main', href: links.docs.gtReadme },
+];
+const rows = ROWS.map((r) => {
+  const parts = noArrow(ts(r.k, locale)).split(' · ');
+  return {
+    ...r,
+    name: parts.length > 1 ? (parts[0] as string) : '',
+    desc: parts.slice(parts.length > 1 ? 1 : 0).map(runs),
+  };
+});
+
+// "倉庫：GlimmerTown · GlimmerTown-lab · GlimmerTown3D-lab ↗" → label + one link per repo
+const reposText = noArrow(ts('gt.open.repos', locale));
+const cut = reposText.search(/[：:]/u);
+const reposLabel = cut > 0 ? reposText.slice(0, cut) : '';
+const repoLinks = (cut > 0 ? reposText.slice(cut + 1) : reposText)
+  .split(' · ')
+  .map((name) => name.trim())
+  .map((name) => ({ name, url: REPOS.find((r) => r.repo === name)?.url ?? null }));
 ---
 <Section id="gt-open" labelledby="gt-open-title">
-  <Display k="gt.open.title" as="h2" size="m" id="gt-open-title" />
+  <div class="go">
+    <Display k="gt.open.title" as="h2" size="m" id="gt-open-title" />
+    <ul class="go-list" role="list">
+      {
+        rows.map((r) => (
+          <li class="go-row" data-rise>
+            <a
+              class:list={['go-link', { 'go-link--note': !r.name }]}
+              href={r.href}
+              rel="noopener"
+              data-astro-prefetch={r.heavy ? 'false' : undefined}
+            >
+              {r.name && <span class="go-name">{r.name}</span>}
+              <span class="go-desc">
+                {r.desc.map((part, i) => (
+                  <Fragment>
+                    {i > 0 && <span class="go-sep" aria-hidden="true">{' · '}</span>}
+                    {part.map((run) => (run.weight ? <span class="go-w">{run.text}</span> : run.text))}
+                  </Fragment>
+                ))}
+              </span>
+              <span class="sr-only">{external}</span>
+              <Arrow dir="up-right" class="go-arrow" />
+            </a>
+          </li>
+        ))
+      }
+      <li class="go-row go-row--repos" data-rise>
+        {reposLabel && <span class="go-name">{reposLabel}</span>}
+        <span class="go-repos">
+          {
+            repoLinks.map((r) =>
+              r.url ? (
+                <a class="go-repo link t-mono" href={r.url} rel="noopener">
+                  {r.name}
+                  <span class="sr-only">{external}</span>
+                  <Arrow dir="up-right" />
+                </a>
+              ) : (
+                <span class="go-repo t-mono">{r.name}</span>
+              ),
+            )
+          }
+        </span>
+      </li>
+    </ul>
+  </div>
 </Section>
+
+<style>
+  .go {
+    display: grid;
+    gap: var(--s-8) var(--gap);
+  }
+  .go-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--line-ui);
+  }
+  .go-row {
+    border-bottom: 1px solid var(--line);
+  }
+  .go-link,
+  .go-row--repos {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--s-2) var(--s-5);
+    align-items: baseline;
+    min-height: calc(var(--hit) + var(--s-5));
+    padding-block: var(--s-5);
+    color: var(--fg);
+  }
+  .go-name {
+    font-size: var(--fs-h3);
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    transition: font-variation-settings var(--d-s) var(--ease-weigh);
+  }
+  .go-desc,
+  .go-repos {
+    grid-column: 1;
+    color: var(--fg-2);
+  }
+  .go-w {
+    font-family: var(--ff-mono);
+    font-size: 0.92em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums lining-nums;
+    white-space: nowrap;
+  }
+  .go-sep {
+    color: var(--fg-3);
+  }
+  .go-link :global(.go-arrow) {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    font-size: var(--fs-h3);
+    color: var(--fg-2);
+    transition:
+      transform var(--d-s) var(--ease-rise),
+      color var(--d-s) var(--ease-rise);
+  }
+  .go-link--note .go-desc {
+    color: var(--fg-2);
+  }
+  /* hover == focus: the name gains weight (CJK) and the arrow lights; the row never moves */
+  .go-link:is(:hover, :focus-visible) :global(.go-arrow) {
+    color: var(--glim);
+  }
+  .go-link:is(:hover, :focus-visible) .go-name:lang(zh) {
+    font-variation-settings: 'wght' 660;
+  }
+  .go-link:is(:hover, :focus-visible) .go-name {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+  .go-link:focus-visible {
+    outline-offset: 4px;
+  }
+  .go-repos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-6);
+  }
+  .go-repo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    min-height: var(--hit);
+    color: var(--fg);
+  }
+
+  @media (min-width: 1024px) {
+    .go {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-items: start;
+    }
+    .go > :global(:first-child) {
+      grid-column: 1 / span 4;
+    }
+    .go-list {
+      grid-column: 6 / -1;
+    }
+    .go-link,
+    .go-row--repos {
+      grid-template-columns: minmax(10em, 0.8fr) minmax(0, 1.4fr) auto;
+    }
+    .go-desc,
+    .go-repos {
+      grid-column: 2;
+    }
+    .go-link :global(.go-arrow) {
+      grid-column: 3;
+    }
+    .go-link--note .go-desc {
+      grid-column: 1 / span 2;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .go-name,
+    .go-link :global(.go-arrow) {
+      transition: none;
+    }
+  }
+</style>

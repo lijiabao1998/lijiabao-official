@@ -1,10 +1,19 @@
 ---
 // <LatticeCss count={12513} cols={112} size="mini|full" />  (§6.3)
-// A pure-CSS isometric lattice with EXACTLY `count` cells: a cols × rows plane of cells (repeating-gradient
-// stripes ∩ a stripe mask), turned into a 2:1 diamond (scaleY(.5) rotate(45deg)); the unused tail of the last
-// row is covered by a strip in --lattice-bg (set it if the lattice sits on --bg-2). Cell i sits at (i mod cols, i div cols), matching gl/gen/grid.ts, so the static tier and
-// the GL grid show the same shape. 112 × 112 − 31 = 12,513. Decorative (aria-hidden): the figure's caption
-// and table carry the number. Owners may animate `clip-path` on .lattice (the mini lights left → right).
+// A pure-CSS lattice with EXACTLY `count` lit cells, one point of light per cell. Cell i sits at
+// (i mod cols, i div cols), the cell order of gl/gen/grid.ts; 112 × 112 − 31 = 12,513.
+// - full: the GL grid's shape. The cols × rows plane turned into a 2:1 isometric diamond (cell centre
+//   x = gx − gy + rows, y = (gx + gy + 1) / 2 in cell units, box (cols + rows) × (cols + rows) / 2), drawn in
+//   screen space: two offset dot layers on a (2a × a) tile that repeats on whole device pixels (crisp,
+//   no beat, no moiré). The pitch `a` is the box width / (cols + rows), snapped down to whole device
+//   pixels (1px, 0.5px at ≥ 2x) where round() exists; dots are a / 2 (≥ 1px).
+// - mini: the same plane seen from above (a square, #work) at an integer pitch --p with --d dots, so the
+//   12,513 lights stay resolvable at thumbnail size. The consumer sets --p / --d.
+// The `missing` positions (the unused tail of the last row) are not cut away: they are drawn as unlit slots
+// (--lattice-off), so the plane reads complete and the count stays exact. Clip polygons follow the cells'
+// pitch boundaries, halfway between dots, so no dot is ever cut. Decorative (aria-hidden): the figure's
+// caption and table carry the number. Owners may animate `clip-path` on .lattice itself (the mini lights
+// left → right): the lattice's own clips live on inner elements.
 interface Props {
   count: number;
   cols: number;
@@ -18,77 +27,131 @@ if (!Number.isInteger(count) || !Number.isInteger(cols) || count < 1 || cols < 1
 }
 const rows = Math.ceil(count / cols);
 const missing = rows * cols - count;
+
+const pct = (n: number) => `${+(n * 100).toFixed(4)}%`;
+const poly = (pts: string[]) => `polygon(${pts.join(',')})`;
+let lit: string;
+let off: string | null = null;
+if (size === 'mini') {
+  // plan view: cell (gx, gy) occupies [gx, gx + 1] × [gy, gy + 1] pitches
+  const P = (x: number, y: number) => `${pct(x / cols)} ${pct(y / rows)}`;
+  if (missing) {
+    const x0 = cols - missing;
+    const y0 = rows - 1;
+    lit = poly([P(0, 0), P(cols, 0), P(cols, y0), P(x0, y0), P(x0, rows), P(0, rows)]);
+    off = poly([P(x0, y0), P(cols, y0), P(cols, rows), P(x0, rows)]);
+  } else lit = 'none';
+} else {
+  // isometric: plane point (u, v) (cell centres at integers, pitch edges at ±0.5) → percent of the box
+  const W = cols + rows;
+  const S = (u: number, v: number) => `${pct((u - v + rows) / W)} ${pct((u + v + 1) / W)}`;
+  const top = S(-0.5, -0.5);
+  const right = S(cols - 0.5, -0.5);
+  const bottom = S(cols - 0.5, rows - 0.5);
+  const left = S(-0.5, rows - 0.5);
+  if (missing) {
+    const u0 = cols - missing - 0.5;
+    const outer = S(u0, rows - 0.5); // on the lower-left edge
+    const inner = S(u0, rows - 1.5);
+    const edge = S(cols - 0.5, rows - 1.5); // on the lower-right edge
+    lit = poly([top, right, edge, inner, outer, left]);
+    off = poly([outer, inner, edge, bottom]);
+  } else lit = poly([top, right, bottom, left]);
+}
 ---
 <span
   class:list={['lattice', `lattice--${size}`, cls]}
-  style={`--cols:${cols};--rows:${rows};--missing:${missing}`}
+  style={`--cols:${cols};--rows:${rows};--odd:${rows % 2};--lit:${lit}${off ? `;--off:${off}` : ''}`}
   data-count={count}
   data-cols={cols}
   aria-hidden="true"
 >
-  <span class="lattice-plane"></span>
+  <span class="lattice-plane">
+    <span class="lattice-dots lattice-lit"></span>{off && <span class="lattice-dots lattice-off"></span>}
+  </span>
 </span>
 
 <style>
   .lattice {
-    --lattice-c: var(--fg);
-    --lattice-bg: var(--bg);
-    /* half the gap between cells, as a fraction of one cell pitch (cells fill 1 − 2g) */
-    --g: 0.19;
+    --lattice-c: color-mix(in srgb, var(--fg) 86%, transparent);
+    /* an unlit slot: the position exists on the plane, but holds no record */
+    --lattice-off-c: var(--line-ui);
     position: relative;
     display: block;
-    aspect-ratio: 2 / 1;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
-  .lattice--full {
-    width: min(100%, 880px);
-  }
-  .lattice--mini {
-    width: 120px;
-  }
-  /* Cells = vertical stripes (background) ∩ horizontal stripes (mask). Repeating gradients are continuous,
-     so there are no tile-rounding slivers at the plane's edges; each stripe is centred in its pitch. */
   .lattice-plane {
-    --tx: calc(100% / var(--cols));
-    --ty: calc(100% / var(--rows));
-    --rows-mask: repeating-linear-gradient(
-      180deg,
-      transparent 0 calc(var(--ty) * var(--g)),
-      #000 0 calc(var(--ty) * (1 - var(--g))),
-      transparent 0 var(--ty)
-    );
     position: absolute;
-    left: 50%;
-    top: 50%;
-    /* the rotated cols × rows rectangle's bounding box is (cols + rows) / √2 cells wide */
-    width: calc(100% * var(--cols) * 1.41421356 / (var(--cols) + var(--rows)));
-    aspect-ratio: var(--cols) / var(--rows);
-    transform: translate(-50%, -50%) scaleY(0.5) rotate(45deg);
-    background:
-      linear-gradient(var(--lattice-bg), var(--lattice-bg)) 100% 100% /
-        calc(100% * var(--missing) / var(--cols)) calc(100% / var(--rows)) no-repeat,
-      repeating-linear-gradient(
-        90deg,
-        transparent 0 calc(var(--tx) * var(--g)),
-        var(--lattice-c) 0 calc(var(--tx) * (1 - var(--g))),
-        transparent 0 var(--tx)
-      );
-    -webkit-mask-image: var(--rows-mask);
-    mask-image: var(--rows-mask);
+    inset: 0;
   }
-  /* At 120px a cell is < 1px: stripes would alias into moiré, so the mini is drawn at the lattice's mean
-     coverage — the same diamond of 12,513 cells, too dense to resolve. */
-  .lattice--mini .lattice-plane {
-    background:
-      linear-gradient(var(--lattice-bg), var(--lattice-bg)) 100% 100% /
-        calc(100% * var(--missing) / var(--cols)) calc(100% / var(--rows)) no-repeat,
-      color-mix(in srgb, var(--lattice-c) 45%, transparent);
-    -webkit-mask-image: none;
-    mask-image: none;
+  .lattice-dots {
+    position: absolute;
+    inset: 0;
   }
+  .lattice-lit {
+    clip-path: var(--lit);
+  }
+  .lattice-off {
+    --lattice-c: var(--lattice-off-c);
+    clip-path: var(--off);
+  }
+
+  /* ---- mini: plan view, one --d square per --p pitch ------------------------------------------------------ */
+  .lattice--mini {
+    --p: 3px;
+    --d: 1px;
+    width: calc(var(--cols) * var(--p));
+    height: calc(var(--rows) * var(--p));
+  }
+  .lattice--mini .lattice-dots {
+    /* a --d square in the top-left of each tile (the conic's first quarter), shifted to the tile's centre */
+    background: conic-gradient(from -90deg at var(--d) var(--d), var(--lattice-c) 25%, transparent 0)
+      calc((var(--p) - var(--d)) / 2) calc((var(--p) - var(--d)) / 2) / var(--p) var(--p);
+  }
+
+  /* ---- full: the isometric diamond, centred in a 2:1 box ------------------------------------------------ */
+  .lattice--full {
+    --W: calc(var(--cols) + var(--rows));
+    /* the tile (2a × a) snaps to whole device pixels, so the dots repeat exactly (no beat, no moiré) */
+    --snap: 1px;
+    width: min(100%, 880px);
+    aspect-ratio: 2 / 1;
+    container-type: inline-size;
+  }
+  @media (resolution >= 2x) {
+    .lattice--full {
+      --snap: 0.5px;
+    }
+  }
+  .lattice--full .lattice-plane {
+    --a: calc(100cqi / var(--W));
+    --d: max(1px, var(--a) / 2);
+    inset: 0;
+    margin: auto;
+    width: calc(var(--W) * var(--a));
+    height: calc(var(--W) * var(--a) / 2);
+  }
+  @supports (width: round(down, 10px, 1px)) {
+    .lattice--full .lattice-plane {
+      --a: round(down, 100cqi / var(--W), var(--snap));
+      --d: max(1px, round(down, var(--a) / 2, var(--snap)));
+    }
+  }
+  .lattice--full .lattice-dots {
+    /* cell centres sit at (x even, y + ½) and (x odd, y) in cell units (x parity flips with an odd row count):
+       one dot per layer on a 2a × a tile */
+    --x0: calc(var(--odd, 0) * var(--a));
+    --dot: conic-gradient(from -90deg at var(--d) var(--d), var(--lattice-c) 25%, transparent 0);
+    background:
+      var(--dot) calc(var(--x0) - var(--d) / 2) calc(var(--a) / 2 - var(--d) / 2) / calc(var(--a) * 2) var(--a),
+      var(--dot) calc(var(--x0) + var(--a) - var(--d) / 2) calc(var(--d) / -2) / calc(var(--a) * 2) var(--a);
+  }
+
   @media (forced-colors: active) {
     .lattice {
       --lattice-c: CanvasText;
-      --lattice-bg: Canvas;
+      --lattice-off-c: GrayText;
       forced-color-adjust: none;
     }
   }

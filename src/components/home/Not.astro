@@ -125,6 +125,12 @@ const nmax = Math.round((MARK + Math.max(...widths)) * 1.03 * 100) / 100;
     border-top: 1px solid var(--line-ui);
     max-width: 40em;
   }
+  /* phones: the coda stays apart from the lines, without a screen of empty space */
+  @media (max-width: 639.98px) {
+    .not-coda {
+      margin-top: var(--s-8);
+    }
+  }
   .not-coda blockquote {
     margin: 0;
   }

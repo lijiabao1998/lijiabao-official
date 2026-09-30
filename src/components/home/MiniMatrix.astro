@@ -23,8 +23,10 @@ const cols = Math.max(...LABS.map((l) => l.cards.length));
 ><span class="mm-spine" data-mm-spine></span><span class="mm-grid">{LABS.map((lab) => lab.cards.map(() => <span class="mm-c" data-mm-cell></span>))}</span></span>
 
 <style>
+  /* ring pitch 9px = 3 × the GlimmerTown mini's dot pitch in the same #work column (WorkRow scales both on wide
+     columns: 12px = 3 × 4px), so the two minis share one grid of light */
   .mm {
-    --c: 5px;
+    --c: 6px;
     --g: 3px;
     display: inline-flex;
     align-items: stretch;
@@ -48,17 +50,5 @@ const cols = Math.max(...LABS.map((l) => l.cards.length));
   .mm-c {
     border: 1px solid var(--fg-2);
     border-radius: 50%;
-  }
-  @media (min-width: 640px) {
-    .mm {
-      --c: 6px;
-      --g: 4px;
-    }
-  }
-  @media (min-width: 1024px) {
-    .mm {
-      --c: 7px;
-      --g: 4px;
-    }
   }
 </style>

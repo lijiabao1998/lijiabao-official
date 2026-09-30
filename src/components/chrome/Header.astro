@@ -47,23 +47,22 @@ const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
 </header>
 
 <script>
-  // Header state (§5.3): after 24px of scroll, a bottom hairline and a --bg veil fade in.
-  let header: HTMLElement | null = null;
-  let queued = false;
+  // Header state (§5.3): the bar is always opaque --bg; after 24px of scroll its bottom hairline fades in.
+  // A passive listener that writes only when the state flips: reading scrollY never forces layout, and no rAF,
+  // so the state is right even where frames are throttled (hidden windows). The header is swapped by the
+  // ClientRouter (not persisted), so the element is looked up again on every page load.
+  let header: HTMLElement | null = document.querySelector<HTMLElement>('[data-header]');
   const update = () => {
-    queued = false;
-    header?.toggleAttribute('data-scrolled', window.scrollY > 24);
+    if (!header) return;
+    const scrolled = window.scrollY > 24;
+    if (header.hasAttribute('data-scrolled') !== scrolled) header.toggleAttribute('data-scrolled', scrolled);
   };
-  const onScroll = () => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(update);
-  };
-  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', update, { passive: true });
   document.addEventListener('astro:page-load', () => {
     header = document.querySelector<HTMLElement>('[data-header]');
     update();
   });
+  update();
 
   // Navigation progress (§5.5): only if fetching takes more than 300ms; no fake percentage.
   let timer = 0;
@@ -81,14 +80,16 @@ const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
 </script>
 
 <style>
+  /* Opaque, always: nothing reads through behind the wordmark (§2.5: no blur, no veil gradient). The canvas
+     draws under it like under any other --bg surface. */
   .hdr {
     position: fixed;
     inset: 0 0 auto;
     z-index: 10;
     height: var(--header-h);
-    background: transparent;
-    transition: background-color var(--d-s) var(--ease-rise);
+    background: var(--bg);
   }
+  /* the bottom hairline appears once the page has scrolled (data-scrolled, set by the script above) */
   .hdr::after {
     content: '';
     position: absolute;
@@ -98,14 +99,40 @@ const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
     opacity: 0;
     transition: opacity var(--d-s) var(--ease-rise);
   }
-  .hdr[data-scrolled] {
-    background: var(--bg-veil);
-  }
   .hdr[data-scrolled]::after {
     opacity: 1;
   }
+  /* no JS: a scroll-driven fade where the browser has scroll timelines; otherwise the hairline simply stays on */
+  :global(html:not([data-js])) .hdr::after {
+    opacity: 1;
+  }
+  @supports (animation-timeline: scroll()) {
+    :global(html:not([data-js])) .hdr::after {
+      opacity: 0;
+      /* longhands only: the minifier would fold a shorthand + timeline into one `animation` value that
+         browsers reject */
+      animation-name: lj-hdr-line;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 24px;
+    }
+  }
+  @keyframes lj-hdr-line {
+    to {
+      opacity: 1;
+    }
+  }
   :global(html[data-menu-open]) .hdr {
     background: var(--bg-2);
+  }
+  @media (forced-colors: active) {
+    .hdr {
+      background: Canvas;
+    }
+    .hdr::after {
+      background: CanvasText;
+    }
   }
 
   .hdr-bar {

@@ -23,7 +23,18 @@ const locale = localeOf(Astro);
   :global(#work .work-title .display__set) {
     max-width: 13em;
   }
+  /* h2 → first row: 48px on phones (plus the row's own 32px lead), 64px on tablets, the full 96px from 1024px */
   .work-rows {
-    margin-top: var(--s-9);
+    margin-top: var(--s-7);
+  }
+  @media (min-width: 640px) {
+    .work-rows {
+      margin-top: var(--s-8);
+    }
+  }
+  @media (min-width: 1024px) {
+    .work-rows {
+      margin-top: var(--s-9);
+    }
   }
 </style>

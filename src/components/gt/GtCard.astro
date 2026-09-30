@@ -1,8 +1,227 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-card" motion="gt-card"> (§3 order, §9.3).
+// #gt-card (§3, §4.3, §5.3) — the life of one card: seven steps on one baseline (a vertical rail), then the rule
+// for frame-wide changes, the D000 quote with its source, and the owner's dated decision of 2026-09-25.
+// Server HTML is the end state: every step finished (●). motion/sections/gt-card.ts (full motion only) resets
+// the steps and walks a DOM marker glimmer down the rail as each step reaches 75% of the viewport; the current
+// step gains weight, finished steps fill. Step names are the display-face list `gt.card.names`; the details are
+// the second part of `gt.card.N` (body face).
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import type { Key } from '@i18n/dict';
+import { links } from '@data/links';
+import { localeOf, tl, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const names = tl('gt.card.names', locale);
+const steps = names.map((name, i) => ({ name, detail: tl(`gt.card.${i + 1}`, locale)[1] ?? '' }));
+if (steps.length !== 7) throw new Error(`[GtCard] expected 7 steps, got ${steps.length}`);
+const colon = locale === 'en' ? ': ' : '：';
+const decision: Key = 'gt.3d.decision';
+/** the cited file's path, read from its URL (links.ts is the one source of every outbound link) */
+const quotePath = links.docs.d000Vision.split('/blob/main/')[1] ?? '';
 ---
 <Section id="gt-card" motion="gt-card" labelledby="gt-card-title">
-  <Display k="gt.card.title" as="h2" size="m" id="gt-card-title" />
+  <div class="gc">
+    <div class="gc-main">
+      <Display k="gt.card.title" as="h2" size="m" id="gt-card-title" />
+      <div class="gc-track" data-card-track>
+        <span class="gc-rail" aria-hidden="true"></span>
+        <span class="gc-marker" aria-hidden="true" data-card-marker></span>
+        <ol class="gc-steps" role="list">
+          {
+            steps.map((s) => (
+              <li class="gc-step" data-card-step data-state="done">
+                <span class="gc-glyph" aria-hidden="true" data-card-glyph />
+                <span class="gc-name t-s" data-card-name>
+                  {s.name}
+                </span>
+                {s.detail && <span class="gc-detail">{s.detail}</span>}
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </div>
+
+    <aside class="gc-aside">
+      <T k="gt.card.detail" as="p" class="gc-rule t-lede" data-rise />
+      <blockquote class="gc-quote" data-rise>
+        <T k="gt.card.quote" as="p" class="gc-quote-t" />
+        <footer class="gc-cite t-label">
+          {ts('common.source', locale)}
+          {colon}
+          <cite>
+            <a class="link" href={links.docs.d000Vision} rel="noopener">
+              <code>{quotePath}</code>
+              <span class="sr-only">{ts('a11y.external', locale)}</span>
+            </a>
+          </cite>
+        </footer>
+      </blockquote>
+      <T k={decision} as="p" class="gc-decision" data-rise />
+    </aside>
+  </div>
 </Section>
+
+<style>
+  .gc {
+    display: grid;
+    gap: var(--s-9) var(--gap);
+  }
+  .gc-track {
+    position: relative;
+    margin-top: var(--s-8);
+  }
+  /* the baseline every step sits on, vertical: glyph centres at x = 7px */
+  .gc-rail {
+    position: absolute;
+    left: 7px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--line-ui);
+  }
+  .gc-marker {
+    position: absolute;
+    left: 1px;
+    top: 0;
+    width: 13px;
+    height: 13px;
+    margin-top: -6.5px;
+    border-radius: 50%;
+    background: var(--glim);
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform;
+  }
+  .gc-steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: gc;
+  }
+  .gc-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 15px minmax(0, 1fr);
+    column-gap: var(--s-5);
+    align-items: start;
+    padding-block: var(--s-4);
+    counter-increment: gc;
+  }
+  .gc-step + .gc-step {
+    border-top: 1px solid var(--line);
+  }
+  /* status by shape: ○ to do, ● finished; the current step keeps its ring under the amber marker */
+  .gc-glyph {
+    grid-row: 1;
+    align-self: center;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 1.5px solid var(--fg-3);
+    background: var(--bg);
+    transition:
+      background-color var(--d-s) var(--ease-rise),
+      border-color var(--d-s) var(--ease-rise);
+  }
+  .gc-name {
+    grid-row: 1;
+    grid-column: 2;
+    --w-rest: 500;
+    color: var(--fg-2);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  .gc-name::before {
+    content: counter(gc, decimal-leading-zero);
+    display: inline-block;
+    min-width: 2.6em;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    color: var(--fg-3);
+    vertical-align: 0.35em;
+  }
+  .gc-detail {
+    grid-row: 2;
+    grid-column: 2;
+    max-width: 34em;
+    margin-top: var(--s-2);
+    padding-left: 2.6rem;
+    color: var(--fg-2);
+  }
+  .gc-step[data-state='done'] .gc-glyph {
+    background: var(--fg);
+    border-color: var(--fg);
+  }
+  .gc-step:is([data-state='done'], [data-state='current']) .gc-name {
+    color: var(--fg);
+  }
+  .gc-step[data-state='current'] .gc-glyph {
+    border-color: var(--glim);
+  }
+
+  .gc-aside {
+    display: grid;
+    align-content: start;
+    gap: var(--s-7);
+  }
+  .gc-rule {
+    color: var(--fg-2);
+  }
+  .gc-quote {
+    margin: 0;
+    padding-left: var(--s-5);
+    border-left: 1px solid var(--glim);
+  }
+  .gc-quote-t {
+    font-size: var(--fs-h3);
+    line-height: 1.35;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .gc-quote-t:lang(zh) {
+    line-height: 1.6;
+  }
+  .gc-cite {
+    margin-top: var(--s-3);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .gc-cite code {
+    font-size: 1em;
+  }
+  .gc-decision {
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line-ui);
+    color: var(--fg);
+  }
+
+  @media (min-width: 1024px) {
+    .gc {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+    }
+    .gc-main {
+      grid-column: 1 / span 7;
+    }
+    .gc-aside {
+      grid-column: 9 / -1;
+      position: sticky;
+      top: calc(var(--header-h) + var(--s-7));
+      align-self: start;
+      margin-top: calc(var(--fs-m) * 1.12 + var(--s-8));
+    }
+  }
+
+  @media (forced-colors: active) {
+    .gc-step[data-state='done'] .gc-glyph {
+      background: CanvasText;
+      border-color: CanvasText;
+    }
+    .gc-marker {
+      background: Highlight;
+    }
+  }
+</style>

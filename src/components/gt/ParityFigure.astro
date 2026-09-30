@@ -1,6 +1,81 @@
 ---
-// STUB (F0-shell) — owner S4 replaces this file. Sub-component of Gt3D (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
+// figure#fig-parity (§3 #gt-3d, §5.3, §6.4) — the exact cross-check, SCHEMATIC, DOM (not GL).
+// Two blocks of `gt3d.parityMaps` cells (256: D011's random maps), the 2D rules on the left and their 3D port on
+// the right, with one "=" per row between them. Every pair is equal, so every cell is drawn lit: the figure is a
+// to-scale picture of the claim in the caption (gt.3d.parity), not a record of individual maps.
+// motion/sections/gt-3d.ts lights the pairs in reading order (1.2s lj.rise, 0.004 stagger) and draws each row's
+// "=" as its last pair lights. No JS / static / reduced motion: the finished state.
+// Cells are emitted with set:html (no scope attribute on 512 nodes) and styled through :global.
+import Figure from '@ui/Figure.astro';
+import { fact } from '@data/facts';
+
+const maps = fact('gt3d.parityMaps').value;
+if (typeof maps !== 'number' || !Number.isInteger(maps) || maps < 1 || maps > 1024) {
+  throw new Error(`[ParityFigure] gt3d.parityMaps must be an integer in 1..1024 (got ${maps})`);
 }
+const cols = Math.ceil(Math.sqrt(maps));
+const rows = Math.ceil(maps / cols);
+const cells = '<i></i>'.repeat(maps);
+const eqs = '<i data-parity-eq></i>'.repeat(rows);
 ---
+<Figure id="fig-parity" kind="SCHEMATIC" caption="gt.3d.parity">
+  <div class="pf" style={`--cols:${cols};--rows:${rows}`} aria-hidden="true" data-parity>
+    <div class="pf-grid" data-parity-a set:html={cells} />
+    <div class="pf-eqs" set:html={eqs} />
+    <div class="pf-grid" data-parity-b set:html={cells} />
+  </div>
+</Figure>
+
+<style>
+  .pf {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(20px, 3vw, 36px) minmax(0, 1fr);
+    align-items: stretch;
+    column-gap: clamp(8px, 1.4vw, 16px);
+    padding-block: var(--s-5);
+  }
+  .pf-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    gap: clamp(2px, 0.28vw, 4px);
+    aspect-ratio: var(--cols) / var(--rows);
+  }
+  .pf-grid :global(i) {
+    display: block;
+    background: var(--fg);
+  }
+  .pf-eqs {
+    display: grid;
+    grid-template-rows: repeat(var(--rows), minmax(0, 1fr));
+    gap: clamp(2px, 0.28vw, 4px);
+  }
+  /* "=": two hairlines, centred in the row */
+  .pf-eqs :global(i) {
+    position: relative;
+    display: block;
+  }
+  .pf-eqs :global(i)::before,
+  .pf-eqs :global(i)::after {
+    content: '';
+    position: absolute;
+    left: 20%;
+    right: 20%;
+    height: 1px;
+    background: var(--fg-2);
+  }
+  .pf-eqs :global(i)::before {
+    top: calc(50% - 2px);
+  }
+  .pf-eqs :global(i)::after {
+    top: calc(50% + 1px);
+  }
+
+  @media (forced-colors: active) {
+    .pf-grid :global(i),
+    .pf-eqs :global(i)::before,
+    .pf-eqs :global(i)::after {
+      background: CanvasText;
+      forced-color-adjust: none;
+    }
+  }
+</style>

@@ -1,8 +1,155 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-lines" motion="gt-lines"> (§3 order, §9.3).
+// #gt-lines (§3, §4.3) — one city, three lines: the main line, the art lab, the 3D line. Each column: name,
+// description, the line's own numbers (from the copy, which reads them from facts.ts), its repo; the lab column
+// carries the owner's quote with its source. Then figure#fig-fork (ForkTimeline, SCHEMATIC) with the history note.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Arrow from '@ui/Arrow.astro';
+import ForkTimeline from './ForkTimeline.astro';
+import { REPO_BY_ID, type RepoId } from '@data/repos';
+import { fileUrl } from '@data/links';
+import type { Key } from '@i18n/dict';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const colon = locale === 'en' ? ': ' : '：';
+
+interface Line {
+  repo: RepoId;
+  name: Key;
+  desc: Key;
+  stats: Key;
+  quote?: Key;
+}
+const LINES: Line[] = [
+  { repo: 'gt', name: 'gt.main.name', desc: 'gt.main.desc', stats: 'gt.main.stats' },
+  { repo: 'gtlab', name: 'gt.lab.name', desc: 'gt.lab.desc', stats: 'gt.lab.stats', quote: 'gt.lab.quote' },
+  { repo: 'gt3d', name: 'gt.3d.name', desc: 'gt.3d.desc', stats: 'gt.3d.stats' },
+];
+const external = ts('a11y.external', locale);
 ---
 <Section id="gt-lines" motion="gt-lines" labelledby="gt-lines-title">
   <Display k="gt.lines.title" as="h2" size="m" id="gt-lines-title" />
+
+  <ol class="gl" role="list">
+    {
+      LINES.map((l) => {
+        const r = REPO_BY_ID[l.repo];
+        return (
+          <li class="gl-line" data-rise>
+            <span class="gl-mark" aria-hidden="true" />
+            <Display k={l.name} as="h3" size="s" />
+            <T k={l.desc} as="p" class="gl-desc" />
+            <ul class="gl-stats" role="list">
+              {ts(l.stats, locale)
+                .split(' · ')
+                .map((s) => (
+                  <li class="t-mono">{s}</li>
+                ))}
+            </ul>
+            {l.quote && (
+              <blockquote class="gl-quote">
+                <T k={l.quote} as="p" />
+                <footer class="gl-cite t-label">
+                  {ts('common.source', locale)}
+                  {colon}
+                  <cite>
+                    <a class="link" href={fileUrl(r.repo, 'README.md')} rel="noopener">
+                      {r.repo}
+                      <span class="sr-only">{external}</span>
+                    </a>
+                  </cite>
+                </footer>
+              </blockquote>
+            )}
+            <a class="gl-repo link t-mono" href={r.url} rel="noopener">
+              {r.repo}
+              <span class="sr-only">{external}</span>
+              <Arrow dir="up-right" />
+            </a>
+          </li>
+        );
+      })
+    }
+  </ol>
+
+  <div class="gl-fig">
+    <ForkTimeline />
+  </div>
 </Section>
+
+<style>
+  .gl {
+    display: grid;
+    gap: var(--s-8) var(--gap);
+    margin: var(--s-8) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .gl-line {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line-ui);
+  }
+  /* the line's start point sits on its rule, like the nodes of the timeline below */
+  .gl-mark {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--fg);
+  }
+  .gl-desc {
+    max-width: 30em;
+    color: var(--fg-2);
+  }
+  .gl-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1) 0;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--fg-2);
+  }
+  .gl-stats > li:not(:last-child)::after {
+    content: '·';
+    margin-inline: 0.6em;
+    color: var(--fg-3);
+  }
+  .gl-quote {
+    margin: var(--s-2) 0 0;
+    padding-left: var(--s-4);
+    border-left: 1px solid var(--line-ui);
+    color: var(--fg);
+  }
+  .gl-cite {
+    margin-top: var(--s-2);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .gl-repo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    align-self: flex-start;
+    min-height: var(--hit);
+    margin-top: auto;
+    color: var(--fg);
+  }
+  .gl-fig {
+    margin-top: var(--s-9);
+  }
+
+  @media (min-width: 1024px) {
+    .gl {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>

@@ -1,8 +1,77 @@
 ---
-// STUB (F0-shell) — owner S4 replaces the internals. Keep the contract: <Section id="gt-undone"> (§3 order, §9.3).
+// #gt-undone (§3, §4.3) — what didn't get done. The repo's own rule: this list may not be left blank and may not
+// be dressed up. Every item has the same size, weight and motion as any result on the page (site law 5).
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import type { Key } from '@i18n/dict';
+
+const ITEMS: Key[] = ['gt.undone.1', 'gt.undone.2', 'gt.undone.3', 'gt.undone.4', 'gt.undone.5'];
 ---
 <Section id="gt-undone" labelledby="gt-undone-title">
-  <Display k="gt.undone.title" as="h2" size="m" id="gt-undone-title" />
+  <div class="gu">
+    <Display k="gt.undone.title" as="h2" size="m" id="gt-undone-title" />
+    <ol class="gu-list" role="list">
+      {
+        ITEMS.map((k) => (
+          <li class="gu-item" data-rise>
+            <T k={k} />
+          </li>
+        ))
+      }
+    </ol>
+  </div>
 </Section>
+
+<style>
+  .gu {
+    display: grid;
+    gap: var(--s-8) var(--gap);
+  }
+  .gu-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: gu;
+    border-top: 1px solid var(--line-ui);
+  }
+  .gu-item {
+    display: grid;
+    grid-template-columns: 3.2em minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--s-4);
+    padding-block: var(--s-5);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--fs-lede);
+    line-height: 1.45;
+    color: var(--fg);
+    counter-increment: gu;
+  }
+  .gu-item:lang(zh) {
+    line-height: 1.7;
+  }
+  .gu-item::before {
+    content: counter(gu, decimal-leading-zero);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.06em;
+    color: var(--fg-3);
+  }
+  .gu-item :global(code) {
+    color: var(--fg-2);
+  }
+
+  @media (min-width: 1024px) {
+    .gu {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-items: start;
+    }
+    .gu > :global(:first-child) {
+      grid-column: 1 / span 4;
+    }
+    .gu-list {
+      grid-column: 6 / -1;
+    }
+  }
+</style>

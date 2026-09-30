@@ -1,0 +1,13 @@
+{
+  "rows": 180,
+  "aspect": "553/720",
+  "a": 4096,
+  "b": 8192,
+  "poster": {
+    "points": 6144,
+    "width": 880,
+    "height": 1146
+  },
+  "accents": 32,
+  "seed": "0x6C6A62"
+}

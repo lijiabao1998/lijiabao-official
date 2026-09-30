@@ -1,6 +1,179 @@
 ---
-// STUB (F0-shell) — owner S3 replaces this file. Sub-component of Vision (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// The measured-bytes readout in #vision (§3, §8): what this visit actually loaded, read from the Resource Timing
+// buffer by lib/perf.ts (same origin only; no network, no trackers). A live readout, so it is JS-only and
+// parity-ignored; everything it states is also true of the page (tier cards carry the CI caps as plain text).
+// Below the sentence, a byte ruler: one tick per request, widths ∝ bytes, in the order they started (left → right).
+// Static-tier safe: the script uses no GSAP. motion/sections/vision.ts may re-count the number as an odometer
+// (it listens for the `lj-measured` event this script dispatches on each update).
+import { localeOf, tpl, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const template = tpl('tier.measured', locale, ['kb', 'n']);
+// build-time split of the template around its two numbers (the copy stays whole in the dictionary)
+const parts = template.split(/(\{kb\}|\{n\})/).filter(Boolean);
 ---
+<div class="me js-only" data-measured data-parity-ignore data-i18n-cached={ts('tier.cached', locale)}>
+  <h3 class="me-title t-label" data-rise>{ts('vision.measured.title', locale)}</h3>
+  <p class="me-line t-lede" data-rise>
+    {
+      parts.map((p) =>
+        p === '{kb}' ? (
+          <span class="me-fig">
+            <data class="me-v" value="0" data-me-kb>0</data>
+            <span class="me-odo" aria-hidden="true" data-me-odo />
+          </span>
+        ) : p === '{n}' ? (
+          <data class="me-n" value="0" data-me-n>0</data>
+        ) : (
+          p
+        ),
+      )
+    }
+    <span class="me-cached c-fg-3" data-me-cached hidden />
+  </p>
+  <div class="me-ruler" aria-hidden="true" data-rise="clip">
+    <div class="me-ticks" data-me-ruler></div>
+  </div>
+</div>
+
+<script>
+  import { observeBytes, kb, resources } from '@lib/perf';
+
+  let stop: (() => void) | null = null;
+
+  function render(box: HTMLElement) {
+    const list = resources();
+    let bytes = 0;
+    let cached = false;
+    for (const r of list) {
+      bytes += r.bytes;
+      if (r.cached) cached = true;
+    }
+    const lang = document.documentElement.lang === 'en' ? 'en' : 'zh-Hant-TW';
+    const k = kb(bytes);
+    const kbText = new Intl.NumberFormat(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(k);
+    const nText = new Intl.NumberFormat(lang).format(list.length);
+    const kbEl = box.querySelector<HTMLDataElement>('[data-me-kb]');
+    const nEl = box.querySelector<HTMLDataElement>('[data-me-n]');
+    const changed = kbEl?.value !== String(k);
+    if (kbEl) {
+      kbEl.value = String(k);
+      kbEl.textContent = kbText;
+    }
+    if (nEl) {
+      nEl.value = String(list.length);
+      nEl.textContent = nText;
+    }
+    const c = box.querySelector<HTMLElement>('[data-me-cached]');
+    if (c) {
+      c.textContent = cached ? (box.dataset.i18nCached ?? '') : '';
+      c.hidden = !cached;
+    }
+    const ruler = box.querySelector<HTMLElement>('[data-me-ruler]');
+    if (ruler) {
+      const ticks: HTMLElement[] = [];
+      for (const r of list) {
+        if (r.bytes <= 0) continue;
+        const s = document.createElement('span');
+        s.className = r.cached ? 'is-cached' : '';
+        s.style.flexGrow = String(r.bytes);
+        ticks.push(s);
+      }
+      ruler.replaceChildren(...ticks);
+    }
+    if (changed) box.dispatchEvent(new CustomEvent('lj-measured', { detail: { kb: k, text: kbText } }));
+  }
+
+  function bind() {
+    stop?.();
+    stop = null;
+    const box = document.querySelector<HTMLElement>('[data-measured]');
+    if (box) stop = observeBytes(() => render(box));
+  }
+
+  document.addEventListener('astro:page-load', bind);
+  document.addEventListener('astro:before-swap', () => {
+    stop?.();
+    stop = null;
+  });
+</script>
+
+<style>
+  .me {
+    margin-top: var(--s-9);
+  }
+  .me-title {
+    color: var(--fg-3);
+    margin-bottom: var(--s-4);
+  }
+  .me-line {
+    max-width: 40ch;
+    color: var(--fg-2);
+  }
+  .me-line:lang(zh) {
+    max-width: 26em;
+  }
+  .me-fig {
+    position: relative;
+    display: inline-block;
+  }
+  .me-v,
+  .me-n {
+    font-family: var(--ff-mono);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .me-odo {
+    display: none;
+    position: absolute;
+    inset: 0;
+    font-family: var(--ff-mono);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+    white-space: pre;
+    pointer-events: none;
+    user-select: none;
+  }
+  /* while the odometer runs (vision.ts), it draws over the real, transparent number */
+  .me-fig[data-ticking] .me-v {
+    color: transparent;
+  }
+  .me-fig[data-ticking] .me-odo {
+    display: inline-flex;
+  }
+  .me-cached {
+    margin-inline-start: 0.35em;
+    font-size: var(--fs-small);
+  }
+
+  .me-ruler {
+    margin-top: var(--s-5);
+    max-width: 42rem;
+  }
+  .me-ticks {
+    display: flex;
+    height: 14px;
+    border-bottom: 1px solid var(--fg-3);
+  }
+  .me-ticks :global(span) {
+    flex: 1 1 0;
+    min-width: 1px;
+    border-left: 1px solid var(--fg-2);
+  }
+  .me-ticks :global(span.is-cached) {
+    border-left-color: var(--line-ui);
+  }
+  .me-ticks :global(span:last-child) {
+    border-right: 1px solid var(--fg-2);
+  }
+
+  @media (forced-colors: active) {
+    .me-ticks,
+    .me-ticks :global(span) {
+      border-color: CanvasText;
+    }
+  }
+</style>

@@ -1,9 +1,262 @@
 ---
-// STUB (F0-shell) — owner S3 replaces the internals. Keep the contract: <Section id="vision" motion="vision"> (§3 order, §9.3).
-// Manifesto slot (P gating), 本站的解讀, evidence, site list, TierCards, Measured.
+// #vision (§3 row 6, §4.2): 「LLM 平權／科技平權」, shown as mechanism, never as slogan.
+//   h2 → the manifesto slot → 本站的解讀 (the site's reading, labelled as such, never his quote) → 作品裡寫著的
+//   (evidence, each with its source) → 這個網站也照做 → three tier cards → the measured-bytes readout.
+// The manifesto slot is manifesto.title (P): it renders the owner's approved line when there is one, and until then
+// its factual fallback 「規則 → 驗證 → 公開紀錄」 (build-overrides §1). A → chain is set as terms on one line with a
+// scan hairline beneath (motion: the light passes left → right and each term weighs in); anything else goes
+// through <Display>. manifesto.date (PE) renders only once dated.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import TierCards from './TierCards.astro';
+import Measured from './Measured.astro';
+import { fitUnits, plain, runsOf, type Run } from '@i18n/t';
+import type { Key } from '@i18n/types';
+import { localeOf, ts, tv } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+
+const mf = tv('manifesto.title', locale);
+const chain = typeof mf === 'string' && mf.includes('→') ? mf.split('→').map((s) => s.trim()).filter(Boolean) : null;
+// fit the chain to one line (zh: CJK counts 1, Latin 0.56 — same arithmetic as <Display>, plus the arrows' spacing)
+const chainN = chain ? fitUnits(chain.join(' → ')) + 0.6 : 0;
+const chainFit = locale === 'zh-Hant';
+
+/** "quote — source" → [quote, "— source"] (the source keeps its dash; the copy stays whole in the dictionary). */
+function cite(key: string): { text: Run[]; src: Run[] | null } | null {
+  const v = tv(key, locale);
+  if (v === null || typeof v !== 'string') return v === null ? null : { text: runsOf(plain(v)), src: null };
+  const i = v.lastIndexOf(' — ');
+  return i < 0
+    ? { text: runsOf(v), src: null }
+    : { text: runsOf(v.slice(0, i)), src: runsOf(v.slice(i + 1).trim()) };
+}
+
+const evidence = [1, 2, 3, 4, 5].map((i) => cite(`vision.ev.${i}`)).filter((e): e is NonNullable<typeof e> => e !== null);
+const site = [1, 2, 3, 4, 5].map((i) => `vision.site.${i}` as Key);
 ---
 <Section id="vision" motion="vision" label="vision.label" labelledby="vision-title">
-  <Display k="vision.title" as="h2" size="m" id="vision-title" />
+  <div class="vi-head" data-mask>
+    <Display k="vision.title" as="h2" size="m" id="vision-title" data-rise="mask" />
+  </div>
+
+  {
+    chain ? (
+      <div class="vi-mf" data-vi-mf>
+        <p class:list={['vi-chain', { 'vi-chain--fit': chainFit }]} style={`--n:${chainN}`} data-display="manifesto.title">
+          <span class="sr-only">{mf}</span>
+          <span class="vi-chain-set" aria-hidden="true" data-vi-set>
+            {chain.map((term, i) => (
+              <Fragment>
+                {i > 0 && <span class="vi-arrow" data-vi-arrow>→</span>}
+                <span class="vi-term" data-vi-term>
+                  {term}
+                </span>
+              </Fragment>
+            ))}
+          </span>
+        </p>
+        <span class="vi-scan" aria-hidden="true" data-vi-scan />
+        <T k="manifesto.date" as="p" class="vi-date t-label" />
+      </div>
+    ) : (
+      <div class="vi-mf" data-vi-mf>
+        <Display k="manifesto.title" as="p" size="m" animate />
+        <T k="manifesto.date" as="p" class="vi-date t-label" />
+      </div>
+    )
+  }
+
+  <div class="vi-grid">
+    <div class="vi-reading" data-rise>
+      <h3 class="vi-sub t-label">
+        <span class="vi-sub-mark" aria-hidden="true" />
+        {ts('manifesto.reading.label', locale)}
+      </h3>
+      <T k="manifesto.reading" as="p" class="vi-reading-text t-lede" />
+    </div>
+
+    <div class="vi-ev">
+      <h3 class="vi-sub t-label" data-rise>{ts('vision.ev.title', locale)}</h3>
+      <ol class="vi-list" role="list">
+        {
+          evidence.map((e) => (
+            <li class="vi-item" data-rise="clip">
+              <p class="vi-ev-text">
+                {e.text.map((r) => (r.code ? <code>{r.text}</code> : r.text))}
+              </p>
+              {e.src && (
+                <p class="vi-ev-src t-label">
+                  {e.src.map((r) => (r.code ? <code>{r.text}</code> : r.text))}
+                </p>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <div class="vi-site">
+      <h3 class="vi-sub t-label" data-rise>{ts('vision.site.title', locale)}</h3>
+      <ul class="vi-list" role="list">
+        {
+          site.map((k) => (
+            <li class="vi-item" data-rise="clip">
+              <T k={k} as="p" class="vi-site-text" />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="vi-tiers">
+    <TierCards />
+    <Measured />
+  </div>
 </Section>
+
+<style>
+  /* ---- the manifesto slot ---------------------------------------------------------------- */
+  .vi-mf {
+    position: relative;
+    margin-top: var(--s-9);
+    container-type: inline-size;
+  }
+  .vi-chain {
+    --w-rest: 520;
+    font-family: var(--ff-display);
+    font-size: var(--fs-m);
+    font-weight: var(--w-rest);
+    line-height: 1;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+  }
+  .vi-chain:lang(zh) {
+    --w-rest: 560;
+    line-height: 1.12;
+    letter-spacing: 0.01em;
+  }
+  /* zh: one line, fitted to the column (no JS; the same fit-to-line rule as <Display>) */
+  .vi-chain--fit {
+    font-size: min(var(--fs-m), 100cqi / var(--n));
+    white-space: nowrap;
+  }
+  .vi-chain-set {
+    display: block;
+  }
+  .vi-term {
+    display: inline-block;
+  }
+  .vi-arrow {
+    display: inline-block;
+    margin-inline: 0.3em;
+    color: var(--fg-3);
+    font-weight: 300;
+    letter-spacing: 0;
+  }
+  /* the scan: a hairline under the line; static / no-JS show it drawn */
+  .vi-scan {
+    display: block;
+    height: 1px;
+    margin-top: var(--s-4);
+    background: var(--fg-3);
+    transform-origin: 0 50%;
+  }
+  .vi-date {
+    margin-top: var(--s-3);
+    color: var(--fg-3);
+  }
+
+  /* ---- reading, evidence, site --------------------------------------------------------- */
+  .vi-grid {
+    display: grid;
+    gap: var(--s-9);
+    margin-top: var(--s-9);
+  }
+  @media (min-width: 1024px) {
+    .vi-grid {
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--gap);
+      row-gap: var(--s-10);
+    }
+    .vi-reading {
+      grid-column: 1 / span 7;
+    }
+    .vi-ev {
+      grid-column: 1 / span 7;
+    }
+    .vi-site {
+      grid-column: 9 / span 4;
+    }
+  }
+
+  .vi-sub {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin-bottom: var(--s-5);
+    color: var(--fg-3);
+  }
+  /* the reading is the site's interpretation: its label carries a hollow ring (not a record, not a quote) */
+  .vi-sub-mark {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+  .vi-reading {
+    padding-inline-start: var(--s-5);
+    border-inline-start: 1px solid var(--line-ui);
+  }
+  .vi-reading-text {
+    max-width: 34em;
+    color: var(--fg-2);
+  }
+  .vi-reading-text:lang(zh) {
+    max-width: 30em;
+  }
+
+  .vi-list {
+    list-style: none;
+    padding: 0;
+  }
+  .vi-item {
+    padding-block: var(--s-4);
+    border-top: 1px solid var(--line);
+  }
+  .vi-item:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  .vi-ev-text {
+    max-width: 38em;
+    color: var(--fg);
+  }
+  .vi-ev-src {
+    margin-top: var(--s-2);
+    color: var(--fg-3);
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  .vi-ev-src :global(code) {
+    color: var(--fg-2);
+  }
+  .vi-site-text {
+    color: var(--fg-2);
+  }
+
+  .vi-tiers {
+    margin-top: var(--s-10);
+  }
+
+  @media (max-width: 639.98px) {
+    .vi-mf {
+      margin-top: var(--s-7);
+    }
+    .vi-grid {
+      gap: var(--s-8);
+      margin-top: var(--s-8);
+    }
+  }
+</style>

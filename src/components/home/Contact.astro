@@ -1,8 +1,130 @@
 ---
-// STUB (F0-shell) — owner S2 replaces the internals. Keep the contract: <Section id="contact" motion="contact"> (§3 order, §9.3).
+// #contact (S2 · §3 row 8, §4.2 About and contact, §5.3): the label (h2), the lede, and one large GitHub link —
+// GitHub is the only social link (build-overrides §1). contact.x is gated by features.x (off: not approved),
+// so t() returns null and nothing renders; no X URL exists anywhere in the build.
+// The link is display type fitted to the column: a locked single line from 640px (its weight grows to the right,
+// never re-wraps), balanced over two lines on phones. Hover / focus: the underline scans in from the left and
+// the text weighs in (motion: contact.ts; static tier / reduced motion: CSS); the ↗ is magnetic (≤ 12px).
 import Section from '@ui/Section.astro';
 import T from '@ui/T.astro';
+import Arrow from '@ui/Arrow.astro';
+import { features } from '@data/features';
+import { links } from '@data/links';
+import { fitUnits } from '@i18n/t';
+import { localeOf, ts, tv } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const ext = ts('a11y.external', locale);
+// 「GitHub · lijiabao1998 ↗」: the ↗ is drawn by <Arrow> (magnetic, aria-hidden), so it comes off the text.
+const text = ts('contact.github', locale).replace(/\s*[↗→]\s*$/u, '');
+// fit: the text (fitUnits counts Latin at 0.56em; Geist at -0.04em tracking sets ≈ 0.42em, a system sans
+// ≈ 0.5em: 0.82 keeps the fallback inside too), the gap and the ↗ (≈ 1.3em), + the lit weight (≈ 6%)
+const n = Math.round((fitUnits(text) * 0.82 + 1.3) * 1.06 * 100) / 100;
+// the last word and the ↗ are glued (nowrap), so the arrow never lands on a line of its own
+const cut = text.lastIndexOf(' ');
+const head = cut > 0 ? text.slice(0, cut) : '';
+const tail = cut > 0 ? text.slice(cut + 1) : text;
+const x = tv('contact.x', locale);
+const xText = typeof x === 'string' ? x : '';
 ---
 <Section id="contact" motion="contact" label="contact.label" labelAs="h2">
-  <T k="contact.lede" as="p" class="t-lede measure" />
+  <T k="contact.lede" as="p" class="contact-lede t-lede measure" data-rise />
+  <p class="contact-big" style={`--n:${n}`} data-contact-mask>
+    <a class="contact-gh" href={links.github} rel="me" data-contact-link>
+      <span class="contact-gh-t" data-contact-text>{head && `${head} `}<span class="contact-gh-nw">{tail}<span class="contact-gh-go" data-magnet data-contact-go><Arrow dir="up-right" class="contact-arrow" /></span></span></span>
+      <span class="sr-only">{ext}</span>
+    </a>
+  </p>
+  {
+    xText && features.xUrl && (
+      <p class="contact-x">
+        <a class="link" href={features.xUrl} rel="me">
+          {xText}
+          <span class="sr-only">{ext}</span>
+        </a>
+      </p>
+    )
+  }
 </Section>
+
+<style>
+  .contact-big {
+    container-type: inline-size;
+    margin-top: var(--s-8);
+    /* mask slack: the rise clips to this box, so the j's descender and the accents keep their room */
+    padding-block: var(--s-2) var(--s-5);
+  }
+  /* block flow (the rise needs a transformable box); the ↗ follows the last word, never a line of its own */
+  .contact-gh {
+    --w-rest: 500;
+    --u: 0;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    font-family: var(--ff-display);
+    font-size: min(var(--fs-l), 12cqi);
+    font-weight: var(--w-rest);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .contact-gh:focus-visible {
+    outline-offset: 0.12em;
+  }
+  @media (min-width: 640px) {
+    .contact-gh {
+      white-space: nowrap;
+      text-wrap: nowrap;
+      font-size: min(var(--fs-l), 100cqi / var(--n));
+    }
+  }
+  /* the underline scans in from the left and leaves to the right; its weight scales with the type */
+  .contact-gh-t {
+    padding-bottom: 0.06em;
+    background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / calc(var(--u) * 100%)
+      max(1px, 0.028em);
+    transition: background-size var(--d-s) var(--ease-rise);
+  }
+  .contact-gh:is(:hover, :focus-visible) {
+    --u: 1;
+  }
+  .contact-gh:is(:hover, :focus-visible) .contact-gh-t {
+    background-position: 0 100%;
+  }
+  .contact-gh-nw {
+    white-space: nowrap;
+  }
+  .contact-gh-go {
+    display: inline-block;
+    margin-left: 0.24em;
+    color: var(--fg-2);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  .contact-gh:is(:hover, :focus-visible) .contact-gh-go {
+    color: var(--glim);
+  }
+  .contact-gh-go :global(.contact-arrow) {
+    font-weight: 300;
+  }
+  /* weight where the motion runtime doesn't run it (static tier, no JS, reduced motion) */
+  :global(html:is([data-tier='static'], [data-motion='reduced'])) .contact-gh:is(:hover, :focus-visible) .contact-gh-t {
+    font-variation-settings: 'wght' 700;
+  }
+
+  .contact-x {
+    margin-top: var(--s-6);
+  }
+
+  @media (forced-colors: active) {
+    .contact-gh-t {
+      text-decoration: underline;
+      background: none;
+    }
+  }
+  @media print {
+    .contact-gh {
+      transform: none !important;
+    }
+  }
+</style>

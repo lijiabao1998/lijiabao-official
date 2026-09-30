@@ -1,6 +1,275 @@
 ---
-// STUB (F0-shell) — owner S2 replaces the internals. Keep the contract: <Section id="method" motion="method"> (§3 order, §9.3).
+// #method (S2 · §3 row 3, §4.2 Method, §5.3): the owner's quote with its citation; one round of work as his
+// → chain (5 steps, each → a drawn hairline); the writers line (anonymous; the named variant renders only when
+// features.vendorNames is on); the "undone" rule with its citation.
+// - The quote is set in the text face (method.quote is not display-flagged: the CJK display subset stays in
+//   budget). It carries a screen-reader copy and an aria-hidden visual copy, so SplitText can split the visual
+//   characters (zh) / lines (en) without touching what assistive tech reads.
+// - The chain is an <ol>: order is in the markup; the arrows are aria-hidden hairlines. No-JS / static /
+//   reduced motion show every arrow drawn and every step lit.
+// Motion: motion/sections/method.ts (quote mask rise, chain scrub).
 import Section from '@ui/Section.astro';
+import T from '@ui/T.astro';
+import { links } from '@data/links';
+import { localeOf, tl, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const quote = ts('method.quote', locale);
+const steps = tl('method.chain', locale);
+const ext = ts('a11y.external', locale);
+// Optical margin: hang the opening quotation mark outside the text column.
+const hang = /^[「『]/u.test(quote) ? 'cjk' : /^["“‘']/u.test(quote) ? 'latin' : null;
 ---
 <Section id="method" motion="method" label="method.label" labelAs="h2">
+  <figure class="mq">
+    <blockquote class="mq-quote">
+      <p class:list={['mq-text', hang && `mq-text--hang-${hang}`]}>
+        <span class="sr-only">{quote}</span>
+        <span class="mq-vis" aria-hidden="true" data-mq-vis>{quote}</span>
+      </p>
+    </blockquote>
+    <figcaption class="mq-cite t-label" data-rise>
+      <a class="link" href={links.docs.d000Vision}><T k="method.quote.cite" /><span class="sr-only">{ext}</span></a>
+    </figcaption>
+  </figure>
+
+  <div class="chain-block">
+    <T k="method.chain.title" as="h3" class="chain-title t-label" id="method-chain-title" data-rise />
+    <ol class="chain" aria-labelledby="method-chain-title" data-chain>
+      {
+        steps.map((step, i) => (
+          <li class="chain-step" data-chain-step>
+            {i > 0 && (
+              <span class="chain-arr" aria-hidden="true">
+                <span class="chain-line" data-chain-line />
+                <svg class="chain-head" viewBox="0 0 8 12" width="8" height="12" focusable="false">
+                  <path d="M1.5 1.5 6.5 6l-5 4.5" pathLength="1" data-chain-head />
+                </svg>
+              </span>
+            )}
+            <span class="chain-term" data-chain-term>{step}</span>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+
+  <div class="m-foot">
+    <div class="m-writers">
+      <T k="method.writers" as="p" class="m-writers-text" data-rise />
+      <T k="method.writers.named" as="p" class="m-writers-text m-writers-named" data-rise />
+    </div>
+    <figure class="m-undone" data-rise>
+      <blockquote>
+        <T k="method.undone" as="p" class="m-undone-text" />
+      </blockquote>
+      <figcaption class="m-undone-cite t-label">
+        <a class="link" href={links.docs.labAutorun}><T k="method.undone.cite" /><span class="sr-only">{ext}</span></a>
+      </figcaption>
+    </figure>
+  </div>
 </Section>
+
+<style>
+  /* ---- the quote ---------------------------------------------------------------------------------------- */
+  .mq {
+    margin: 0;
+  }
+  .mq-quote {
+    margin: 0;
+  }
+  .mq-text {
+    max-width: 22em;
+    font-family: var(--ff-body);
+    font-size: var(--fs-s);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .mq-text:lang(en) {
+    max-width: 21em;
+    font-weight: 380;
+    line-height: 1.22;
+    letter-spacing: -0.015em;
+  }
+  /* the opening mark hangs in the margin; with text-spacing-trim its blank half is already trimmed */
+  .mq-text--hang-cjk {
+    text-indent: -1em;
+  }
+  @supports (text-spacing-trim: trim-start) {
+    .mq-text--hang-cjk {
+      text-indent: -0.5em;
+    }
+  }
+  .mq-text--hang-latin {
+    text-indent: -0.4em;
+  }
+  .mq-vis {
+    display: block;
+  }
+  /* SplitText wrappers (chars / masked lines) must not inherit the hang; only the first line hangs */
+  .mq-vis > :global(*) {
+    text-indent: 0;
+  }
+  .mq-text--hang-latin .mq-vis > :global(:first-child) {
+    text-indent: -0.4em;
+  }
+  .mq-cite {
+    margin-top: var(--s-6);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .mq-cite :global(.link) {
+    color: var(--fg-2);
+  }
+  .mq-cite :global(code) {
+    font-size: 1em;
+  }
+
+  /* ---- the → chain: a sentence of five steps, hairline arrows between them -------------------------- */
+  .chain-block {
+    margin-top: var(--s-10);
+  }
+  .chain-title {
+    margin-bottom: var(--s-5);
+    color: var(--fg-3);
+  }
+  .chain {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    row-gap: 0.35em;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-family: var(--ff-body);
+    font-size: var(--fs-h3);
+    font-weight: 450;
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+    color: var(--fg);
+  }
+  .chain:lang(en) {
+    letter-spacing: -0.005em;
+    line-height: 1.3;
+  }
+  .chain-step {
+    display: flex;
+    align-items: flex-start;
+    min-width: 0;
+  }
+  .chain-term {
+    min-width: 0;
+  }
+  /* one arrow = a 1px line drawn from the left + a chevron drawn when the line lands; it sits on the
+     first line of the step it leads into */
+  .chain-arr {
+    flex: none;
+    display: flex;
+    align-items: center;
+    width: 2.6em;
+    height: 1.45em;
+    height: 1lh;
+    margin-inline: 0.45em 0.55em;
+    color: var(--fg-3);
+  }
+  .chain-line {
+    flex: 1;
+    height: 1px;
+    background: currentColor;
+    transform-origin: 0 50%;
+  }
+  .chain-head {
+    flex: none;
+    width: 8px;
+    height: 12px;
+    margin-left: -6.5px;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .chain-head path {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+  }
+
+  /* ---- writers + the undone rule -------------------------------------------------------------------------- */
+  .m-foot {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--gap);
+    row-gap: var(--s-8);
+    margin-top: var(--s-10);
+  }
+  .m-writers,
+  .m-undone {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  @media (min-width: 1024px) {
+    .m-writers {
+      grid-column: 1 / span 5;
+    }
+    .m-undone {
+      grid-column: 7 / span 6;
+    }
+  }
+  .m-writers :global(.m-writers-text) {
+    max-width: 28em;
+    color: var(--fg-2);
+  }
+  .m-writers :global(.m-writers-named) {
+    margin-top: var(--s-4);
+  }
+  .m-undone {
+    margin: 0;
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line-ui);
+  }
+  .m-undone blockquote {
+    margin: 0;
+  }
+  .m-undone :global(.m-undone-text) {
+    max-width: 22em;
+    font-size: var(--fs-lede);
+    line-height: 1.6;
+    color: var(--fg);
+  }
+  .m-undone :global(.m-undone-text:lang(en)) {
+    line-height: 1.4;
+  }
+  .m-undone-cite {
+    margin-top: var(--s-4);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .m-undone-cite :global(.link) {
+    color: var(--fg-2);
+  }
+  .m-undone-cite :global(code) {
+    font-size: 1em;
+  }
+
+  @media (forced-colors: active) {
+    .chain-line {
+      background: CanvasText;
+    }
+    .m-undone {
+      border-top-color: CanvasText;
+    }
+  }
+  @media print {
+    .chain :global(:is([data-chain-line], [data-chain-term])) {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .chain :global([data-chain-head]) {
+      stroke-dashoffset: 0 !important;
+    }
+  }
+</style>

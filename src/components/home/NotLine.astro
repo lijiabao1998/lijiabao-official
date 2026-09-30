@@ -1,6 +1,128 @@
 ---
-// STUB (F0-shell) — owner S2 replaces this file. Sub-component of Not (§9.1); renders nothing yet.
+// NotLine (S2 · §3 #not, §4.2 Is not, §5.3): one "X 不是 Y" statement, drawn as
+//         X
+//     ≠   Y          ← the ≠ hangs in the margin column; X and Y share one left edge
+//   不是             ← the operator's reading, a small annotation under the glyph (≥ 640px)
+// The ≠ is DOM, not a font glyph: two hairlines (the "=") and an amber slash (the verdict), so motion can draw
+// it left → right. Y rests at lit weight (the claim that holds). Lives inside Not.astro's aria-hidden visual
+// block: the sentence itself is read from not.full, so this markup carries no accessible text of its own.
+import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+
 interface Props {
-  [key: string]: unknown;
+  n: 1 | 2 | 3;
 }
+
+const { n } = Astro.props;
+const K = {
+  x: `not.${n}.x`,
+  op: `not.${n}.op`,
+  y: `not.${n}.y`,
+} as const;
 ---
+<div class="not-st" data-not-st>
+  <span class="not-xm" data-not-xmask><Display k={K.x} size="m" class="not-x" data-not-x /></span>
+  <span class="not-mark" data-not-mark>
+    <span class="neq">
+      <span class="neq-bar neq-bar--a" data-neq-bar></span>
+      <span class="neq-bar neq-bar--b" data-neq-bar></span>
+      <span class="neq-slash" data-neq-slash></span>
+    </span>
+  </span>
+  <Display k={K.y} size="m" class="not-y" data-not-y />
+  <T k={K.op} class="not-op t-label" data-not-op />
+</div>
+
+<style>
+  .not-st {
+    display: grid;
+    grid-template-columns: var(--mark, 0.9em) minmax(0, 1fr);
+    grid-template-areas:
+      '. x'
+      'mark y'
+      'op .';
+    align-items: center;
+  }
+  .not-xm {
+    grid-area: x;
+    display: block;
+    min-width: 0;
+  }
+  .not-st > :global(.not-y) {
+    grid-area: y;
+    min-width: 0;
+  }
+  /* the Displays take their size from the statement (Not.astro fits it to the longest line) */
+  .not-st :global(.display) {
+    --fs: 1em;
+  }
+  .not-st :global(.not-y) {
+    font-variation-settings: 'wght' 720;
+  }
+
+  /* ---- ≠ ------------------------------------------------------------------------------------------------ */
+  .not-mark {
+    grid-area: mark;
+    align-self: center;
+    display: block;
+    height: 0.44em;
+  }
+  .neq {
+    --hair: max(1px, 0.03em);
+    position: relative;
+    display: block;
+    width: 0.56em;
+    height: 0.44em;
+  }
+  .neq-bar {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: var(--hair);
+    background: var(--fg-2);
+    transform-origin: 0 50%;
+  }
+  .neq-bar--a {
+    top: 0.11em;
+  }
+  .neq-bar--b {
+    top: 0.31em;
+  }
+  /* the slash: from lower left to upper right, drawn from its left end */
+  .neq-slash {
+    position: absolute;
+    left: 0.101em;
+    top: 0.53em;
+    width: 0.716em;
+    height: var(--hair);
+    margin-top: calc(var(--hair) / -2);
+    background: var(--glim);
+    transform-origin: 0 50%;
+    transform: rotate(-60deg);
+  }
+
+  /* ---- the operator's reading, under the glyph ------------------------------------------------------------ */
+  .not-st > :global(.not-op) {
+    grid-area: op;
+    justify-self: end;
+    margin-top: 0.4rem;
+    padding-right: 0.3em;
+    font-size: var(--fs-mono);
+    line-height: 1.2;
+    color: var(--fg-3);
+    white-space: nowrap;
+  }
+  @media (max-width: 639.98px) {
+    .not-st > :global(.not-op) {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .neq-bar,
+    .neq-slash {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+  }
+</style>

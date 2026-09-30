@@ -1,9 +1,29 @@
 ---
-// STUB (F0-shell) — owner S2 replaces the internals. Keep the contract: <Section id="work" motion="work"> (§3 order, §9.3).
-// Two <article> rows (WorkRow): GlimmerTown with <LatticeCss size="mini">, Frontier with MiniMatrix.
+// #work (S2 · §3 row 2, §4.2 Work, §5.3): the section label, the h2, and two <article> rows —
+// GlimmerTown (mini CSS lattice, exactly 12,513 cells) and Frontier (mini 1 + 15 × 10 matrix). Each row title
+// carries transition:name="case-title-gt|fr" so it flies into the case page's h1 (§5.5).
+// Motion: motion/sections/work.ts (row reveals, hover weigh, magnetic arrows).
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import WorkRow from './WorkRow.astro';
+import { localeOf, localePath } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
 ---
 <Section id="work" motion="work" label="work.label" labelledby="work-title">
-  <Display k="work.title" as="h2" size="m" id="work-title" />
+  <Display k="work.title" as="h2" size="m" id="work-title" class="work-title" data-rise />
+  <div class="work-rows">
+    <WorkRow id="gt" href={localePath(locale, '/glimmertown/')} />
+    <WorkRow id="fr" href={localePath(locale, '/frontier/')} />
+  </div>
 </Section>
+
+<style>
+  /* the display size lives on .display__set, so the measure is set there (in display ems) */
+  :global(#work .work-title .display__set) {
+    max-width: 13em;
+  }
+  .work-rows {
+    margin-top: var(--s-9);
+  }
+</style>

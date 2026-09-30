@@ -1,7 +1,169 @@
 ---
-// STUB (F0-shell) — owner S2 replaces the internals. Keep the contract: <Section id="not" motion="not"> (§3 order, §9.3).
-// Three NotLine statements with the kinetic ≠ (pinned ≤ 150%), the sr-only not.full, coda.
+// #not (S2 · §3 row 4, §4.2 Is not, §5.3, §8 display text): three "X 不是 Y" statements with the kinetic ≠ —
+// the ONE pin on home (desktop, motion full: `top top` → `+=150%`, scrub 0.6) — then the coda.
+// - Accessible text: not.full (one sentence, sr-only). The visual statements are aria-hidden.
+// - The stage (label + statements + citation) is what pins; the section label lives inside it (same look as
+//   <Section label>) so the heading stays in view while the statements play. The coda rises after the pin.
+// - Fit: every statement shares one size, min(--fs-m, container / longest line), computed here from the copy
+//   (CJK 1em, Latin 0.56em, + the hanging ≠ column, + the lit weight of Y). ≥ 1024px lines are locked single
+//   lines (weight grows to the right, never re-wraps); below that they wrap at --fs-m.
+// - No-JS / static / reduced motion: the end state — every ≠ drawn, every Y lit, every statement at full.
+// Motion: motion/sections/not.ts.
 import Section from '@ui/Section.astro';
+import T from '@ui/T.astro';
+import NotLine from './NotLine.astro';
+import { links } from '@data/links';
+import { fitUnits } from '@i18n/t';
+import { localeOf, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const ext = ts('a11y.external', locale);
+
+const IDS = [1, 2, 3] as const;
+/** width of the hanging ≠ column, in em of the statement */
+const MARK = 0.9;
+/** Y rests at lit weight: Latin gets wider by about this much (CJK keeps its 1em advance) */
+const LIT_LATIN = 1.08;
+const track = locale === 'zh-Hant' ? 0.01 : 0;
+const latin = (s: string) => /[A-Za-z]/.test(s);
+const widths = IDS.flatMap((n) => {
+  const x = ts(`not.${n}.x`, locale);
+  const y = ts(`not.${n}.y`, locale);
+  return [fitUnits(x, track), fitUnits(y, track) * (latin(y) ? LIT_LATIN : 1)];
+});
+const nmax = Math.round((MARK + Math.max(...widths)) * 1.03 * 100) / 100;
 ---
-<Section id="not" motion="not" label="not.label" labelAs="h2">
+<Section id="not" motion="not" labelledby="not-title">
+  <div class="not-stage" data-not-stage>
+    <h2 id="not-title" class="not-label t-label">
+      <span class="not-rule" aria-hidden="true"></span>
+      <T k="not.label" />
+    </h2>
+    <T k="not.full" as="p" class="sr-only" />
+    <div class="not-lines" aria-hidden="true" style={`--nmax:${nmax}`} data-not-lines>
+      {IDS.map((n) => <NotLine n={n} />)}
+    </div>
+    <p class="not-cite t-label">
+      <a class="link" href={links.docs.csReadme}><T k="not.cite" /><span class="sr-only">{ext}</span></a>
+    </p>
+  </div>
+
+  <figure class="not-coda" data-rise>
+    <blockquote>
+      <T k="not.coda" as="p" class="not-coda-text" />
+    </blockquote>
+    <figcaption class="not-coda-cite t-label">
+      <a class="link" href={links.docs.govReadme}><T k="not.coda.cite" /><span class="sr-only">{ext}</span></a>
+    </figcaption>
+  </figure>
 </Section>
+
+<style>
+  /* the section label, as <Section label> draws it (it lives in the pinned stage here) */
+  .not-label {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin-bottom: var(--s-7);
+    color: var(--fg-3);
+  }
+  .not-rule {
+    flex: none;
+    width: 24px;
+    height: 1px;
+    background: var(--line-ui);
+  }
+
+  /* ---- the statements --------------------------------------------------------------------------------- */
+  .not-lines {
+    position: relative;
+    container-type: inline-size;
+    --not-fs: var(--fs-m);
+  }
+  /* sized per statement: 100cqi resolves against .not-lines (the container), never the viewport */
+  .not-lines :global(.not-st) {
+    --mark: 0.9em;
+    font-size: var(--not-fs);
+  }
+  .not-lines :global(.not-st + .not-st) {
+    margin-top: max(0.5em, var(--s-6));
+  }
+  @media (min-width: 1024px) {
+    .not-lines {
+      --not-fs: min(var(--fs-m), 100cqi / var(--nmax));
+    }
+    .not-lines :global(.display__line) {
+      white-space: nowrap;
+      text-wrap: nowrap;
+    }
+  }
+  /* pinned (desktop, motion full — not.ts sets .is-pin): the stage must fit the viewport under the header,
+     and each X rises inside its own clip (slack padding so ascenders / descenders are never cut) */
+  .not-stage.is-pin .not-lines {
+    --not-fs: min(var(--fs-m), 100cqi / var(--nmax), (100svh - 320px) / 7.8);
+  }
+  .not-stage.is-pin :global(.not-xm),
+  .not-lines :global(.not-xm[data-masking]) {
+    overflow: clip;
+    padding-block: 0.12em 0.2em;
+    margin-block: -0.12em -0.2em;
+  }
+
+  .not-cite {
+    margin-top: var(--s-7);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .not-cite :global(.link) {
+    color: var(--fg-2);
+  }
+
+  /* ---- coda --------------------------------------------------------------------------------------------- */
+  .not-coda {
+    margin: var(--s-10) 0 0;
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line-ui);
+    max-width: 40em;
+  }
+  .not-coda blockquote {
+    margin: 0;
+  }
+  .not-coda :global(.not-coda-text) {
+    max-width: 24em;
+    font-size: var(--fs-lede);
+    line-height: 1.6;
+    color: var(--fg);
+  }
+  .not-coda :global(.not-coda-text:lang(en)) {
+    line-height: 1.4;
+  }
+  .not-coda-cite {
+    margin-top: var(--s-4);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .not-coda-cite :global(.link) {
+    color: var(--fg-2);
+  }
+
+  @media (forced-colors: active) {
+    .not-rule {
+      background: CanvasText;
+    }
+    .not-coda {
+      border-top-color: CanvasText;
+    }
+  }
+  @media print {
+    .not-lines :global(:is([data-not-st], [data-not-x], [data-not-y], [data-not-op], [data-neq-bar])) {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+    .not-lines :global([data-neq-slash]) {
+      transform: rotate(-60deg) !important;
+    }
+    .not-lines {
+      transform: none !important;
+    }
+  }
+</style>

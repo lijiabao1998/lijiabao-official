@@ -1,6 +1,285 @@
 ---
-// STUB (F0-shell) — owner S2 replaces this file. Sub-component of Work (§9.1); renders nothing yet.
+// WorkRow (S2 · §3 #work, §4.2 Work, §5.3 #work rows, §5.5): one body of work as an <article>.
+//   rule   : a 1px lane with its record point (the row dot, amber on hover / focus) that scans in from the left
+//   h3     : the title (display --fs-l) with transition:name="case-title-<id>", the case h1's twin on its page
+//   text   : kicker, summary, dates + stat (every number interpolated from facts.ts by the dictionary)
+//   figure : the mini — GlimmerTown's 12,513-cell CSS lattice or Frontier's 1 + 15 × 10 matrix — with its legend
+//   CTA    : 「看案例 →」, whose ::after covers the whole row (one link, one tab stop), described by the title
+// The title is <Display animate>: a screen-reader copy plus an aria-hidden visual copy, so the hover weigh can
+// split the visual characters without touching the heading's accessible name. Static tier / reduced motion get
+// the hover from CSS (instant weight, dot, underline); motion/sections/work.ts drives it everywhere else.
+import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Arrow from '@ui/Arrow.astro';
+import Legend from '@ui/Legend.astro';
+import LatticeCss from '@ui/LatticeCss.astro';
+import MiniMatrix from './MiniMatrix.astro';
+import { fact } from '@data/facts';
+import { localeOf, ts } from '../chrome/i18n';
+
 interface Props {
-  [key: string]: unknown;
+  id: 'gt' | 'fr';
+  /** locale-prefixed case page path */
+  href: string;
 }
+
+const { id, href } = Astro.props;
+const locale = localeOf(Astro);
+
+const K = {
+  title: `work.${id}.title`,
+  kicker: `work.${id}.kicker`,
+  summary: `work.${id}.summary`,
+  dates: `work.${id}.dates`,
+  stat: `work.${id}.stat`,
+} as const;
+
+const titleId = `work-${id}-title`;
+// 「看案例 →」: the arrow is drawn by <Arrow> (magnetic, aria-hidden), so it is taken off the link text.
+const cta = ts('work.cta', locale).replace(/\s*[→↗]\s*$/u, '');
+const pass = fact('gt.pass').value;
+if (typeof pass !== 'number') throw new Error('[WorkRow] facts gt.pass must be a number');
+const legend = id === 'gt' ? 'gt.pass.legend' : 'fr.matrix.legend';
 ---
+<article class:list={['wrow', `wrow--${id}`]} aria-labelledby={titleId} data-work-row>
+  <div class="wrow-rule" aria-hidden="true">
+    <span class="wrow-line" data-wrow-line></span>
+    <span class="wrow-dot" data-wrow-dot></span>
+  </div>
+  <div class="wrow-body">
+    <h3 id={titleId} class="wrow-title" data-mask data-wrow-mask transition:name={`case-title-${id}`}>
+      <Display k={K.title} size="l" animate weigh="hover" data-wrow-title />
+    </h3>
+    <T k={K.kicker} as="p" class="wrow-kicker t-label" data-wrow-meta />
+    <T k={K.summary} as="p" class="wrow-summary" data-wrow-meta />
+    <p class="wrow-facts t-label" data-wrow-meta>
+      <T k={K.dates} class="wrow-dates" />
+      <T k={K.stat} class="wrow-stat" />
+    </p>
+    <div class="wrow-fig" data-wrow-fig>
+      <div class="wrow-mini" aria-hidden="true" data-wrow-mini>
+        {id === 'gt' ? <LatticeCss count={pass} cols={112} size="mini" class="wrow-lattice" /> : <MiniMatrix />}
+      </div>
+      <Legend legend={legend} class="wrow-legend" />
+    </div>
+    <p class="wrow-go-row" data-wrow-cta>
+      <a class="wrow-cta" href={href} aria-describedby={titleId}>
+        <span class="wrow-cta-t">{cta}</span>
+        <span class="wrow-go" data-magnet data-wrow-go><Arrow dir="right" class="wrow-arrow" /></span>
+      </a>
+    </p>
+  </div>
+</article>
+
+<style>
+  .wrow {
+    position: relative;
+    padding-block: var(--s-7) var(--s-8);
+  }
+
+  /* ---- the lane: a hairline that starts at a record point ---------------------------------------------- */
+  .wrow-rule {
+    position: relative;
+    height: 1px;
+    margin-bottom: var(--s-7);
+  }
+  .wrow-line {
+    position: absolute;
+    inset: 0;
+    background: var(--line-ui);
+    transform-origin: 0 50%;
+  }
+  .wrow-dot {
+    position: absolute;
+    left: 0;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--fg-2);
+    transition: background-color var(--d-s) var(--ease-rise);
+  }
+  .wrow:is(:hover, :has(:focus-visible)) .wrow-dot {
+    background: var(--glim);
+  }
+
+  /* ---- layout: text left (weight sits on the left), the mini bottom-right -------------------------------- */
+  .wrow-body {
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  /* (explicit classes, not `> *`: scoping would make that outrank the breakpoint rules below) */
+  .wrow-title,
+  .wrow-kicker,
+  .wrow-summary,
+  .wrow-facts,
+  .wrow-fig,
+  .wrow-go-row {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+  @media (min-width: 640px) {
+    .wrow-title,
+    .wrow-kicker,
+    .wrow-summary,
+    .wrow-facts,
+    .wrow-go-row {
+      grid-column: 1 / span 5;
+    }
+    .wrow-fig {
+      grid-column: 6 / -1;
+      grid-row: 1 / span 5;
+      align-self: end;
+    }
+  }
+  @media (min-width: 1024px) {
+    .wrow-title,
+    .wrow-kicker,
+    .wrow-summary,
+    .wrow-facts,
+    .wrow-go-row {
+      grid-column: 1 / span 7;
+    }
+    .wrow-fig {
+      grid-column: 9 / -1;
+    }
+  }
+
+  /* ---- title: a locked single line (weight grows to the right, never re-wraps: §2.2 weight-safety) ------- */
+  .wrow-title {
+    /* mask slack: the rise clips to this box, so give ascenders / descenders room without moving layout */
+    padding-block: 0.08em 0.14em;
+    margin-block: -0.08em -0.14em;
+  }
+  .wrow-title :global(.display) {
+    --fs: min(var(--fs-l), 18cqi);
+  }
+  .wrow-title:lang(en) :global(.display) {
+    --fs: min(var(--fs-l), 14.5cqi);
+  }
+  .wrow-title :global(.display__line) {
+    white-space: nowrap;
+    text-wrap: nowrap;
+  }
+
+  .wrow-kicker {
+    margin-top: var(--s-4);
+    color: var(--fg-3);
+  }
+  .wrow-summary {
+    margin-top: var(--s-5);
+    max-width: 30em;
+    color: var(--fg-2);
+  }
+  .wrow-summary:lang(en) {
+    max-width: 34em;
+  }
+  .wrow-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-5);
+    margin-top: var(--s-4);
+    color: var(--fg-3);
+  }
+  .wrow-facts :global(.wrow-stat) {
+    color: var(--fg-2);
+  }
+
+  /* ---- the mini + its legend -------------------------------------------------------------------------- */
+  .wrow-fig {
+    display: grid;
+    justify-items: start;
+    gap: var(--s-4);
+    margin-top: var(--s-7);
+  }
+  @media (min-width: 640px) {
+    .wrow-fig {
+      margin-top: 0;
+    }
+  }
+  .wrow-mini {
+    --mini-w: 200px;
+    display: flex;
+    align-items: flex-end;
+    min-height: calc(var(--mini-w) / 2);
+  }
+  .wrow-mini :global(.lattice.lattice--mini) {
+    width: var(--mini-w);
+  }
+  @media (min-width: 1024px) {
+    .wrow-mini {
+      --mini-w: 300px;
+    }
+  }
+
+  /* ---- CTA: one link; its ::after makes the whole row the target ------------------------------------ */
+  .wrow-go-row {
+    margin-top: var(--s-6);
+  }
+  .wrow-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: var(--hit);
+    font-size: var(--fs-small);
+    font-weight: 500;
+    color: var(--fg);
+  }
+  .wrow-cta::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  .wrow-cta:focus-visible {
+    outline-offset: 6px;
+  }
+  .wrow-cta-t {
+    padding-bottom: 2px;
+    background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / 0 1px;
+    transition: background-size var(--d-s) var(--ease-rise);
+  }
+  .wrow:is(:hover, :has(:focus-visible)) .wrow-cta-t {
+    background-position: 0 100%;
+    background-size: 100% 1px;
+  }
+  /* the magnetic zone around the arrow (44px target), without moving the text */
+  .wrow-go {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    margin: -12px -14px -12px -10px;
+  }
+  .wrow-go :global(.wrow-arrow) {
+    font-size: 1.25em;
+  }
+
+  /* ---- CSS hover where the motion runtime doesn't run it (static tier, no JS, reduced motion) ---------- */
+  :global(html:is([data-tier='static'], [data-motion='reduced'])) .wrow:is(:hover, :has(:focus-visible)) .wrow-title :global(.display) {
+    font-variation-settings: 'wght' 760;
+  }
+
+  @media (forced-colors: active) {
+    .wrow-line {
+      background: CanvasText;
+    }
+    .wrow-dot {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+    .wrow:is(:hover, :has(:focus-visible)) .wrow-dot {
+      background: Highlight;
+    }
+  }
+  /* print the end state even if the page was printed before a row scrolled in */
+  @media print {
+    .wrow :global(:is([data-wrow-line], [data-wrow-dot], [data-wrow-title], [data-wrow-meta], [data-wrow-cta], [data-wrow-go], .legend, .lattice, [data-mm-spine], [data-mm-cell])) {
+      opacity: 1 !important;
+      transform: none !important;
+      clip-path: none !important;
+    }
+  }
+</style>

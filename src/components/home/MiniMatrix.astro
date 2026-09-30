@@ -1,6 +1,64 @@
 ---
-// STUB (F0-shell) — owner S2 replaces this file. Sub-component of Work (§9.1); renders nothing yet.
+// MiniMatrix (S2 · §3 #work row 2, §6.4, §5.5): the home thumbnail of Frontier's figure, DOM "1 + 15 × 10":
+// the governance spine, then one row per lab (labs.ts order = matrix rows = hero lanes 5–19) with one ring per
+// problem card (legend fr.matrix.legend: 1 ○ = 1 problem card). Card IDs and topics are never shown here.
+// It shares transition:name="fr-matrix" with #fig-matrix on /frontier/, so a ClientRouter navigation morphs
+// one into the other. Decorative (aria-hidden): the row copy and legend carry the numbers; the case page holds
+// the table. motion/sections/work.ts lights it: the spine draws first, then the cards row by row, left → right.
+import { LABS } from '@data/labs';
+
 interface Props {
-  [key: string]: unknown;
+  class?: string;
 }
+
+const { class: cls } = Astro.props;
+const cols = Math.max(...LABS.map((l) => l.cards.length));
 ---
+<span
+  class:list={['mm', cls]}
+  style={`--mm-cols:${cols}`}
+  aria-hidden="true"
+  transition:name="fr-matrix"
+  data-mm
+><span class="mm-spine" data-mm-spine></span><span class="mm-grid">{LABS.map((lab) => lab.cards.map(() => <span class="mm-c" data-mm-cell></span>))}</span></span>
+
+<style>
+  .mm {
+    --c: 5px;
+    --g: 3px;
+    display: inline-flex;
+    align-items: stretch;
+    gap: calc(var(--g) * 3);
+    vertical-align: top;
+  }
+  /* the governance repo: one core the 15 labs hang from (a border, so forced colours keep it) */
+  .mm-spine {
+    flex: none;
+    width: 0;
+    border-left: 2px solid var(--fg);
+    transform-origin: 50% 0;
+  }
+  .mm-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--mm-cols), var(--c));
+    grid-auto-rows: var(--c);
+    gap: var(--g);
+  }
+  /* one problem card = one hollow ring (the ○ of the legend) */
+  .mm-c {
+    border: 1px solid var(--fg-2);
+    border-radius: 50%;
+  }
+  @media (min-width: 640px) {
+    .mm {
+      --c: 6px;
+      --g: 4px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .mm {
+      --c: 7px;
+      --g: 4px;
+    }
+  }
+</style>

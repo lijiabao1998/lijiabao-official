@@ -74,14 +74,30 @@ const legend = id === 'gt' ? 'gt.pass.legend' : 'fr.matrix.legend';
 <style>
   .wrow {
     position: relative;
-    padding-block: var(--s-7) var(--s-8);
+    padding-block: var(--s-6) var(--s-7);
+  }
+  @media (min-width: 640px) {
+    .wrow {
+      padding-block: var(--s-7) var(--s-8);
+    }
+  }
+  /* below desktop the section's own padding closes the last row */
+  @media (max-width: 1023.98px) {
+    .wrow:last-child {
+      padding-bottom: 0;
+    }
   }
 
   /* ---- the lane: a hairline that starts at a record point ---------------------------------------------- */
   .wrow-rule {
     position: relative;
     height: 1px;
-    margin-bottom: var(--s-7);
+    margin-bottom: var(--s-6);
+  }
+  @media (min-width: 640px) {
+    .wrow-rule {
+      margin-bottom: var(--s-7);
+    }
   }
   .wrow-line {
     position: absolute;
@@ -104,6 +120,9 @@ const legend = id === 'gt' ? 'gt.pass.legend' : 'fr.matrix.legend';
   }
 
   /* ---- layout: text left (weight sits on the left), the mini bottom-right -------------------------------- */
+  /* < 640: one column (title, text, mini, CTA). 640–1023: the title spans the row; text left, the mini right.
+     ≥ 1024: text in columns 1–7, the mini in 8–12 beside the whole row. A tall mini never spreads the text:
+     the last row (under the CTA) takes the slack. */
   .wrow-body {
     display: grid;
     grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
@@ -121,16 +140,34 @@ const legend = id === 'gt' ? 'gt.pass.legend' : 'fr.matrix.legend';
     min-width: 0;
   }
   @media (min-width: 640px) {
-    .wrow-title,
+    .wrow-body {
+      grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    }
+    .wrow-title {
+      grid-column: 1 / -1;
+      grid-row: 1;
+    }
     .wrow-kicker,
     .wrow-summary,
     .wrow-facts,
     .wrow-go-row {
-      grid-column: 1 / span 5;
+      grid-column: 1 / span 4;
+    }
+    .wrow-kicker {
+      grid-row: 2;
+    }
+    .wrow-summary {
+      grid-row: 3;
+    }
+    .wrow-facts {
+      grid-row: 4;
+    }
+    .wrow-go-row {
+      grid-row: 5;
     }
     .wrow-fig {
-      grid-column: 6 / -1;
-      grid-row: 1 / span 5;
+      grid-column: 5 / -1;
+      grid-row: 2 / span 4;
       align-self: end;
     }
   }
@@ -143,7 +180,8 @@ const legend = id === 'gt' ? 'gt.pass.legend' : 'fr.matrix.legend';
       grid-column: 1 / span 7;
     }
     .wrow-fig {
-      grid-column: 9 / -1;
+      grid-column: 8 / -1;
+      grid-row: 1 / span 5;
     }
   }
 
@@ -189,28 +227,55 @@ const legend = id === 'gt' ? 'gt.pass.legend' : 'fr.matrix.legend';
 
   /* ---- the mini + its legend -------------------------------------------------------------------------- */
   .wrow-fig {
+    container: wfig / inline-size;
     display: grid;
     justify-items: start;
     gap: var(--s-4);
-    margin-top: var(--s-7);
+    margin-top: var(--s-6);
   }
   @media (min-width: 640px) {
+    .wrow-fig {
+      margin-top: var(--s-5);
+    }
+  }
+  @media (min-width: 1024px) {
     .wrow-fig {
       margin-top: 0;
     }
   }
   .wrow-mini {
-    --mini-w: 200px;
     display: flex;
     align-items: flex-end;
-    min-height: calc(var(--mini-w) / 2);
   }
-  .wrow-mini :global(.lattice.lattice--mini) {
-    width: var(--mini-w);
+  /* GlimmerTown: the 112 × 112 plane from above, one point of light per PASS. The pitch is a whole CSS pixel
+     (exact at DPR 1, 2 and 3) and grows with the room the column gives it: 3px (336px) on phones, 4px (448px)
+     with 2px points on wide columns; 2.5px only where a phone column is narrower than 336px. */
+  .wrow-mini :global(.lattice--mini) {
+    --p: 3px;
+    --d: 1px;
   }
-  @media (min-width: 1024px) {
-    .wrow-mini {
-      --mini-w: 300px;
+  @container wfig (width < 336px) {
+    .wrow-mini :global(.lattice--mini) {
+      --p: 2.5px;
+    }
+  }
+  @container wfig (width >= 448px) {
+    .wrow-mini :global(.lattice--mini) {
+      --p: 4px;
+      --d: 2px;
+      --lattice-c: color-mix(in srgb, var(--fg) 58%, transparent);
+    }
+    /* on dense screens a finer 1.5px point keeps the phone's star-field weight (3 device px, exact at 2x) */
+    @media (resolution >= 2x) {
+      .wrow-mini :global(.lattice--mini) {
+        --d: 1.5px;
+        --lattice-c: color-mix(in srgb, var(--fg) 86%, transparent);
+      }
+    }
+    /* Frontier's matrix keeps 3 × that pitch (MiniMatrix: 9px by default) */
+    .wrow-mini :global(.mm) {
+      --c: 8px;
+      --g: 4px;
     }
   }
 

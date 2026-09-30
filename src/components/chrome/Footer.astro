@@ -5,6 +5,9 @@ import TierFieldset from './TierFieldset.astro';
 import { localeOf, ts } from './i18n';
 
 const locale = localeOf(Astro);
+// The colophon is a " · " list: each item keeps its trailing separator on its own line (a line never starts
+// with "·"). Same text, same order; only the wrap points change.
+const colophon = ts('footer.colophon', locale).split(' · ');
 ---
 <footer id="colophon" class="ftr">
   <div class="wrap grid ftr-top">
@@ -15,7 +18,16 @@ const locale = localeOf(Astro);
       <p class="ftr-say">{ts('footer.disclaimer', locale)}</p>
       <p class="ftr-say c-fg-2">{ts('footer.privacy', locale)}</p>
       <p class="ftr-meta t-mono">{ts('footer.snapshot', locale)}</p>
-      <p class="ftr-small t-mono c-fg-3">{ts('footer.colophon', locale)}</p>
+      <p class="ftr-small t-mono c-fg-3">
+        {
+          colophon.map((item, i) => (
+            <Fragment>
+              {i > 0 && ' '}
+              <span class="ftr-item">{i < colophon.length - 1 ? `${item} ·` : item}</span>
+            </Fragment>
+          ))
+        }
+      </p>
       <p class="ftr-small t-mono c-fg-3">{ts('footer.type', locale)}</p>
     </div>
   </div>
@@ -47,12 +59,26 @@ const locale = localeOf(Astro);
 <style>
   .ftr {
     border-top: 1px solid var(--line);
-    padding-top: var(--s-9);
-    padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
+    padding-top: var(--s-8);
+    padding-bottom: max(var(--s-5), env(safe-area-inset-bottom));
     background: var(--bg);
   }
   .ftr-top {
-    row-gap: var(--s-8);
+    row-gap: var(--s-7);
+  }
+  @media (min-width: 640px) {
+    .ftr {
+      padding-top: var(--s-9);
+      padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
+    }
+    .ftr-top {
+      row-gap: var(--s-8);
+    }
+  }
+  /* one list item never breaks inside (a long one may still wrap on its own line) */
+  .ftr-item {
+    display: inline-block;
+    max-width: 100%;
   }
   .ftr-notes {
     display: flex;
@@ -72,7 +98,12 @@ const locale = localeOf(Astro);
   }
 
   .ftr-base {
-    margin-top: var(--s-10);
+    margin-top: var(--s-8);
+  }
+  @media (min-width: 1024px) {
+    .ftr-base {
+      margin-top: var(--s-10);
+    }
   }
   .ftr-mark {
     --w-rest: 560;

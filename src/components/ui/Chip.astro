@@ -30,15 +30,33 @@ const def = ts(`chip.${kind}.def`, locale, kind === 'DATA' ? { date } : undefine
 </span>
 
 <script>
+  // Keep the definition inside the viewport: it hangs from the chip's left edge, so a chip far to the right
+  // (e.g. after a long label on /en/) would push it off-screen. Measured once, just before it can show (hover
+  // intent, focus, tap): one read, one write, no layout loop. CSS already caps its width at the viewport.
+  function place(def: HTMLElement) {
+    def.style.removeProperty('--chip-dx');
+    const r = def.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const pad = Math.min(16, Math.max(0, (vw - r.width) / 2));
+    let dx = 0;
+    if (r.right > vw - pad) dx = vw - pad - r.right;
+    if (r.left + dx < pad) dx = pad - r.left;
+    if (dx) def.style.setProperty('--chip-dx', `${Math.round(dx)}px`);
+  }
+
   function bind() {
     for (const wrap of document.querySelectorAll<HTMLElement>('[data-chip]:not([data-chip-ready])')) {
       wrap.dataset.chipReady = '';
       const btn = wrap.querySelector<HTMLButtonElement>('.chip');
-      if (!btn) continue;
+      const def = wrap.querySelector<HTMLElement>('.chip-def');
+      if (!btn || !def) continue;
       const set = (open: boolean) => {
+        if (open) place(def);
         wrap.toggleAttribute('data-open', open);
         btn.setAttribute('aria-expanded', String(open));
       };
+      wrap.addEventListener('pointerenter', () => place(def));
+      btn.addEventListener('focus', () => place(def));
       btn.addEventListener('click', () => set(!wrap.hasAttribute('data-open')));
       btn.addEventListener('blur', () => set(false));
       wrap.addEventListener('pointerleave', () => wrap.removeAttribute('data-dismissed'));
@@ -100,13 +118,15 @@ const def = ts(`chip.${kind}.def`, locale, kind === 'DATA' ? { date } : undefine
     box-shadow: inset 0 0 0 1px currentColor;
   }
 
+  /* hangs from the chip's left edge; --chip-dx (set by the script above) slides it back inside the viewport */
   .chip-def {
     position: absolute;
     z-index: 5;
     left: 0;
     top: calc(100% + 8px);
     width: max-content;
-    max-width: min(34ch, 80vw);
+    max-width: min(34ch, calc(100vw - 2 * var(--gutter)));
+    translate: var(--chip-dx, 0) 0;
     padding: 10px 12px;
     background: var(--bg-2);
     border: 1px solid var(--line-ui);
@@ -125,7 +145,7 @@ const def = ts(`chip.${kind}.def`, locale, kind === 'DATA' ? { date } : undefine
     pointer-events: none;
   }
   .chip-def:lang(zh) {
-    max-width: min(20em, 80vw);
+    max-width: min(20em, calc(100vw - 2 * var(--gutter)));
   }
   /* hover: after 300ms; focus / tap: immediately; Esc: dismissed until pointer leaves or focus returns */
   .chip-wrap:hover:not([data-dismissed]) .chip-def {
@@ -141,6 +161,16 @@ const def = ts(`chip.${kind}.def`, locale, kind === 'DATA' ? { date } : undefine
     transform: none;
     transition-delay: 0s;
     pointer-events: auto;
+  }
+  /* no JS on a phone: nothing can measure the chip, so the definition docks to the bottom of the viewport,
+     between the gutters (always on screen) */
+  @media (max-width: 639.98px) {
+    :global(html:not([data-js])) .chip-def {
+      position: fixed;
+      inset: auto var(--gutter) var(--gutter);
+      width: auto;
+      max-width: none;
+    }
   }
   @media (forced-colors: active) {
     .chip,

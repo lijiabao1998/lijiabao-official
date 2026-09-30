@@ -1,8 +1,62 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-undone"> (§3 order, §9.3).
+// #fr-undone (§3, §4.4, site law 5): what didn't get done, stated with the same weight as what did.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+
+const ITEMS = ['fr.undone.1', 'fr.undone.2', 'fr.undone.3', 'fr.undone.4'] as const;
 ---
 <Section id="fr-undone" labelledby="fr-undone-title">
-  <Display k="fr.undone.title" as="h2" size="m" id="fr-undone-title" />
+  <div class="grid ud">
+    <div class="lg-4">
+      <Display k="fr.undone.title" as="h2" size="m" id="fr-undone-title" />
+    </div>
+    <ol class="ud-list lg-8 lg-start-5" role="list">
+      {
+        ITEMS.map((k) => (
+          <li class="ud-item" data-rise>
+            <span class="ud-n t-label" aria-hidden="true" />
+            <T k={k} as="p" class="ud-text" />
+          </li>
+        ))
+      }
+    </ol>
+  </div>
 </Section>
+
+<style>
+  .ud {
+    row-gap: var(--s-8);
+  }
+  .ud-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: ud;
+    border-bottom: 1px solid var(--line);
+  }
+  .ud-item {
+    counter-increment: ud;
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: var(--s-4);
+    align-items: baseline;
+    padding-block: var(--s-5);
+    border-top: 1px solid var(--line);
+  }
+  .ud-n {
+    color: var(--fg-3);
+  }
+  .ud-n::before {
+    content: counter(ud, decimal-leading-zero);
+  }
+  .ud-text {
+    max-width: 32em;
+    font-size: var(--fs-lede);
+    line-height: 1.45;
+    color: var(--fg);
+  }
+  .ud-text:lang(zh) {
+    line-height: 1.7;
+  }
+</style>

@@ -1,8 +1,113 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-review"> (§3 order, §9.3).
+// #fr-review (§3, §4.4): Physics, Biology and Chemistry — results that sit in PRs nobody has merged yet, so each is
+// marked "in review" (◐, the word always follows) and links to its pull request(s). The copy names the PR itself.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import Status from '@ui/Status.astro';
+import T from '@ui/T.astro';
+import { links } from '@data/links';
+import { localeOf, ts } from '../chrome/i18n';
+import { ghPath, labCode } from './parts';
+
+const locale = localeOf(Astro);
+const external = ts('a11y.external', locale);
+const ITEMS = [
+  { id: 'phys', key: 'fr.review.phys', prs: [links.pulls.phys4] },
+  { id: 'bio', key: 'fr.review.bio', prs: [links.pulls.bio2] },
+  { id: 'chem', key: 'fr.review.chem', prs: [links.pulls.chem1, links.pulls.chem2] },
+] as const;
 ---
 <Section id="fr-review" labelledby="fr-review-title">
-  <Display k="fr.review.title" as="h2" size="m" id="fr-review-title" />
+  <div class="grid rv">
+    <div class="lg-4">
+      <Display k="fr.review.title" as="h2" size="m" id="fr-review-title" />
+      <T k="fr.review.lead" as="p" class="rv-lead t-lede" />
+    </div>
+    <ul class="rv-list lg-8 lg-start-5" role="list">
+      {
+        ITEMS.map((it) => (
+          <li class="rv-item" data-rise>
+            <div class="rv-top">
+              <span class="rv-code t-label" aria-hidden="true">
+                {labCode(it.id)}
+              </span>
+              <Status code="review" />
+            </div>
+            <T k={it.key} as="p" class="rv-body" />
+            <p class="src-links">
+              {it.prs.map((url) => (
+                <a class="link" href={url} rel="noopener">
+                  {ghPath(url)}
+                  <span class="sr-only">{external}</span>
+                </a>
+              ))}
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
 </Section>
+
+<style>
+  .rv {
+    row-gap: var(--s-8);
+  }
+  .rv-lead {
+    margin-top: var(--s-5);
+    max-width: 18em;
+    color: var(--fg-2);
+  }
+  .rv-list {
+    display: grid;
+    gap: 0 var(--gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 640px) {
+    .rv-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .rv-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    padding: var(--s-5) 0 var(--s-6);
+    border-top: 1px solid var(--line-ui);
+  }
+  .rv-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+  }
+  .rv-code {
+    color: var(--fg-2);
+  }
+  .rv-body {
+    font-size: var(--fs-small);
+    line-height: 1.55;
+  }
+  .rv-body:lang(zh) {
+    line-height: 1.75;
+  }
+  .src-links {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-1);
+    margin-top: auto;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.02em;
+  }
+  .src-links .link {
+    color: var(--fg-3);
+    overflow-wrap: anywhere;
+  }
+  .src-links .link:is(:hover, :focus-visible) {
+    color: var(--fg);
+  }
+</style>

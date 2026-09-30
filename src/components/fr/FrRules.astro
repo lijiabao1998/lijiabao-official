@@ -1,8 +1,162 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-rules"> (§3 order, §9.3).
+// #fr-rules (§3, §4.4): the brand rule and the two-model rule (repo text, quoted), what OPEN means, and the two
+// status vocabularies. The vocabularies are split from their dictionary strings into terms (label → list), so each
+// term reads as a term; the words are exactly the dictionary's. Items rise via the generic reveal ([data-rise]).
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import Status from '@ui/Status.astro';
+import T from '@ui/T.astro';
+import { localeOf, ts } from '../chrome/i18n';
+import { splitLabel, splitSlash } from './parts';
+
+const locale = localeOf(Astro);
+const vocab = (['fr.vocab.problem', 'fr.vocab.round'] as const).map((k) => {
+  const { label, body } = splitLabel(ts(k, locale));
+  return { label, terms: splitSlash(body) };
+});
 ---
 <Section id="fr-rules" labelledby="fr-rules-title">
-  <Display k="fr.rules.title" as="h2" size="m" id="fr-rules-title" />
+  <div class="grid ru">
+    <div class="ru-head lg-4">
+      <Display k="fr.rules.title" as="h2" size="m" id="fr-rules-title" />
+    </div>
+
+    <ol class="ru-list lg-8 lg-start-5" role="list">
+      <li class="ru-rule" data-rise>
+        <span class="ru-n t-label" aria-hidden="true"></span>
+        <blockquote class="ru-q"><T k="fr.rule.1" as="p" /></blockquote>
+      </li>
+      <li class="ru-rule" data-rise>
+        <span class="ru-n t-label" aria-hidden="true"></span>
+        <blockquote class="ru-q"><T k="fr.rule.2" as="p" /></blockquote>
+      </li>
+    </ol>
+
+    <div class="ru-open lg-4 lg-start-5" data-rise>
+      <Status code="open" class="ru-open-term" />
+      <Display k="fr.open.title" as="h3" size="h3" class="ru-open-title" />
+      <T k="fr.open.body" as="p" class="ru-open-body" />
+    </div>
+
+    <dl class="ru-vocab lg-4 lg-start-9" data-rise>
+      {
+        vocab.map((v) => (
+          <div class="ru-v">
+            <dt class="ru-v-label t-label">{v.label}</dt>
+            <dd class="ru-v-terms">
+              <ul role="list">
+                {v.terms.map((term) => (
+                  <li>
+                    <code>{term}</code>
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        ))
+      }
+    </dl>
+  </div>
 </Section>
+
+<style>
+  .ru {
+    row-gap: var(--s-8);
+  }
+  @media (min-width: 1024px) {
+    .ru-head {
+      grid-row: span 2;
+    }
+  }
+
+  /* the two rules: repo text, quoted, large in the text face */
+  .ru-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: ru;
+    border-bottom: 1px solid var(--line);
+  }
+  .ru-rule {
+    counter-increment: ru;
+    display: grid;
+    grid-template-columns: 2.25rem minmax(0, 1fr);
+    column-gap: var(--s-4);
+    align-items: baseline;
+    padding-block: var(--s-6);
+    border-top: 1px solid var(--line);
+  }
+  .ru-n {
+    color: var(--fg-3);
+  }
+  .ru-n::before {
+    content: counter(ru, decimal-leading-zero);
+  }
+  .ru-q {
+    margin: 0;
+    font-size: var(--fs-s);
+    font-weight: 450;
+    line-height: 1.22;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .ru-q:lang(zh) {
+    line-height: 1.45;
+    letter-spacing: 0.02em;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  /* what OPEN means: the term, then its definition */
+  .ru-open {
+    display: grid;
+    justify-items: start;
+    gap: var(--s-4);
+    align-content: start;
+  }
+  .ru-open-title {
+    margin-top: var(--s-2);
+  }
+  .ru-open-body {
+    max-width: 30em;
+    color: var(--fg-2);
+  }
+
+  /* the status vocabularies: label, then the terms as quiet mono pills */
+  .ru-vocab {
+    display: grid;
+    gap: var(--s-6);
+    margin: 0;
+    align-content: start;
+  }
+  .ru-v-label {
+    margin-bottom: var(--s-3);
+    color: var(--fg-3);
+  }
+  .ru-v-terms {
+    margin: 0;
+  }
+  .ru-v-terms ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .ru-v-terms code {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 3px 10px;
+    border: 1px solid var(--line-ui);
+    border-radius: 999px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  @media (forced-colors: active) {
+    .ru-v-terms code {
+      border-color: CanvasText;
+    }
+  }
+</style>

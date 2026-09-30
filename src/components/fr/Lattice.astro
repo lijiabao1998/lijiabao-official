@@ -1,6 +1,168 @@
 ---
-// STUB (F0-shell) — owner S5 replaces this file. Sub-component of FrMath (#fig-lattice) (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// figure#fig-lattice (§3, §4.4, §6.4): MATH-001 no-three-in-line as a SCHEMATIC — one dotted column per n = 2..76,
+// n dots in column n (the rows of an n × n grid; column height carries no data, as the caption says). The column
+// for n = 75 is empty: a DOM ring marks it, with its label. Nothing here is a record, so the chip says SCHEMATIC.
+// Motion (fr-math.ts): the columns fill left → right with the scroll; the ring's outline breathes 0.4 ↔ 1 on a 2.4s
+// cycle only while it is in view ([data-live]); no JS / static / reduced motion: every column drawn, ring still.
+// Styles are `is:global`, every rule namespaced under #fig-lattice (74 columns would otherwise each carry a scoping
+// attribute; the case-page HTML budget is 32 KB).
+import Figure from '@ui/Figure.astro';
+import { localeOf, ts } from '../chrome/i18n';
+import { lattice } from './parts';
+
+const locale = localeOf(Astro);
+// fr.math.body: all configurations for n = 2..76 verified; n = 75 is the only gap.
+const N_MIN = 2;
+const N_MAX = 76;
+const N_GAP = 75;
+const g = lattice(N_MIN, N_MAX, N_GAP);
+const gap = g.cols.find((c) => c.empty);
+const first = g.cols[0];
+const last = g.cols[g.cols.length - 1];
+const pct = (v: number, of: number): string => `${Math.round((v / of) * 100000) / 1000}%`;
 ---
+<Figure id="fig-lattice" kind="SCHEMATIC" caption="fr.math.lattice">
+  <div class="lat">
+    <div class="lat-plot" style={`aspect-ratio:${g.w} / ${g.h}`}>
+      <svg class="lat-svg" viewBox={`0 0 ${g.w} ${g.h}`} style={`--dy:${g.dy}`} aria-hidden="true" focusable="false">
+        {
+          gap && (
+            <line
+              class="lat-slot"
+              x1={gap.x}
+              x2={gap.x}
+              y1={gap.y0}
+              y2={gap.y1}
+              vector-effect="non-scaling-stroke"
+            />
+          )
+        }
+        {
+          g.cols
+            .filter((c) => !c.empty)
+            .map((c) => <path class="lat-col" d={`M${c.x} ${c.y0}V${c.y1}`} />)
+        }
+      </svg>
+      {
+        gap && (
+          <Fragment>
+            <span
+              class="lat-ring"
+              style={`left:${pct(gap.x, g.w)};top:${pct(gap.y1, g.h)}`}
+              aria-hidden="true"
+              data-lat-ring
+            />
+            <span class="lat-gap" style={`right:calc(${pct(g.w - gap.x, g.w)} - 7px);top:calc(${pct(gap.y1, g.h)} - 14px)`}>
+              {ts('fr.math.gap', locale)}
+            </span>
+          </Fragment>
+        )
+      }
+    </div>
+    <div class="lat-axis" aria-hidden="true">
+      {first && <span class="lat-tick" style={`left:${pct(first.x, g.w)}`}>{first.n}</span>}
+      {last && <span class="lat-tick" style={`left:${pct(last.x, g.w)}`}>{last.n}</span>}
+    </div>
+  </div>
+</Figure>
+
+<style is:global>
+  #fig-lattice .lat {
+    padding: var(--s-6) var(--s-5) var(--s-4);
+  }
+  @media (max-width: 639.98px) {
+    #fig-lattice .lat {
+      padding: var(--s-5) var(--s-3) var(--s-3);
+    }
+  }
+  #fig-lattice .lat-plot {
+    position: relative;
+    width: 100%;
+  }
+  #fig-lattice .lat-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  /* n dots per column: a zero-length dash every lattice row (--dy = parts.lattice's row step), round caps */
+  #fig-lattice .lat-col {
+    stroke: var(--fg-2);
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-dasharray: 0 var(--dy);
+    fill: none;
+  }
+  @media (max-width: 639.98px) {
+    #fig-lattice .lat-col {
+      stroke-width: 2.6;
+    }
+  }
+  /* where n = 75 would stand: a hairline, not dots */
+  #fig-lattice .lat-slot {
+    stroke: var(--line-ui);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+  }
+
+  #fig-lattice .lat-ring {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border: 1.5px solid var(--glim);
+    border-radius: 50%;
+  }
+  #fig-lattice .lat-ring[data-live] {
+    animation: fr-lat-breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes fr-lat-breathe {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+  /* the label sits just above the ring, right-aligned to it (above the tallest columns, never on them) */
+  #fig-lattice .lat-gap {
+    position: absolute;
+    transform: translateY(-100%);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--fg);
+    white-space: nowrap;
+  }
+
+  #fig-lattice .lat-axis {
+    position: relative;
+    height: 1.5em;
+    margin-top: var(--s-2);
+    border-top: 1px solid var(--line);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  #fig-lattice .lat-tick {
+    position: absolute;
+    top: var(--s-2);
+    transform: translateX(-50%);
+    line-height: 1;
+  }
+
+  @media (forced-colors: active) {
+    #fig-lattice .lat-col {
+      stroke: CanvasText;
+    }
+    #fig-lattice .lat-ring {
+      border-color: Highlight;
+    }
+  }
+
+</style>

@@ -1,6 +1,326 @@
 ---
-// STUB (F0-shell) — owner S5 replaces this file. Sub-component of FrLabs (§9.1); renders nothing yet.
+// One tile of #fr-labs (§4.5): code, computed status, name (→ the repo), the README method chain (zh) or the
+// brief's one-liner (en), and facts read from src/data/labs.ts. Two layouts, one DOM:
+//   - card (grid view with JS from 640px; every phone): code + status on top, facts at the foot;
+//   - row  (no JS, or list view from 640px): code | name | description + facts | status.
+// fr-labs.ts morphs grid ⇄ list with Flip (nested) over the tile and its parts (.tile-code/-status/-name/-desc/
+// -facts/-note); Flip gives them ids itself, so the markup carries none.
+// Styles are `is:global`, every rule namespaced under #fr-labs (16 tiles × ~15 elements would otherwise each carry a
+// scoping attribute; the case-page HTML budget is 32 KB).
+import Status from '@ui/Status.astro';
+import T from '@ui/T.astro';
+import Arrow from '@ui/Arrow.astro';
+import { labStatus, type Lab, type StatusCode } from '@data/labs';
+import { REPO_BY_ID } from '@data/repos';
+import { localeOf, numberFormat, ts } from '../chrome/i18n';
+import { labCode } from './parts';
+
 interface Props {
-  [key: string]: unknown;
+  lab: Lab;
 }
+
+const { lab } = Astro.props;
+const locale = localeOf(Astro);
+const nf = numberFormat(locale);
+const status = labStatus(lab);
+const repo = REPO_BY_ID[lab.id];
+const name = ts(lab.nameKey, locale);
+const camel = /^(Frontier)(?=[A-Z])(.+)$/.exec(name); // a line-break chance inside long repo names
+const fid = `lab-${lab.id}`;
+const nameId = `${fid}-name`;
+
+type Fact = { text: string } | { status: StatusCode } | { open: number };
+const facts: Fact[] = [];
+if (lab.roundsMerged > 0) facts.push({ text: ts('lab.rounds.merged', locale, { n: lab.roundsMerged }) });
+// MATH-001 evidence is merged, and no resolution is claimed (fr.math.not.3): say so next to "merged".
+if (lab.id === 'math') facts.push({ status: 'notclaimed' });
+if (lab.prs.open > 0) facts.push({ text: ts('lab.prs.open', locale, { n: lab.prs.open }) });
+if (lab.prs.merged > 0) facts.push({ text: ts('lab.prs.merged', locale, { n: lab.prs.merged }) });
+facts.push({ text: ts('lab.commits', locale, { n: lab.commits }) });
+facts.push({ text: ts('lab.protocol', locale, { v: lab.protocol }) });
+if (lab.ciGreen) facts.push({ text: ts('lab.ci', locale) });
+if (lab.openCards !== null) facts.push({ open: lab.openCards });
+if (lab.first) facts.push({ text: ts('lab.first', locale, { id: lab.first }) });
 ---
+<article class="tile" data-kind={lab.kind} aria-labelledby={nameId}>
+  <div class="tile-top">
+    <span class="tile-code" aria-hidden="true">{labCode(lab.id)}</span>
+    {
+      status && (
+        <span class="tile-status">
+          <Status code={status} />
+        </span>
+      )
+    }
+  </div>
+
+  <h3 class="tile-name" id={nameId}>
+    <a class="tile-link" href={repo.url} rel="noopener">
+      {
+        camel ? (
+          <Fragment>
+            {camel[1]}
+            <wbr />
+            {camel[2]}
+          </Fragment>
+        ) : (
+          name
+        )
+      }
+      <span class="sr-only">{ts('a11y.external', locale)}</span>
+      <Arrow dir="up-right" class="tile-arrow" />
+    </a>
+  </h3>
+
+  <T k={lab.descKey} as="p" class="tile-desc" />
+
+  <ul class="tile-facts" role="list">
+    {
+      facts.map((f) =>
+        'status' in f ? (
+          <li class="tile-fact tile-fact--status">
+            <Status code={f.status} />
+          </li>
+        ) : 'open' in f ? (
+          <li class="tile-fact">
+            <data value={f.open}>{nf.format(f.open)}</data>
+            {' '}
+            {ts('status.open', locale)}
+          </li>
+        ) : (
+          <li class="tile-fact">{f.text}</li>
+        ),
+      )
+    }
+  </ul>
+
+  {lab.id === 'math' && <T k="fr.math.affil" as="p" class="tile-note" />}
+</article>
+
+<style is:global>
+  /* ---- card (default; phones; grid view) ------------------------------------ */
+  #fr-labs .tile {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    height: 100%;
+    padding: var(--s-5);
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    transition: border-color var(--d-s) var(--ease-rise);
+  }
+  #fr-labs .tile[data-kind='governance'] {
+    border-top: 2px solid var(--fg);
+  }
+  #fr-labs .tile:is(:hover, :focus-within) {
+    border-color: var(--line-ui);
+  }
+  #fr-labs .tile[data-kind='governance']:is(:hover, :focus-within) {
+    border-top-color: var(--fg);
+  }
+
+  #fr-labs .tile-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--s-2) var(--s-3);
+    min-height: 20px;
+  }
+  #fr-labs .tile-code {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    color: var(--fg-2);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  #fr-labs .tile:is(:hover, :focus-within) .tile-code {
+    color: var(--fg);
+  }
+  /* static tier: instant weight (Geist Mono has a fixed advance: no reflow) */
+  html[data-tier='static'] #fr-labs .tile:is(:hover, :focus-within) .tile-code {
+    font-variation-settings: 'wght' 720;
+  }
+  #fr-labs .tile-status {
+    min-width: 0;
+    line-height: 0;
+  }
+  /* a long status word ("No research rounds yet") wraps inside a narrow card instead of overflowing it */
+  #fr-labs .tile-status .status {
+    align-items: flex-start;
+    white-space: normal;
+  }
+  #fr-labs .tile-status .status-g {
+    margin-top: 1px;
+  }
+
+  #fr-labs .tile-name {
+    margin-top: var(--s-4);
+    font-size: var(--fs-lede);
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+    overflow-wrap: break-word;
+  }
+  #fr-labs .tile-name:lang(zh) {
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+  }
+  #fr-labs .tile-link {
+    color: inherit;
+  }
+  /* the whole tile is the link's hit area; the focus ring draws around the tile */
+  #fr-labs .tile-link::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: 1;
+  }
+  #fr-labs .tile-link:focus-visible {
+    outline: none;
+  }
+  #fr-labs .tile-link:focus-visible::after {
+    outline: 2px solid var(--glim);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  #fr-labs .tile-arrow {
+    margin-left: 0.3em;
+    font-size: 0.8em;
+    color: var(--fg-3);
+    transition:
+      transform var(--d-s) var(--ease-rise),
+      color var(--d-s) var(--ease-rise);
+  }
+  #fr-labs .tile:is(:hover, :focus-within) .tile-arrow {
+    color: var(--fg);
+    transform: translate(0.12em, -0.12em);
+  }
+
+  #fr-labs .tile-desc,
+  #fr-labs .tile-note {
+    font-size: var(--fs-small);
+    line-height: 1.5;
+    color: var(--fg-2);
+  }
+  #fr-labs .tile-desc:lang(zh) {
+    line-height: 1.7;
+  }
+
+  #fr-labs .tile-facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 0;
+    margin: auto 0 0;
+    padding: var(--s-4) 0 0;
+    list-style: none;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    color: var(--fg-3);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  #fr-labs .tile-fact {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+  }
+  #fr-labs .tile-fact + .tile-fact::before {
+    content: '';
+    width: 3px;
+    height: 3px;
+    margin-inline: 9px;
+    border-radius: 50%;
+    background: var(--line-ui);
+  }
+  #fr-labs .tile-fact--status .status {
+    gap: 6px;
+    color: var(--fg-2);
+  }
+  #fr-labs .tile-fact--status .status-g {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* ---- row (no JS, or the list view, from 640px) ------------------------------ */
+  @media (min-width: 640px) {
+    html:not([data-js]) #fr-labs .tile,
+    #fr-labs [data-view='list'] .tile {
+      display: grid;
+      grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+      grid-template-areas:
+        'code name status'
+        '. desc desc'
+        '. facts facts'
+        '. note note';
+      column-gap: var(--gap);
+      row-gap: var(--s-2);
+      align-items: baseline;
+      padding: var(--s-4) var(--s-5);
+    }
+    html:not([data-js]) #fr-labs .tile-top,
+    #fr-labs [data-view='list'] .tile-top {
+      display: contents;
+    }
+    html:not([data-js]) #fr-labs .tile-code,
+    #fr-labs [data-view='list'] .tile-code {
+      grid-area: code;
+    }
+    html:not([data-js]) #fr-labs .tile-status,
+    #fr-labs [data-view='list'] .tile-status {
+      grid-area: status;
+      justify-self: end;
+      line-height: 1.3;
+    }
+    /* same type size as the card: Flip morphs the box, never the text */
+    html:not([data-js]) #fr-labs .tile-name,
+    #fr-labs [data-view='list'] .tile-name {
+      grid-area: name;
+      margin: 0;
+    }
+    html:not([data-js]) #fr-labs .tile-desc,
+    #fr-labs [data-view='list'] .tile-desc {
+      grid-area: desc;
+    }
+    html:not([data-js]) #fr-labs .tile-facts,
+    #fr-labs [data-view='list'] .tile-facts {
+      grid-area: facts;
+      margin: 0;
+      padding-top: var(--s-1);
+    }
+    html:not([data-js]) #fr-labs .tile-note,
+    #fr-labs [data-view='list'] .tile-note {
+      grid-area: note;
+    }
+  }
+  @media (min-width: 1024px) {
+    html:not([data-js]) #fr-labs .tile,
+    #fr-labs [data-view='list'] .tile {
+      grid-template-columns: 4.5rem minmax(0, 16rem) minmax(0, 1fr) 13rem;
+      grid-template-areas:
+        'code name desc status'
+        '. name facts status'
+        '. name note status';
+    }
+    html:not([data-js]) #fr-labs .tile-status,
+    #fr-labs [data-view='list'] .tile-status {
+      justify-self: start;
+    }
+  }
+
+  @media (forced-colors: active) {
+    #fr-labs .tile {
+      border-color: CanvasText;
+    }
+    #fr-labs .tile-fact + .tile-fact::before {
+      forced-color-adjust: none;
+      background: CanvasText;
+    }
+  }
+</style>

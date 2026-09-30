@@ -1,6 +1,137 @@
 ---
-// STUB (F0-shell) — owner S5 replaces this file. Sub-component of FrRound (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// The record shelf of #fr-round (§4.4 fr.shelf.*, site law 5): the program's real failures, kept on record and shown
+// at the same size, weight and motion as the passes. Each item: status glyph, lab, what failed, the recorded status
+// (the dictionary's own words), and the source it was read from (the `src` of each fr.shelf.N entry).
+// The glyph is decorative here (aria-hidden): the words that follow it are the status.
+import Display from '@ui/Display.astro';
+import Status from '@ui/Status.astro';
+import type { StatusCode } from '@data/labs';
+import { links } from '@data/links';
+import { localeOf, tl, ts } from '../chrome/i18n';
+import { ghPath } from './parts';
+
+const locale = localeOf(Astro);
+const external = ts('a11y.external', locale);
+
+// fr.shelf.N = [lab, item, recorded status]; the glyph matches the status words, the source matches the entry's src.
+const SHELF: readonly { key: string; code: StatusCode; src: string }[] = [
+  { key: 'fr.shelf.1', code: 'fail', src: links.pulls.phys4 },
+  { key: 'fr.shelf.2', code: 'withdrawn', src: links.pulls.bio2 },
+  { key: 'fr.shelf.3', code: 'fail', src: links.pulls.chem1 },
+  { key: 'fr.shelf.4', code: 'fail', src: links.docs.govExpansion },
+];
+const items = SHELF.map((s) => {
+  const [lab = '', what = '', words = ''] = tl(s.key, locale);
+  return { ...s, lab, what, words };
+});
 ---
+<div class="shelf" data-shelf>
+  <Display k="fr.shelf.title" as="h3" size="h3" class="shelf-title" />
+  <ul class="shelf-list" role="list">
+    {
+      items.map((it) => (
+        <li class="shelf-item" data-shelf-item>
+          <span class="shelf-g" aria-hidden="true">
+            <Status code={it.code} quiet />
+          </span>
+          <span class="shelf-lab t-label">{it.lab}</span>
+          <span class="shelf-what">{it.what}</span>
+          <span class="shelf-words">{it.words}</span>
+          <a class="shelf-src link" href={it.src} rel="noopener">
+            {ghPath(it.src)}
+            <span class="sr-only">{external}</span>
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  .shelf {
+    margin-top: clamp(48px, 6vw, 80px);
+  }
+  :global(.rd[data-mode='pin']) .shelf {
+    margin-top: 0;
+  }
+  :global(.rd[data-mode='pin']) .shelf :global(.shelf-title) {
+    margin-bottom: var(--s-3);
+  }
+  :global(.rd[data-mode='pin']) .shelf-item {
+    padding: var(--s-3) 0 var(--s-2);
+  }
+  :global(.rd[data-mode='pin']) .shelf-src {
+    margin-top: var(--s-1);
+  }
+  .shelf :global(.shelf-title) {
+    margin-bottom: var(--s-5);
+  }
+
+  .shelf-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0 var(--gap);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 640px) {
+    .shelf-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .shelf-list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .shelf-item {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr);
+    column-gap: var(--s-3);
+    row-gap: var(--s-1);
+    align-content: start;
+    padding: var(--s-4) 0 var(--s-5);
+    border-top: 1px solid var(--line-ui);
+  }
+  .shelf-g {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    padding-top: 2px;
+    color: var(--fg);
+    line-height: 0;
+  }
+  .shelf-lab,
+  .shelf-what,
+  .shelf-words,
+  .shelf-src {
+    grid-column: 2;
+  }
+  .shelf-lab {
+    color: var(--fg-2);
+  }
+  .shelf-what {
+    font-size: var(--fs-body);
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--fg);
+  }
+  .shelf-words {
+    font-size: var(--fs-small);
+    line-height: 1.45;
+    color: var(--fg);
+  }
+  .shelf-src {
+    justify-self: start;
+    margin-top: var(--s-2);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.02em;
+    color: var(--fg-3);
+    overflow-wrap: anywhere;
+  }
+  .shelf-src:is(:hover, :focus-visible) {
+    color: var(--fg);
+  }
+</style>

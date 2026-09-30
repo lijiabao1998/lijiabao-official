@@ -1,7 +1,10 @@
 ---
-// Frontier (§3). SCAFFOLD (F0-shell) — owner S5. Sections in §3 order:
+// Frontier (§3, S5). Sections in §3 order:
 //   #fr-hero · #fr-round · #fr-rules · #fr-labs · #fr-math · #fr-review · #fr-gov · #fr-bounds · #fr-undone
 //   · nav#fr-next
+// All copy comes from the dictionary (`fr.*`, `lab.*`, `labs.*`); all numbers from src/data (facts, labs, links).
+// Motion keys: fr-hero, fr-round (the one pin on this page, ≤ 150%), fr-labs (Flip, lazy), fr-math; everything else
+// rises through the generic reveal ([data-rise]). No GL scene loads here: the canvas stays idle (§6.4).
 import Base from '../layouts/Base.astro';
 import FrHero from '../components/fr/FrHero.astro';
 import FrRound from '../components/fr/FrRound.astro';

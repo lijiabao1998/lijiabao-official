@@ -8,7 +8,9 @@
 //   data-rise="fade"    opacity only (0.48s)
 //
 // Never hides content that is already on screen: items in the first viewport are left alone unless CSS has
-// them hidden and the page is fresh (< 2.4s), so a slow runtime never makes visible text blink.
+// them hidden and the page is fresh (< 2.4s), so a slow runtime never makes visible text blink. Items already
+// scrolled past (restored scroll, #hash, back/forward) stay at rest too: nobody would see them arrive.
+// The runtime's fail-open (settle.ts) finishes anything in or above the viewport 2.5s after page-load.
 // Reduced motion: nothing moves (rest state = the server HTML). Don't put [data-rise] on elements your own
 // section module animates.
 
@@ -35,7 +37,9 @@ export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
     // one batch of reads before any write
     const fresh = pageAge() < 2400;
     const todo = items.filter((el) => {
-      if (!inView(el.getBoundingClientRect())) return true;
+      const r = el.getBoundingClientRect();
+      if (r.bottom <= 0) return false; // above the viewport: at rest
+      if (!inView(r)) return true;
       return fresh && getComputedStyle(el).opacity === '0';
     });
     if (!todo.length) return;

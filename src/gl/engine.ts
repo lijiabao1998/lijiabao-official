@@ -21,7 +21,7 @@ import { Guard, type GuardStep } from './core/guard';
 import { collectHoles, MAX_HOLES } from './core/holes';
 import { createLoop, rafClock } from './core/loop';
 import { recordLoss, watchLoss } from './core/loss';
-import { Probe, probeEligible } from './core/probe';
+import { Probe, probeEligible, type Verdict } from './core/probe';
 import { clearPrograms, enableParallel, onProgramError, pollPrograms } from './core/program';
 import { Pulse } from './core/pulse';
 import { newBox, newRect, readHoles, readRect, sizeCanvas, watchLayout } from './core/rects';
@@ -48,6 +48,8 @@ const SCENE_FILES = import.meta.glob<SceneModule>(['./scenes/field.ts', './scene
 const IDS: readonly string[] = ['field', 'portrait', 'grid'];
 /** Pointer reach around an anchor (§5.4: within 120px). */
 const REACH = 120;
+/** Inconclusive upgrade-probe attempts allowed per page before it gives up for that page. */
+const PROBE_TRIES = 3;
 
 /**
  * DPR caps (§6.0): full 1.75 desktop / 1.5 mobile; lite 1.5 (was 1: on a 2× screen a 1× canvas smears the soft
@@ -130,6 +132,8 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
   let lastState = '';
   let offs: Cleanup[] = [];
   let probeOff: Cleanup | null = null;
+  /** inconclusive probe attempts on this page (a noisy main thread): at most PROBE_TRIES */
+  let probeTries = 0;
   let visIO: IntersectionObserver | null = null;
   let nearIO: IntersectionObserver | null = null;
   let ro: ResizeObserver | null = null;
@@ -544,7 +548,7 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
       needClear = false;
       const busy = performance.now() - r0;
       if (continuous) guard.sample(dtMs, tier);
-      if (probe.active) probe.sample(dtMs, busy);
+      if (probe.active) probe.sample(dtMs, busy, continuous);
     } else if (needClear) {
       clearAll(gl);
       needClear = false;
@@ -592,23 +596,34 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
     return true;
   }
 
-  function scheduleProbe(root: ParentNode): void {
-    if (probeOff || probe.active) return;
-    const main = root instanceof Element ? root.closest('main') ?? root.querySelector('main') : null;
-    const home = (main ?? document.querySelector('main'))?.getAttribute('data-layout') === 'home';
-    if (!home || !probeEligible()) return;
+  // The upgrade test (core/probe.ts): on any page with a GL scene, after load + idle, only while the document is
+  // visible (a hidden tab's throttled rAF must never read as slowness: hiding cancels, showing reschedules).
+  function scheduleProbe(): void {
+    if (probeOff || probe.active || destroyed || probeTries >= PROBE_TRIES || !atts.length || !probeEligible()) return;
     probeOff = afterLoadIdle(() => {
       probeOff = null;
-      if (destroyed || !probeEligible() || !atts.length) return;
+      if (destroyed || probe.active || !gl || lost || broken || !atts.length || !probeEligible()) return;
+      if (document.visibilityState !== 'visible') return; // onVisibility reschedules it
       probe.start();
       wake();
     });
   }
 
-  function onProbe(promote: boolean | null): void {
-    if (promote === null) return; // inconclusive: may run again on a later home visit
-    if (promote && getTier() === 'lite') setPrefTier('full', 'auto', 'promoted');
-    else markProbe('lite');
+  function cancelProbe(): void {
+    probeOff?.();
+    probeOff = null;
+    probe.cancel();
+  }
+
+  function onProbe(v: Verdict): void {
+    if (v === 'pass') {
+      if (getTier() === 'lite') setPrefTier('full', 'auto', 'promoted');
+      else markProbe(getTier());
+    } else if (v === 'fail') markProbe('lite');
+    else {
+      probeTries++;
+      scheduleProbe(); // inconclusive (something else janked the page): again at the next idle
+    }
   }
 
   /* ------------------------------------------------------------------ input, visibility, loss */
@@ -670,10 +685,12 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
     if (document.hidden) {
       loop.stop();
       lastNow = 0;
+      cancelProbe(); // throttled or stopped frames are not a measurement
     } else {
       layoutDirty = 2;
       markAll();
       wake();
+      scheduleProbe();
     }
   }
 
@@ -838,7 +855,8 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
       }
       layoutDirty = 2;
       publish();
-      scheduleProbe(root);
+      probeTries = 0;
+      scheduleProbe();
     },
 
     detachAll(): void {
@@ -851,9 +869,7 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
         ro?.unobserve(a.el);
       }
       atts.length = 0;
-      probeOff?.();
-      probeOff = null;
-      probe.cancel();
+      cancelProbe();
       // the persisted canvas must never show the old page's glimmers over the new one
       if (gl && !lost) clearAll(gl);
       needClear = false;

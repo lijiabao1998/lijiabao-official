@@ -2,7 +2,9 @@
 //
 //   columns   the 75 lattice columns (n = 2..76, n = 75 empty) fill left → right with the scroll:
 //             `top 75%` → `bottom 70%` of the plot, scrub 0.5, each column growing up from its baseline.
-//   counter   the verified count runs as a Geist Mono odometer, left digit first (prim.tick), once.
+//   counter   the verified count runs as a Geist Mono odometer, left digit first (prim.tick), once — armed only
+//             while it is still below the fold at setup (a reload / #hash / back that lands on it keeps the number
+//             as it is: no 000,000 on screen waiting for a scroll).
 //   ring      the n = 75 ring's outline breathes 0.4 ↔ 1 on a 2.4s cycle (CSS, Lattice.astro) — switched on only
 //             while the figure is in view, so it stops off-screen; never under reduced motion or in the static tier.
 // Reduced motion: nothing moves (every column drawn, the number final, the ring still). Works without engine/Lenis.
@@ -36,7 +38,8 @@ export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
       );
     }
 
-    if (odo) ST.create({ trigger: odo, start: 'top 85%', once: true, animation: prim.tick(odo) });
+    if (odo && odo.getBoundingClientRect().top >= window.innerHeight)
+      ST.create({ trigger: odo, start: 'top 85%', once: true, animation: prim.tick(odo) });
 
     if (ring && plot) {
       ST.create({

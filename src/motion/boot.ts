@@ -9,6 +9,14 @@
 // same-origin link, hashes included, and jumps via location.href; Lenis 1.3.26 does not preventDefault, so both
 // would scroll at once. The native jump (header offset = CSS scroll-padding-top) keeps history, Back and the focus
 // start point correct; Lenis resyncs from the native scroll event.
+//
+// Entrances never get stuck (P3, settle.ts): after the sections set up, Lenis re-measures and ScrollTrigger refreshes
+// AND updates (timeline-attached triggers take their first real update only then), so entrances whose start is
+// already behind (restored scroll, #hash, back/forward) enter at once; a late webfont re-measures ('loadingdone');
+// the fail-open runs 2.5s after astro:page-load; at the very end of the page, entrances that can never be reached play.
+// When rAF is starved (hidden / occluded window), a timer ticks gsap.ticker itself (real elapsed time,
+// lagSmoothing(0)) and delivers the scroll events the browser holds back, so entrances still enter and finish
+// instead of freezing mid-way.
 
 import { gsap } from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
@@ -17,11 +25,17 @@ import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
 import type { Clock, EngineOptions, GlimmerEngine, Tier } from '../gl/types';
 import type { TierSrc } from '../lib/events';
-import { isFine, isMobile, listen, locale, MQ, mq, type Cleanup } from '../lib/dom';
+import { isFine, isMobile, listen, locale, MQ, mq, pageAge, type Cleanup } from '../lib/dom';
 import { endIntro, getTier, isReduced } from '../lib/prefs';
 import { registerEases } from './eases';
 import { createPrimitives } from './primitives';
 import { intro, load, run, runModule, type BaseCtx, type PageMotion, type Primitives } from './registry';
+import { settle } from './settle';
+
+/** §5.1 fail-open: 2.5s after astro:page-load, nothing in or above the viewport stays in a before-state. */
+const FAIL_OPEN_MS = 2500;
+/** How often the starved-rAF pump looks at the ticker. */
+const PUMP_MS = 400;
 
 export type EngineFactory = (o: EngineOptions) => GlimmerEngine;
 
@@ -73,6 +87,7 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
   let introCleanup: Cleanup | null = null;
   let seq = 0;
   let refreshTimer = 0;
+  let failTimer = 0;
   const offs: Cleanup[] = [];
 
   const lenisRaf = (time: number): void => lenis?.raf(time * 1000);
@@ -80,6 +95,44 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
     ScrollTrigger.update();
     engine?.invalidate?.();
   };
+
+  /** Re-measure every trigger (Lenis first: its limit feeds nothing in ScrollTrigger, but keep them in step). */
+  function remeasure(): void {
+    lenis?.resize();
+    ScrollTrigger.refresh();
+    // a timeline-attached trigger swaps in its real update() on the refresh's own pass: update once more so
+    // entrances whose start is already behind enter now instead of on the next scroll event
+    ScrollTrigger.update();
+    engine?.invalidate?.();
+  }
+
+  const settlePage = (): void => {
+    try {
+      if (page) settle(ScrollTrigger);
+    } catch {
+      /* a section callback threw: that entrance stays as it is */
+    }
+  };
+
+  // A timer looks at the ticker and the scroll position every PUMP_MS:
+  // - rAF starved (hidden or occluded window: no frames, so no GSAP ticks): it ticks gsap itself (real elapsed time +
+  //   lagSmoothing(0): each tick lands where the animations should be by now). The browser also holds scroll events
+  //   until its next frame, so a scroll made meanwhile (a programmatic jump, a #hash) would reach no trigger: it
+  //   delivers one;
+  // - the reader reached the very end of the page: entrances whose start line can never be crossed play now.
+  let pumpFrame = -1;
+  let pumpY = 0;
+  const pump = window.setInterval(() => {
+    const starved = gsap.ticker.frame === pumpFrame;
+    if (scrollY !== pumpY) {
+      if (starved) dispatchEvent(new Event('scroll'));
+      else if (scrollY >= ScrollTrigger.maxScroll(window) - 2) settlePage();
+    }
+    if (starved) gsap.ticker.tick();
+    pumpFrame = gsap.ticker.frame;
+    pumpY = scrollY;
+  }, PUMP_MS);
+  offs.push(() => clearInterval(pump));
 
   function makeLenis(): void {
     if (lenis || getTier() === 'static' || isReduced() || !mq(MQ.pointerFine).matches) return;
@@ -113,8 +166,8 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
   function refreshSoon(): void {
     window.clearTimeout(refreshTimer);
     refreshTimer = window.setTimeout(() => {
-      ScrollTrigger.refresh();
-      engine?.invalidate?.();
+      if (page) remeasure();
+      else engine?.invalidate?.();
     }, 150);
   }
 
@@ -176,14 +229,15 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
       if (introMod && root.hasAttribute('data-intro')) introCleanup = runModule(introMod, main, base);
       else endIntro();
       page = run(jobs, base);
-      ScrollTrigger.refresh();
-      lenis?.resize();
-      engine?.invalidate?.();
+      remeasure(); // entrances whose start is already behind enter now (a late webfont: 'loadingdone' below)
+      // the fail-open (§5.1), 2.5s after page-load
+      failTimer = window.setTimeout(() => my === seq && settlePage(), Math.max(600, FAIL_OPEN_MS - pageAge()));
     },
 
     teardownPage(): void {
       seq++;
       window.clearTimeout(refreshTimer);
+      window.clearTimeout(failTimer);
       if (lenis) lenis.scrollTo(lenis.actualScroll, { immediate: true, force: true }); // kill inertia
       introCleanup?.();
       introCleanup = null;

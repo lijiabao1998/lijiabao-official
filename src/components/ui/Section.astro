@@ -1,0 +1,102 @@
+---
+// <Section id="not" motion="not" label="not.label"> … </Section>   (§9.3)
+// Renders the section landmark with its registry key (data-motion) and, optionally, the section label.
+// Section ids are identical across locales (the language switch keeps the hash). The heading lives in the
+// slot and is the owner's; when a section has no title key, pass labelAs="h2" and the label IS the heading
+// (id = `${id}-title`, referenced by aria-labelledby). Section CSS stays scoped in the owner's component.
+import { localeOf, ts } from '../chrome/i18n';
+
+interface Props {
+  id: string;
+  /** motion registry key (motion/registry.ts `sections`) */
+  motion?: string;
+  /** dictionary key of the section label */
+  label?: string;
+  /** render the label as the section heading */
+  labelAs?: 'p' | 'h2';
+  /** id of the element that names the section (sets aria-labelledby) */
+  labelledby?: string;
+  /** element: `nav` for the next-case links */
+  as?: 'section' | 'nav' | 'div';
+  /** skip the inner .wrap container (full-bleed stages, pinned figures) */
+  bleed?: boolean;
+  /** drop the default vertical section padding */
+  flush?: boolean;
+  class?: string;
+  [key: `data-${string}`]: string | number | boolean | undefined;
+}
+
+const {
+  id,
+  motion,
+  label,
+  labelAs = 'p',
+  labelledby,
+  as: Tag = 'section',
+  bleed = false,
+  flush = false,
+  class: cls,
+  ...rest
+} = Astro.props;
+const locale = localeOf(Astro);
+const labelText = label ? ts(label, locale) : '';
+const titleId = `${id}-title`;
+const LabelTag = labelAs;
+const named = labelledby ?? (label && labelAs === 'h2' ? titleId : undefined);
+---
+<Tag
+  id={id}
+  class:list={['sec', { 'sec--flush': flush }, cls]}
+  data-motion={motion}
+  aria-labelledby={named}
+  {...rest}
+>
+  {
+    bleed ? (
+      <Fragment>
+        {labelText && (
+          <div class="wrap">
+            <LabelTag id={labelAs === 'h2' ? titleId : undefined} class="sec-label t-label" data-rise>
+              <span class="sec-rule" aria-hidden="true" />
+              <span>{labelText}</span>
+            </LabelTag>
+          </div>
+        )}
+        <slot />
+      </Fragment>
+    ) : (
+      <div class="wrap">
+        {labelText && (
+          <LabelTag id={labelAs === 'h2' ? titleId : undefined} class="sec-label t-label" data-rise>
+            <span class="sec-rule" aria-hidden="true" />
+            <span>{labelText}</span>
+          </LabelTag>
+        )}
+        <slot />
+      </div>
+    )
+  }
+</Tag>
+
+<style>
+  .sec {
+    position: relative;
+    padding-block: var(--sec-pad);
+  }
+  .sec--flush {
+    padding-block: 0;
+  }
+  .sec-label {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin-bottom: var(--s-7);
+    color: var(--fg-3);
+  }
+  .sec-rule {
+    flex: none;
+    width: 24px;
+    height: 1px;
+    background: var(--line-ui);
+  }
+</style>

@@ -1,0 +1,100 @@
+/* ==========================================================================
+   print.css — §2.1: canvas and posters hidden, black on white, tables print.
+   ========================================================================== */
+
+@media print {
+  :root {
+    --bg: #fff;
+    --bg-2: #fff;
+    --fg: #000;
+    --fg-2: #000;
+    --fg-3: #333;
+    --line: #999;
+    --line-ui: #666;
+    --glim: #000;
+    color-scheme: light;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  #gl,
+  .poster,
+  .skip,
+  #top nav,
+  .hud,
+  .lang,
+  .menu-btn,
+  .menu,
+  #tier,
+  .js-only,
+  [data-print-hide],
+  [data-tick] {
+    display: none !important;
+  }
+
+  #top {
+    position: static !important;
+    background: none !important;
+    border: 0 !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* odometers print their real <data> text */
+  .num-v {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    clip-path: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+  }
+
+  /* details: tables print even when collapsed on screen */
+  details::details-content {
+    content-visibility: visible;
+    display: block;
+  }
+  details > summary {
+    display: none;
+  }
+
+  table {
+    page-break-inside: auto;
+  }
+  tr,
+  figure {
+    break-inside: avoid;
+  }
+  th,
+  td {
+    border-bottom: 1px solid #999;
+    padding: 2pt 6pt 2pt 0;
+  }
+
+  .sec {
+    padding-block: 18pt !important;
+  }
+
+  a[href^='http']::after {
+    content: ' (' attr(href) ')';
+    font-size: 0.8em;
+    word-break: break-all;
+  }
+
+  @page {
+    margin: 16mm;
+  }
+}

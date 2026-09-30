@@ -7,8 +7,16 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "node scripts/glyphs.mjs && node scripts/pack-commits.mjs && node scripts/sample-portrait.mjs",
     "build": "astro build",
+    "postbuild": "node scripts/locale-404.mjs && node scripts/headers.mjs",
+    "build:prod": "npm run check:src && npm run build && npm run check:dist",
+    "check": "npm run check:src && npm run check:dist",
+    "check:src": "node scripts/check-dict.mjs && node scripts/check-copy.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "test": "vitest run --passWithNoTests",
     "preview": "astro preview",
+    "deploy:dry": "wrangler deploy --dry-run",
     "astro": "astro"
   },
   "dependencies": {
@@ -21,7 +29,9 @@
   },
   "private": true,
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "sharp": "^0.35.5",
+    "typescript": "^6.0.3",
     "vitest": "^5.0.3",
     "wrangler": "^4.144.0"
   }

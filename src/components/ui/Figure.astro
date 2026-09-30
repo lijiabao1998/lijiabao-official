@@ -1,0 +1,257 @@
+---
+// <Figure id="fig-record" kind="DATA" unit="commit" scene="field" poster="/posters/field.svg"
+//         caption="hero.fig.caption" table={CommitTable}> …slot… </Figure>        (§9.3)
+//
+// Structure (figcaption first, so the figure is named by its chip + legend + caption, not by its table):
+//   figure#id.fig[data-kind]
+//     figcaption.fig-cap   → head row (title, chip, legend, slot "meta") + caption paragraph + slot "caption"
+//     div.fig-frame        → 8px corner ticks; on hover / focus-within they extend to 14px in amber
+//       div.fig-stage[data-gl-scene][data-gl-src]  → poster <img class="poster"> + slot "poster" + default slot
+//     slot "foot"          → notes under the stage (axis notes, sources)
+//     details.fig-table    → the real <table> (prop `table` component or slot "table")
+// Posters toggle in CSS (tiers.css): shown unless html[data-gl="ok"]; <img loading="lazy"> so hidden posters
+// are never fetched. The canvas never covers text: owners mark captions / labels inside the stage [data-gl-hole].
+import Chip from './Chip.astro';
+import Legend from './Legend.astro';
+import { localeOf, ts, type Vars } from '../chrome/i18n';
+
+interface Props {
+  id: string;
+  kind: 'DATA' | 'SCHEMATIC' | 'PORTRAIT';
+  /** DATA unit for the generic legend `1 ● = k unit` */
+  unit?: 'commit' | 'pass' | 'card';
+  /** records per glimmer (always 1 in v1) */
+  k?: number;
+  /** figure-specific legend key (overrides the generic legend) */
+  legend?: string;
+  /** index of the amber glyph inside a figure-specific legend */
+  legendAmber?: number;
+  /** GL scene drawn into the stage */
+  scene?: 'field' | 'portrait' | 'grid';
+  /** gl-manifest key for the scene's binary (defaults to the scene id) */
+  src?: string;
+  /** static poster URL (shown in the static tier, with no JS, on GL loss) */
+  poster?: string;
+  posterWidth?: number;
+  posterHeight?: number;
+  /** dictionary key of the visible figure title */
+  title?: string;
+  /** dictionary key of the caption */
+  caption?: string;
+  captionVars?: Vars;
+  /** component that renders the full data table (inside <details>), e.g. `table={CommitTable}` */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- any Astro component
+  table?: any;
+  tableProps?: Record<string, unknown>;
+  /** CSS aspect-ratio of the stage, e.g. "553 / 942" (prevents CLS) */
+  aspect?: string;
+  /** keyboard-inspectable stage: tabindex=0, role=group, described by a11y.fig.hint */
+  interactive?: boolean;
+  /** snapshot date for the DATA chip definition */
+  date?: string;
+  class?: string;
+  stageClass?: string;
+}
+
+const {
+  id,
+  kind,
+  unit,
+  k = 1,
+  legend,
+  legendAmber,
+  scene,
+  src,
+  poster,
+  posterWidth,
+  posterHeight,
+  title,
+  caption,
+  captionVars,
+  table: Table,
+  tableProps = {},
+  aspect,
+  interactive = false,
+  date,
+  class: cls,
+  stageClass,
+} = Astro.props;
+
+const locale = localeOf(Astro);
+const titleText = title ? ts(title, locale) : '';
+const captionText = caption ? ts(caption, locale, captionVars) : '';
+const showLegend = Boolean(legend || (kind === 'DATA' && unit));
+const hasTable = Boolean(Table) || Astro.slots.has('table');
+const hintId = `${id}-hint`;
+const titleId = `${id}-title`;
+const capId = `${id}-cap`;
+---
+<figure id={id} class:list={['fig', cls]} data-kind={kind}>
+  <figcaption id={capId} class="fig-cap">
+    <div class="fig-head">
+      {titleText && <span id={titleId} class="fig-title t-label">{titleText}</span>}
+      <Chip kind={kind} for={id} date={date} />
+      {showLegend && <Legend unit={unit} k={k} legend={legend} amber={legendAmber} />}
+      <slot name="meta" />
+    </div>
+    {captionText && <p class="fig-caption t-small">{captionText}</p>}
+    <slot name="caption" />
+  </figcaption>
+
+  <div class="fig-frame">
+    <div
+      class:list={['fig-stage', stageClass]}
+      style={aspect ? `aspect-ratio:${aspect}` : undefined}
+      data-gl-scene={scene}
+      data-gl-src={scene ? (src ?? scene) : undefined}
+      tabindex={interactive ? 0 : undefined}
+      role={interactive ? 'group' : undefined}
+      aria-labelledby={interactive ? (titleText ? titleId : capId) : undefined}
+      aria-describedby={interactive ? hintId : undefined}
+    >
+      {
+        poster && (
+          <img
+            class="poster"
+            src={poster}
+            alt=""
+            width={posterWidth}
+            height={posterHeight}
+            loading="lazy"
+            decoding="async"
+          />
+        )
+      }
+      <slot name="poster" />
+      <slot />
+    </div>
+    {interactive && <p id={hintId} class="sr-only">{ts('a11y.fig.hint', locale)}</p>}
+  </div>
+
+  <slot name="foot" />
+
+  {
+    hasTable && (
+      <details class="fig-table">
+        <summary class="fig-summary t-label">
+          <span class="fig-summary-mark" aria-hidden="true" />
+          {ts('fig.table', locale)}
+        </summary>
+        <div class="fig-table-body">
+          {Table && <Table {...tableProps} />}
+          <slot name="table" />
+        </div>
+      </details>
+    )
+  }
+</figure>
+
+<style>
+  .fig {
+    position: relative;
+    display: grid;
+    gap: var(--s-4);
+    margin: 0;
+  }
+  .fig-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--s-2) var(--s-4);
+  }
+  .fig-title {
+    color: var(--fg-2);
+  }
+  .fig-caption {
+    margin-top: var(--s-3);
+    max-width: 60ch;
+    color: var(--fg-2);
+  }
+  .fig-caption:lang(zh) {
+    max-width: 38em;
+  }
+
+  /* corner ticks: four L-shapes drawn with eight 1px gradients; --tk / --tc animate via @property */
+  .fig-frame {
+    --tk: 8px;
+    --tc: var(--fg-3);
+    position: relative;
+    padding: 1px;
+    background:
+      linear-gradient(var(--tc), var(--tc)) 0 0 / var(--tk) 1px no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 0 0 / 1px var(--tk) no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 100% 0 / var(--tk) 1px no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 100% 0 / 1px var(--tk) no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 0 100% / var(--tk) 1px no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 0 100% / 1px var(--tk) no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 100% 100% / var(--tk) 1px no-repeat,
+      linear-gradient(var(--tc), var(--tc)) 100% 100% / 1px var(--tk) no-repeat;
+    transition:
+      --tk var(--d-s) var(--ease-rise),
+      --tc var(--d-s) var(--ease-rise);
+  }
+  .fig:is(:hover, :focus-within) .fig-frame {
+    --tk: 14px;
+    --tc: var(--glim);
+  }
+  .fig-stage {
+    position: relative;
+    width: 100%;
+    min-height: 1px;
+  }
+  .fig-stage:focus-visible {
+    outline-offset: 6px;
+  }
+  .fig-stage :global(.poster) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .fig-table {
+    border-top: 1px solid var(--line);
+  }
+  .fig-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: var(--hit);
+    color: var(--fg-2);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  .fig-summary:hover,
+  .fig-summary:focus-visible {
+    color: var(--fg);
+  }
+  .fig-summary-mark {
+    position: relative;
+    width: 9px;
+    height: 9px;
+  }
+  .fig-summary-mark::before,
+  .fig-summary-mark::after {
+    content: '';
+    position: absolute;
+    inset: 4px 0 auto;
+    height: 1px;
+    background: currentColor;
+    transition: transform var(--d-s) var(--ease-rise);
+  }
+  .fig-summary-mark::after {
+    transform: rotate(90deg);
+  }
+  .fig-table[open] .fig-summary-mark::after {
+    transform: rotate(0deg);
+  }
+  .fig-table-body {
+    padding-top: var(--s-3);
+  }
+
+  @media (forced-colors: active) {
+    .fig-frame {
+      --tc: CanvasText;
+    }
+  }
+</style>

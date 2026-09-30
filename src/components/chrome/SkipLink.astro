@@ -1,0 +1,6 @@
+---
+// First focusable element on every page (§3, §8).
+import { localeOf, ts } from './i18n';
+const locale = localeOf(Astro);
+---
+<a class="skip" href="#main">{ts('a11y.skip', locale)}</a>

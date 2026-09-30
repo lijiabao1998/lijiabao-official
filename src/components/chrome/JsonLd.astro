@@ -1,0 +1,61 @@
+---
+// JSON-LD (§3 Head): home = Person (+ WebSite); case pages = the Person plus one SoftwareSourceCode per repo
+// with its codeRepository. No jobTitle (owner decision). The 404 carries none.
+// alternateName keeps the other written forms of the name and the handle (build-overrides §1).
+import { GITHUB_PROFILE, GITHUB_USER } from '@data/links';
+import { REPOS } from '@data/repos';
+import type { Locale } from '@i18n/types';
+import { PAGE_PATH, localePath, ts, type PageId } from './i18n';
+
+interface Props {
+  locale: Locale;
+  page: PageId;
+  /** extra nodes appended to the @graph */
+  extra?: Record<string, unknown>[];
+}
+
+const { locale, page, extra = [] } = Astro.props;
+const site = (Astro.site ?? new URL('https://lijiabao.dev')).href.replace(/\/$/, '');
+const personId = `${site}/#person`;
+const path = PAGE_PATH[page];
+
+const person = {
+  '@type': 'Person',
+  '@id': personId,
+  name: ts('site.name', locale),
+  alternateName: ['李家宝', '李家寳', '李家寶', 'Li Jiabao', GITHUB_USER],
+  url: `${site}/`,
+  sameAs: [GITHUB_PROFILE],
+  homeLocation: { '@type': 'Place', name: ts('site.location', locale) },
+};
+
+const graph: Record<string, unknown>[] = [];
+if (page === 'home') {
+  graph.push(person, {
+    '@type': 'WebSite',
+    '@id': `${site}/#website`,
+    url: `${site}${localePath(locale, '/')}`,
+    name: 'lijiabao.dev',
+    inLanguage: locale,
+    author: { '@id': personId },
+  });
+} else if (page === 'gt' || page === 'fr') {
+  graph.push(person);
+  for (const r of REPOS.filter((x) => x.group === page)) {
+    graph.push({
+      '@type': 'SoftwareSourceCode',
+      name: r.repo,
+      alternateName: ts(r.nameKey, locale),
+      codeRepository: r.url,
+      url: r.url,
+      author: { '@id': personId },
+      ...(path ? { isPartOf: { '@type': 'WebPage', url: `${site}${localePath(locale, path)}` } } : {}),
+    });
+  }
+}
+graph.push(...extra);
+
+// `<` is escaped so no string can close the script element.
+const json = graph.length ? JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c') : '';
+---
+{json && <script type="application/ld+json" set:html={json} />}

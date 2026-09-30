@@ -1,0 +1,24 @@
+---
+// Home (§3). The section order is FIXED here (F0); owners fill their components, never reorder.
+//   1 #hero (S1) · 2 #work (S2) · 3 #method (S2) · 4 #not (S2) · 5 #numbers (S2)
+//   6 #vision (S3) · 7 #about (S3) · 8 #contact (S2) · footer (F0, in Base)
+import Base from '../layouts/Base.astro';
+import Hero from '../components/home/Hero.astro';
+import Work from '../components/home/Work.astro';
+import Method from '../components/home/Method.astro';
+import Not from '../components/home/Not.astro';
+import Numbers from '../components/home/Numbers.astro';
+import Vision from '../components/home/Vision.astro';
+import About from '../components/home/About.astro';
+import Contact from '../components/home/Contact.astro';
+---
+<Base page="home">
+  <Hero />
+  <Work />
+  <Method />
+  <Not />
+  <Numbers />
+  <Vision />
+  <About />
+  <Contact />
+</Base>

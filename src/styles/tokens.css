@@ -1,0 +1,136 @@
+/* ==========================================================================
+   tokens.css — §2 visual system. Dark only, one accent. Flat surfaces;
+   all depth comes from points of light. Nothing here renders by itself.
+   ========================================================================== */
+
+@property --tk {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 8px;
+}
+@property --tc {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #827f79;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* ---- colour (§2.1; ratios vs --bg / --bg-2) ---------------------------- */
+  --bg: #0b0b0c;
+  --bg-2: #131315;
+  --fg: #edebe6;      /* 16.51 / 15.58 */
+  --fg-2: #a8a59e;    /*  8.00 /  7.55 */
+  --fg-3: #827f79;    /*  4.93 /  4.65  — >= 12px only */
+  --line: #2a2a2d;    /* decorative hairlines; never the only carrier of meaning */
+  --line-ui: #6a6964; /* control borders (WCAG 1.4.11) */
+  --glim: #ffb547;    /* the glimmer: scan head, focus, selected, latest commit */
+  --on-glim: #0b0b0c;
+  --bg-veil: rgb(11 11 12 / 0.92); /* header after scroll */
+  --gl-alpha: 1;      /* multiplied into GL output (prefers-contrast halves it) */
+
+  /* ---- families (§2.2) ---------------------------------------------------- */
+  /* The Fonts API variables carry no generic fallback, so CJK falls through in order.
+     On /en/ the Noto variables are not emitted: var() fallbacks keep the stack valid. */
+  --cjk-system: 'PingFang TC', 'Noto Sans CJK TC', 'Microsoft JhengHei', sans-serif;
+  --ff-display: var(--font-display, sans-serif), var(--font-cjk-hero, var(--cjk-system)),
+    var(--font-cjk-display, var(--cjk-system)), var(--cjk-system);
+  --ff-body: var(--font-display, sans-serif), var(--cjk-system);
+  --ff-mono: var(--font-mono, ui-monospace), ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+    var(--cjk-system);
+
+  /* ---- fluid scale, 360 → 1600 px (§2.2) --------------------------------- */
+  --fs-xl: clamp(4rem, 1.3871rem + 11.613vw, 13rem);
+  --fs-l: clamp(2.75rem, 1.0806rem + 7.419vw, 8.5rem);
+  --fs-m: clamp(2rem, 0.9839rem + 4.516vw, 5.5rem);
+  --fs-num: clamp(2.25rem, 1.1613rem + 4.839vw, 6rem);
+  --fs-s: clamp(1.625rem, 1.2258rem + 1.774vw, 3rem);
+  --fs-h3: clamp(1.3125rem, 1.1129rem + 0.887vw, 2rem);
+  --fs-lede: clamp(1.125rem, 1.0161rem + 0.484vw, 1.5rem);
+  --fs-body: clamp(1rem, 0.9637rem + 0.161vw, 1.125rem);
+  --fs-small: clamp(0.875rem, 0.8569rem + 0.081vw, 0.9375rem);
+  --fs-mono: clamp(0.75rem, 0.7319rem + 0.081vw, 0.8125rem);
+
+  /* weights: lit = rest + 200; dim only during scan / scroll-out */
+  --w-dim: 160;
+  --w-body: 400;
+  --w-mono: 500;
+  --w-num: 300;
+  --w-h3: 560;
+
+  /* ---- grid, spacing, measure (§2.3) ------------------------------------- */
+  --bl: 8px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+  --s-9: 96px;
+  --s-10: 128px;
+  --s-11: 192px;
+
+  --maxw: 1600px;
+  --cols: 4;
+  --gutter: 16px;
+  --gap: 12px;
+  --sec-pad: clamp(96px, 12vw, 192px);
+  --measure-zh: 36em;
+  --measure-en: 34em;
+  --measure: var(--measure-zh);
+  --lane-h: clamp(12px, 2.2svh, 22px);
+  --header-h: 64px;
+  --hit: 44px;   /* primary / touch targets */
+  --hit-min: 24px;
+
+  /* ---- motion (§5.1) ----------------------------------------------------- */
+  --ease-rise: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-weigh: cubic-bezier(0.45, 0, 0.15, 1);
+  --ease-scan: cubic-bezier(0.65, 0, 0.25, 1);
+  --ease-snap: cubic-bezier(0.8, 0, 0.1, 1);
+  --ease-exit: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-settle: cubic-bezier(0.3, 1.4, 0.55, 1);
+  --d-xs: 120ms;
+  --d-s: 240ms;
+  --d-m: 480ms;
+  --d-l: 800ms;
+  --d-xl: 1200ms;
+
+  /* figure corner ticks (§2.3): animated through @property --tk / --tc */
+  --tk: 8px;
+  --tc: var(--fg-3);
+}
+
+:root:lang(en) {
+  --measure: var(--measure-en);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --cols: 8;
+    --gutter: 24px;
+    --gap: 16px;
+    --header-h: 72px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --cols: 12;
+    --gutter: clamp(32px, 2.5vw, 56px);
+    --gap: clamp(16px, 1.25vw, 24px);
+  }
+}
+
+/* §2.1 prefers-contrast: more */
+@media (prefers-contrast: more) {
+  :root {
+    --fg-2: var(--fg);
+    --fg-3: var(--fg);
+    --line: var(--line-ui);
+    --gl-alpha: 0.5;
+  }
+}

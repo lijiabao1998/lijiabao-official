@@ -1,0 +1,45 @@
+---
+// <T k="method.undone" as="p" /> — renders one dictionary value (spec §9.3).
+// - P/PE gating and feature flags via resolve(): nothing renders when the value is null or ''.
+// - `{fact.key}` numbers are formatted for the page locale; pass `vars` for `{name}` placeholders.
+// - string[] renders as lines joined by <br>; `backticks` render as <code>; Seg[] segments get
+//   their own lang/dir span; a value that is one language segment puts lang/dir on the element.
+// - Han ↔ Latin seams between runs get an explicit space (compressHTML strips template whitespace).
+// - Draft builds (PUBLIC_DRAFT=1) add data-copy + data-copy-status="proposed" to unapproved P/PE.
+import type { HTMLAttributes, HTMLTag } from 'astro/types';
+import type { Key, Locale, Seg } from '../../i18n/types.ts';
+import { DRAFT, fill, langOf, linesOf, localeOf, pick, resolve, runsOf, type Run, type Vars } from '../../i18n/t.ts';
+
+type Props = HTMLAttributes<'span'> & {
+  /** Dictionary key. */
+  k: Key;
+  /** Element to render (default span). */
+  as?: HTMLTag;
+  /** Values for `{name}` placeholders. */
+  vars?: Vars;
+  /** Override the page locale. */
+  locale?: Locale;
+};
+
+const { k, as = 'span', vars, locale: forced, lang: langAttr, dir: dirAttr, ...attrs } = Astro.props;
+const locale: Locale = forced ?? localeOf(Astro);
+const r = resolve(k);
+const val = r ? fill(pick(r.entry, locale), locale, vars, r.key) : null;
+const whole = langOf(val);
+let lines: Run[][] = [];
+if (val !== null && val !== '') {
+  lines = whole
+    ? [runsOf(((val as Seg[])[0] as { text: string }).text)]
+    : linesOf(val).map((line) => runsOf(line));
+}
+const Tag = as;
+---
+{lines.length > 0 && (
+  <Tag
+    {...attrs}
+    lang={whole?.lang ?? langAttr}
+    dir={whole?.dir ?? dirAttr}
+    data-copy={DRAFT && r ? r.key : undefined}
+    data-copy-status={r?.proposed ? 'proposed' : undefined}
+  >{lines.map((runs, i) => (<Fragment>{i > 0 && <br />}{runs.map((run) => run.code ? <code lang={run.lang} dir={run.dir}>{run.text}</code> : run.lang ? <span lang={run.lang} dir={run.dir}>{run.text}</span> : run.text)}</Fragment>))}</Tag>
+)}

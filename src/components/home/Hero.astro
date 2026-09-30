@@ -1,0 +1,52 @@
+---
+// STUB (F0-shell) — owner S1 replaces the internals. Keep the contract: <Section id="hero" motion="hero">
+// holding the page's only h1 (name small + hero line display), then sub, meta, quick links, figure#fig-record
+// (GL field, DATA) and the scroll cue (§3 row 1). motion.css already holds the §5.2 intro before-states:
+// [data-weigh="scan"], [data-intro-line], [data-intro-rise], [data-intro-dot].
+import Section from '@ui/Section.astro';
+import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import { localeOf, localePath } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+---
+<Section id="hero" motion="hero" labelledby="hero-title">
+  <h1 id="hero-title" class="hero-h1">
+    <T k="hero.name" class="hero-name t-s" />
+    <Display k="hero.line" size="xl" animate hole weigh="scan" />
+  </h1>
+  <T k="hero.sub" as="p" class="hero-sub t-lede measure" />
+  <p class="hero-meta t-label c-fg-3">
+    <T k="hero.meta.repos" />
+    <span aria-hidden="true">{' · '}</span>
+    <T k="hero.meta.snapshot" />
+  </p>
+  <p class="hero-quick cluster">
+    <a class="link" href={localePath(locale, '/glimmertown/')}><T k="hero.quick.gt" /></a>
+    <a class="link" href={localePath(locale, '/frontier/')}><T k="hero.quick.fr" /></a>
+  </p>
+</Section>
+
+<style>
+  .hero-h1 {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    margin-top: var(--s-8);
+  }
+  /* T / Display are child components: reach their roots with :global() */
+  .hero-h1 :global(.hero-name) {
+    color: var(--fg-2);
+  }
+  :global(.hero-sub) {
+    margin-top: var(--s-7);
+    color: var(--fg-2);
+  }
+  .hero-meta {
+    margin-top: var(--s-5);
+  }
+  .hero-quick {
+    margin-top: var(--s-5);
+    gap: var(--s-5);
+  }
+</style>

@@ -1,0 +1,224 @@
+---
+// fieldset#tier (§3, §7): the only tier radio group on the site — native radios, so arrow keys work.
+// Calls prefs.setTier / clearTier (lib/prefs); never imports the engine. With no JS it is replaced by `tier.nojs`.
+// SSR checks `static` (the SSR tier); the script syncs to <html data-tier> on every page load.
+import { localeOf, tpl, ts } from './i18n';
+
+const locale = localeOf(Astro);
+const tiers = ['full', 'lite', 'static'] as const;
+---
+<div class="tier">
+  <fieldset
+    id="tier"
+    class="tier-set js-only"
+    data-tier-set
+    data-parity-ignore
+    data-i18n-changed={tpl('a11y.tier.changed', locale, ['tier'])}
+  >
+    <legend class="t-label c-fg-3 tier-legend">{ts('tier.legend', locale)}</legend>
+    <div class="tier-opts">
+      {
+        tiers.map((tier) => (
+          <div class="tier-opt">
+            <label class="tier-label">
+              <input
+                class="tier-input"
+                type="radio"
+                name="lj-tier"
+                value={tier}
+                checked={tier === 'static'}
+                aria-describedby={`tier-${tier}-desc`}
+                data-label={ts(`tier.${tier}`, locale)}
+              />
+              <span class="tier-chip">
+                <span class="tier-glyph" aria-hidden="true" />
+                <span class="tier-name">{ts(`tier.${tier}`, locale)}</span>
+              </span>
+              <span class="tier-auto t-label" data-tier-auto hidden>
+                {ts('tier.auto', locale)}
+              </span>
+            </label>
+            <p id={`tier-${tier}-desc`} class="tier-desc t-small">
+              {ts(`tier.${tier}.desc`, locale)}
+            </p>
+          </div>
+        ))
+      }
+    </div>
+    <p class="tier-reduced t-small c-fg-2">{ts('tier.reduced', locale)}</p>
+    <button type="button" class="tier-reset link t-small" data-tier-reset hidden>
+      {ts('tier.reset', locale)}
+    </button>
+    <p class="sr-only" aria-live="polite" data-tier-live></p>
+  </fieldset>
+  <p class="tier-nojs nojs-only t-label c-fg-2" data-parity-ignore>
+    <span class="tier-legend-nojs c-fg-3">{ts('tier.legend', locale)}</span>
+    <span>{ts('tier.nojs', locale)}</span>
+  </p>
+</div>
+
+<script>
+  import { on } from '@lib/events';
+  import { clearTier, isTier, setTier, storedTier } from '@lib/prefs';
+
+  const root = document.documentElement;
+  const fieldset = () => document.querySelector<HTMLFieldSetElement>('[data-tier-set]');
+
+  /** Radios follow <html data-tier>; the 「自動」 tag marks the active tier when nothing is stored. */
+  function sync() {
+    const set = fieldset();
+    if (!set) return;
+    const tier = root.dataset.tier ?? 'static';
+    const auto = storedTier() === null;
+    for (const input of set.querySelectorAll<HTMLInputElement>('input[name="lj-tier"]')) {
+      input.checked = input.value === tier;
+      const tag = input.closest('label')?.querySelector<HTMLElement>('[data-tier-auto]');
+      if (tag) tag.hidden = !(auto && input.checked);
+    }
+    const reset = set.querySelector<HTMLButtonElement>('[data-tier-reset]');
+    if (reset) reset.hidden = auto;
+  }
+
+  let liveTimer = 0;
+  function announce(tier: string) {
+    const set = fieldset();
+    const region = set?.querySelector<HTMLElement>('[data-tier-live]');
+    if (!set || !region) return;
+    const label = set.querySelector<HTMLInputElement>(`input[value="${tier}"]`)?.dataset.label ?? tier;
+    window.clearTimeout(liveTimer);
+    liveTimer = window.setTimeout(() => {
+      region.textContent = (set.dataset.i18nChanged ?? '').replace('{tier}', label);
+    }, 150);
+  }
+
+  function bind() {
+    const set = fieldset();
+    if (!set) return;
+    set.addEventListener('change', (e) => {
+      const input = e.target as HTMLInputElement | null;
+      if (input?.name === 'lj-tier' && isTier(input.value)) setTier(input.value, 'user');
+    });
+    set.querySelector<HTMLButtonElement>('[data-tier-reset]')?.addEventListener('click', () => clearTier());
+    sync();
+  }
+
+  on('lj:tier', (d) => {
+    sync();
+    if (d.src === 'user') announce(d.tier);
+  });
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-tier'] });
+  document.addEventListener('astro:page-load', bind);
+</script>
+
+<style>
+  .tier-set {
+    border: 0;
+    padding: 0;
+    min-inline-size: 0;
+  }
+  .tier-legend {
+    padding: 0;
+    margin-bottom: var(--s-4);
+  }
+  .tier-opts {
+    display: grid;
+    gap: var(--s-4);
+  }
+  @media (min-width: 640px) {
+    .tier-opts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--gap);
+    }
+  }
+  .tier-label {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    cursor: pointer;
+  }
+  .tier-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .tier-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--hit);
+    padding: 0 18px 0 14px;
+    border: 1px solid var(--line-ui);
+    border-radius: 999px;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.06em;
+    color: var(--fg);
+    transition:
+      background-color var(--d-s) var(--ease-rise),
+      border-color var(--d-s) var(--ease-rise),
+      color var(--d-s) var(--ease-rise);
+  }
+  .tier-glyph {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+  .tier-label:hover .tier-chip {
+    border-color: var(--fg-2);
+  }
+  .tier-input:focus-visible + .tier-chip {
+    outline: 2px solid var(--glim);
+    outline-offset: 3px;
+  }
+  /* the selected tier chip: the only text set on amber (§2.1 --on-glim) */
+  .tier-input:checked + .tier-chip {
+    background: var(--glim);
+    border-color: var(--glim);
+    color: var(--on-glim);
+  }
+  .tier-input:checked + .tier-chip .tier-glyph {
+    background: currentColor;
+  }
+  .tier-auto {
+    color: var(--fg-3);
+  }
+  .tier-desc {
+    margin-top: var(--s-3);
+    max-width: 34ch;
+    color: var(--fg-2);
+  }
+  .tier-desc:lang(zh) {
+    max-width: 22em;
+  }
+  .tier-reduced {
+    display: none;
+    margin-top: var(--s-4);
+  }
+  :global(html[data-motion='reduced']) .tier-reduced {
+    display: block;
+  }
+  .tier-reset {
+    margin-top: var(--s-4);
+    min-height: var(--hit-min);
+    color: var(--fg-2);
+  }
+  .tier-nojs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+  @media (forced-colors: active) {
+    .tier-input:checked + .tier-chip {
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+  }
+</style>

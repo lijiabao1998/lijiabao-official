@@ -1,0 +1,80 @@
+---
+// 404 (§3, §4.6). SCAFFOLD (F0-shell) — owner S6 (motion/sections/nf.ts: the digits weigh 100 → 900 with the
+// pointer; breathe 300 ↔ 700 without one; static 600 under reduced motion). The digits are the only centred
+// element on the site. Workers serves the nearest 404.html (/404.html, /en/404.html).
+import Base from '../layouts/Base.astro';
+import Section from '../components/ui/Section.astro';
+import Arrow from '../components/ui/Arrow.astro';
+import { localeOf, localePath, tl, ts } from '../components/chrome/i18n';
+
+const locale = localeOf(Astro);
+const [home, gt, fr] = tl('nf.links', locale);
+const links = [
+  { href: localePath(locale, '/'), text: home },
+  { href: localePath(locale, '/glimmertown/'), text: gt },
+  { href: localePath(locale, '/frontier/'), text: fr },
+].filter((l) => l.text);
+---
+<Base page="nf">
+  <Section id="nf" motion="nf" labelledby="nf-title" class="nf">
+    <p class="nf-code" aria-hidden="true" data-nf-digits>{ts('nf.code', locale)}</p>
+    <h1 id="nf-title" class="nf-title t-m">{ts('nf.title', locale)}</h1>
+    <p class="nf-body t-lede measure">{ts('nf.body', locale)}</p>
+    <ul role="list" class="nf-links">
+      {
+        links.map((l) => (
+          <li>
+            <a class="link nf-link" href={l.href}>
+              {l.text}
+              {' '}
+              <Arrow dir="right" />
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </Section>
+</Base>
+
+<style>
+  /* the Section root is another component: scoped styles do not reach it, so target it by id */
+  :global(#nf) {
+    min-height: calc(100svh - var(--header-h));
+    display: flex;
+    align-items: center;
+    padding-top: calc(var(--header-h) + var(--s-8));
+  }
+  .nf-code {
+    --w-rest: 600;
+    font-family: var(--ff-mono);
+    font-size: clamp(7rem, 3rem + 20vw, 22rem);
+    font-weight: var(--w-rest);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-align: center;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .nf-title {
+    margin-top: var(--s-8);
+  }
+  .nf-body {
+    margin-top: var(--s-5);
+    color: var(--fg-2);
+  }
+  .nf-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3) var(--s-6);
+    margin-top: var(--s-7);
+    padding: 0;
+    list-style: none;
+  }
+  .nf-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3em;
+    min-height: var(--hit);
+    font-size: var(--fs-lede);
+  }
+</style>

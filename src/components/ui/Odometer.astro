@@ -1,0 +1,24 @@
+---
+// Odometer (§5.3 #numbers, §8): the aria-hidden, parity-ignored twin of a number, drawn over the real
+// <data> text (Num.astro keeps the <data> in the DOM, transparent, so it stays selectable and is what
+// screen readers and the parity diff read). It holds the FINAL text, so no-JS / static / reduced motion
+// need nothing: prim.tick([data-tick]) builds its digit reels from this text, runs them left digit first,
+// and restores the plain text when done or reverted.
+interface Props {
+  /** the final, already formatted text (e.g. "12,513") */
+  value: string;
+  class?: string;
+}
+
+const { value, class: cls } = Astro.props;
+---
+<span class:list={['odo', cls]} aria-hidden="true" data-tick data-parity-ignore>{value}</span>
+
+<style>
+  .odo {
+    white-space: pre;
+    user-select: none;
+    pointer-events: none;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+</style>

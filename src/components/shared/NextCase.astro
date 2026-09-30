@@ -1,0 +1,32 @@
+---
+// STUB (F0-shell) — owner S4 builds it; S5 uses it. nav#gt-next (GlimmerTown → Frontier) or nav#fr-next
+// (Frontier → GlimmerTown): an --fs-l link that rises; hover / focus weighs it in; magnetic arrow (§5.3).
+import Section from '@ui/Section.astro';
+import Arrow from '@ui/Arrow.astro';
+import { localeOf, localePath, ts } from '../chrome/i18n';
+
+interface Props {
+  /** the page this nav sits on */
+  from: 'gt' | 'fr';
+}
+
+const { from } = Astro.props;
+const locale = localeOf(Astro);
+const href = localePath(locale, from === 'gt' ? '/frontier/' : '/glimmertown/');
+const label = ts(`${from}.next`, locale).replace(/\s*→\s*$/, '');
+---
+<Section id={`${from}-next`} as="nav" labelledby={`${from}-next-link`}>
+  <a id={`${from}-next-link`} class="next t-l" href={href} data-magnet>
+    <span class="next-label">{label}</span>{' '}
+    <Arrow dir="right" />
+  </a>
+</Section>
+
+<style>
+  .next {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25em;
+    color: var(--fg);
+  }
+</style>

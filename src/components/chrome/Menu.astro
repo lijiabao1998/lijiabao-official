@@ -1,0 +1,222 @@
+---
+// Mobile menu (§7 Mobile, §5.4 Keyboard): below 640px or on coarse pointers a 44×44 button replaces the nav.
+// Open: a full-screen --bg-2 overlay with the nav at --fs-m (plus 微光小鎮 / 前沿實驗室), the HUD and the
+// language switch; everything else is `inert`. Esc closes it and focus returns to the button.
+// Emits document CustomEvent 'lj:menu' {open} so the motion core can pause Lenis.
+import Hud from './Hud.astro';
+import LangSwitch from './LangSwitch.astro';
+import { localeOf, localePath, ts, type PageId } from './i18n';
+
+interface Props {
+  page: PageId;
+}
+
+const { page } = Astro.props;
+const locale = localeOf(Astro);
+const home = localePath(locale, '/');
+const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
+const cases = [
+  { page: 'gt', href: localePath(locale, '/glimmertown/'), key: 'nav.gt' },
+  { page: 'fr', href: localePath(locale, '/frontier/'), key: 'nav.fr' },
+] as const;
+---
+<button
+  type="button"
+  class="menu-btn"
+  aria-expanded="false"
+  aria-controls="menu"
+  aria-label={ts('a11y.menu.open', locale)}
+  data-menu-btn
+  data-i18n-open={ts('a11y.menu.open', locale)}
+  data-i18n-close={ts('a11y.menu.close', locale)}
+>
+  <svg class="i menu-i-open" aria-hidden="true"><use href="#i-menu"></use></svg>
+  <svg class="i menu-i-close" aria-hidden="true"><use href="#i-close"></use></svg>
+</button>
+
+<div id="menu" class="menu" hidden data-menu>
+  <nav class="menu-nav wrap" aria-label={ts('a11y.nav', locale)}>
+    <ul role="list" class="menu-list">
+      {
+        sections.map((id, i) => (
+          <li style={`--i:${i}`}>
+            <a class="menu-link" href={`${home}#${id}`}>
+              {ts(`nav.${id}`, locale)}
+            </a>
+          </li>
+        ))
+      }
+      {
+        cases.map((c, i) => (
+          <li style={`--i:${sections.length + i}`} class:list={['menu-case', { 'is-first': i === 0 }]}>
+            <a class="menu-link menu-link--case" href={c.href} aria-current={page === c.page ? 'page' : undefined}>
+              {ts(c.key, locale)}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
+  <div class="menu-foot wrap" style={`--i:${sections.length + cases.length}`}>
+    <Hud class="hud--menu" />
+    <LangSwitch page={page} class="lang--menu" />
+  </div>
+</div>
+
+<script>
+  const MOBILE = '(max-width: 639.98px), (pointer: coarse)';
+  let controller: AbortController | null = null;
+
+  function setup() {
+    controller?.abort();
+    controller = new AbortController();
+    const { signal } = controller;
+    const btn = document.querySelector<HTMLButtonElement>('[data-menu-btn]');
+    const panel = document.querySelector<HTMLElement>('[data-menu]');
+    if (!btn || !panel) return;
+    const root = document.documentElement;
+
+    const outside = () =>
+      document.querySelectorAll<HTMLElement>('.skip, [data-menu-inert], #main, #colophon');
+
+    const isOpen = () => btn.getAttribute('aria-expanded') === 'true';
+
+    const open = () => {
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      btn.setAttribute('aria-label', btn.dataset.i18nClose ?? '');
+      for (const el of outside()) el.inert = true;
+      root.setAttribute('data-menu-open', '');
+      document.dispatchEvent(new CustomEvent('lj:menu', { detail: { open: true } }));
+    };
+
+    const close = (restoreFocus: boolean) => {
+      if (!isOpen()) return;
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.setAttribute('aria-label', btn.dataset.i18nOpen ?? '');
+      for (const el of outside()) el.inert = false;
+      root.removeAttribute('data-menu-open');
+      document.dispatchEvent(new CustomEvent('lj:menu', { detail: { open: false } }));
+      if (restoreFocus) btn.focus();
+    };
+
+    btn.addEventListener('click', () => (isOpen() ? close(true) : open()), { signal });
+    panel.addEventListener(
+      'click',
+      (e) => {
+        if ((e.target as Element | null)?.closest('a')) close(false);
+      },
+      { signal },
+    );
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && isOpen()) {
+          e.preventDefault();
+          close(true);
+        }
+      },
+      { signal },
+    );
+    const mq = window.matchMedia(MOBILE);
+    mq.addEventListener('change', () => !mq.matches && close(false), { signal });
+    document.addEventListener('astro:before-swap', () => close(false), { signal, once: true });
+  }
+
+  document.addEventListener('astro:page-load', setup);
+</script>
+
+<style>
+  .menu-btn {
+    display: none;
+    position: relative;
+    z-index: 3;
+    width: var(--hit);
+    height: var(--hit);
+    align-items: center;
+    justify-content: center;
+    color: var(--fg);
+    margin-inline-end: -10px;
+  }
+  .menu-i-close {
+    display: none;
+  }
+  .menu-btn[aria-expanded='true'] .menu-i-open {
+    display: none;
+  }
+  .menu-btn[aria-expanded='true'] .menu-i-close {
+    display: block;
+  }
+
+  @media (max-width: 639.98px), (pointer: coarse) {
+    .menu-btn {
+      display: inline-flex;
+    }
+  }
+
+  .menu {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--s-7);
+    padding-top: calc(var(--header-h) + var(--s-6));
+    padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
+    background: var(--bg-2);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .menu-list {
+    display: grid;
+    gap: 0;
+    list-style: none;
+    padding: 0;
+  }
+  .menu-link {
+    --w-rest: 520;
+    display: block;
+    padding-block: 0.12em;
+    /* nav.* are not display-flagged (no Noto subset glyphs): body stack, so CJK never mixes two faces */
+    font-family: var(--ff-body);
+    font-size: var(--fs-m);
+    font-weight: var(--w-rest);
+    line-height: 1.12;
+    letter-spacing: -0.035em;
+    color: var(--fg);
+  }
+  .menu-link:lang(zh) {
+    --w-rest: 560;
+    letter-spacing: 0.01em;
+  }
+  .menu-link:is(:hover, :focus-visible):lang(zh) {
+    font-variation-settings: 'wght' calc(var(--w-rest) + 200);
+  }
+  .menu-link--case {
+    font-size: var(--fs-s);
+    color: var(--fg-2);
+  }
+  .menu-link--case[aria-current='page'] {
+    color: var(--fg);
+  }
+  .menu-case.is-first {
+    margin-top: var(--s-5);
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--line);
+  }
+  .menu-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-3);
+  }
+
+  /* items rise in (0.05 stagger, 0.6s rise) — motion full, animated tiers only */
+  :global(html[data-motion='full']:not([data-tier='static'])) .menu:not([hidden]) :is(li, .menu-foot) {
+    animation: lj-rise-in 0.6s var(--ease-rise) both;
+    animation-delay: calc(var(--i, 0) * 0.05s);
+  }
+</style>

@@ -1,0 +1,74 @@
+/* ==========================================================================
+   tiers.css — §7. Orthogonal axes on <html>:
+     data-tier   = full | lite | static   (render budget; SSR default static)
+     data-motion = full | reduced          (user preference)
+     data-gl     = ok | lost | none | frozen (runtime state)
+     data-js     present when JavaScript runs
+   Section owners add tier rules here only by PR to F0 (§9.4).
+   ========================================================================== */
+
+/* ---- the canvas (§6.0) ---------------------------------------------------- */
+#gl {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100lvh;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--gl-alpha);
+}
+html:not([data-js]) #gl,
+html[data-tier='static'] #gl,
+html[data-gl='none'] #gl,
+html[data-gl='lost'] #gl {
+  display: none;
+}
+
+/* ---- posters: every GL figure carries its static fallback in DOM (§6.0) -- */
+.poster {
+  display: none;
+}
+html:not([data-gl='ok']):not([data-gl='frozen']) .poster,
+html[data-tier='static'] .poster {
+  display: block;
+}
+/* the GL lane is live, but this anchor has not drawn its first frame yet (the engine sets [data-gl-live]),
+   or its scene failed ([data-gl-failed]): keep the poster so the figure is never empty (F0 merge) */
+html[data-gl='ok'] [data-gl-scene]:not([data-gl-live]) .poster,
+html[data-gl='frozen'] [data-gl-scene]:not([data-gl-live]) .poster,
+[data-gl-scene][data-gl-failed] .poster {
+  display: block;
+}
+
+/* ---- JS-only / no-JS-only chrome (§7 No-JS) ------------------------------ */
+html:not([data-js]) .js-only {
+  display: none !important;
+}
+html[data-js] .nojs-only {
+  display: none !important;
+}
+
+/* ---- static tier: CSS-only hover (underline + instant weight), no magnet */
+html[data-tier='static'] [data-magnet] {
+  transform: none !important;
+}
+html[data-tier='static'] .link,
+html[data-tier='static'] .prose a {
+  transition: none;
+}
+
+/* ---- reduced motion: no smooth scrolling; the ACTIVE ring holds still ---- */
+html[data-motion='reduced'] {
+  scroll-behavior: auto;
+}
+
+/* ---- forced colours (§2.1): canvas off, posters on ----------------------- */
+@media (forced-colors: active) {
+  #gl {
+    display: none !important;
+  }
+  .poster {
+    display: block !important;
+    forced-color-adjust: none;
+  }
+}

@@ -1,0 +1,94 @@
+---
+// Language switch (§3, §5.5). Links to the same page in the other locale; section ids are identical across
+// locales, so the script rewrites the hash to the section at least 50% in view on pointerenter, focus and
+// click. Visible label (EN / 中文) + an sr-only sentence, both in the target language (label-in-name).
+import { PAGE_PATH, localeOf, localePath, otherLocale, ts, type PageId } from './i18n';
+
+interface Props {
+  page: PageId;
+  class?: string;
+}
+
+const { page, class: cls } = Astro.props;
+const locale = localeOf(Astro);
+const to = otherLocale(locale);
+const href = localePath(to, PAGE_PATH[page] ?? '/');
+---
+<a class:list={['lang', cls]} href={href} hreflang={to} lang={to} data-lang-switch>
+  <span class="lang-label">{ts('lang.switch', locale)}</span>{' '}
+  <span class="sr-only">{ts('lang.switch.aria', locale)}</span>
+</a>
+
+<script>
+  /** The id of the section that fills at least half of the viewport (or half of itself, if shorter). */
+  function sectionInView(): string | null {
+    const main = document.getElementById('main');
+    if (!main) return null;
+    const vh = window.innerHeight;
+    const nodes = main.querySelectorAll<HTMLElement>(':scope section[id], :scope nav[id], :scope > [id]');
+    let best: HTMLElement | null = null;
+    let bestVisible = 0;
+    for (const el of nodes) {
+      const r = el.getBoundingClientRect();
+      const visible = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      if (visible <= 0) continue;
+      if (visible / Math.min(r.height, vh) < 0.5) continue;
+      if (visible > bestVisible) {
+        best = el;
+        bestVisible = visible;
+      }
+    }
+    if (!best) return null;
+    // the first section is the top of the page: no hash needed
+    const first = main.querySelector<HTMLElement>('section[id]');
+    return best === first ? null : best.id;
+  }
+
+  function rewrite(a: HTMLAnchorElement) {
+    const url = new URL(a.href, location.href);
+    const id = sectionInView();
+    url.hash = id ? `#${id}` : '';
+    a.setAttribute('href', url.pathname + url.search + url.hash);
+  }
+
+  function bind() {
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('a[data-lang-switch]')) {
+      const run = () => rewrite(a);
+      a.addEventListener('pointerenter', run);
+      a.addEventListener('focus', run);
+      a.addEventListener('click', run); // target phase: runs before ClientRouter's document listener
+    }
+  }
+
+  document.addEventListener('astro:page-load', bind);
+</script>
+
+<style>
+  .lang {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--hit);
+    min-height: var(--hit);
+    padding-inline: 8px;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.06em;
+    color: var(--fg-2);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  .lang-label {
+    position: relative;
+    padding-block: 2px;
+    background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / 0 1px;
+    transition: background-size var(--d-s) var(--ease-rise);
+  }
+  .lang:is(:hover, :focus-visible) {
+    color: var(--fg);
+  }
+  .lang:is(:hover, :focus-visible) .lang-label {
+    background-position: 0 100%;
+    background-size: 100% 1px;
+  }
+</style>

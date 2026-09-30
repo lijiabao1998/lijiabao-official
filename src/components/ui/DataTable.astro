@@ -1,0 +1,239 @@
+---
+// DataTable (§3 markup rules, §7 mobile): a real <table> with <caption> and scope. Numbers render as
+// <data value> with locale grouping; the first column can be row headers and sticks on narrow screens.
+// The wrapper scrolls horizontally (data-lenis-prevent) and is focusable so keyboards can scroll it.
+import type { Locale } from '@i18n/types';
+import { localeOf, numberFormat, tl, ts, type Vars } from '../chrome/i18n';
+
+type Cell =
+  | string
+  | number
+  | null
+  | {
+      text: string | number;
+      /** machine value for <data value> (defaults to text when numeric) */
+      value?: string | number;
+      href?: string;
+      lang?: Locale | 'he';
+      /** a short label shown under 640px; the full text stays for screen readers */
+      short?: string;
+    };
+
+interface Props {
+  /** dictionary key of the caption */
+  caption?: string;
+  captionVars?: Vars;
+  /** already-resolved caption text (used when no key fits) */
+  captionText?: string;
+  /** column headers (resolved text) … */
+  cols?: string[];
+  /** … or a dictionary key holding the header list (e.g. hero.table.cols) */
+  colsKey?: string;
+  rows: Cell[][];
+  /** tfoot rows (e.g. the total) */
+  foot?: Cell[][];
+  /** first cell of each body / foot row is a row header */
+  rowHeader?: boolean;
+  /** column indexes that hold numbers (right-aligned, tabular) */
+  numeric?: number[];
+  /** sticky first column when the table scrolls */
+  sticky?: boolean;
+  /** visually hide the caption (it still names the table) */
+  captionHidden?: boolean;
+  id?: string;
+  class?: string;
+}
+
+const {
+  caption,
+  captionVars,
+  captionText,
+  cols,
+  colsKey,
+  rows,
+  foot = [],
+  rowHeader = true,
+  numeric = [],
+  sticky = true,
+  captionHidden = false,
+  id,
+  class: cls,
+} = Astro.props;
+
+const locale = localeOf(Astro);
+const nf = numberFormat(locale);
+const headers = cols ?? (colsKey ? tl(colsKey, locale) : []);
+const capText = captionText ?? (caption ? ts(caption, locale, captionVars) : '');
+const capId = id ? `${id}-caption` : undefined;
+const num = new Set(numeric);
+
+type Norm = { text: string; value?: string; href?: string; lang?: string; short?: string };
+function norm(c: Cell): Norm {
+  if (c === null || c === undefined) return { text: '—' };
+  if (typeof c === 'number') return { text: nf.format(c), value: String(c) };
+  if (typeof c === 'string') return { text: c };
+  const text = typeof c.text === 'number' ? nf.format(c.text) : c.text;
+  const value = c.value !== undefined ? String(c.value) : typeof c.text === 'number' ? String(c.text) : undefined;
+  return { text, value, href: c.href, lang: c.lang, short: c.short };
+}
+const external = (href?: string) => !!href && /^https?:\/\//.test(href);
+---
+<div
+  class:list={['table-wrap', 'dt-wrap', { 'dt-sticky': sticky }, cls]}
+  data-lenis-prevent
+  tabindex="0"
+  role="region"
+  aria-labelledby={capId}
+  aria-label={capId ? undefined : capText || undefined}
+>
+  <table id={id} class="dt">
+    {capText && <caption id={capId} class:list={['dt-cap', 't-label', { 'sr-only': captionHidden }]}>{capText}</caption>}
+    {
+      headers.length > 0 && (
+        <thead>
+          <tr>
+            {headers.map((h, i) => (
+              <th scope="col" class:list={[{ 'is-num': num.has(i) }]}>
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+      )
+    }
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            {row.map((raw, i) => {
+              const c = norm(raw);
+              const Tag = rowHeader && i === 0 ? 'th' : 'td';
+              const body = c.value !== undefined ? <data value={c.value}>{c.text}</data> : c.text;
+              return (
+                <Tag
+                  scope={Tag === 'th' ? 'row' : undefined}
+                  class:list={[{ 'is-num': num.has(i) }]}
+                  lang={c.lang}
+                >
+                  {c.href ? (
+                    <a class="link" href={c.href} rel={external(c.href) ? 'noopener' : undefined}>
+                      {c.short ? (
+                        <Fragment>
+                          <span class="dt-long">{body}</span>
+                          <span class="dt-short" aria-hidden="true">
+                            {c.short}
+                          </span>
+                        </Fragment>
+                      ) : (
+                        body
+                      )}
+                    </a>
+                  ) : c.short ? (
+                    <Fragment>
+                      <span class="dt-long">{body}</span>
+                      <span class="dt-short" aria-hidden="true">
+                        {c.short}
+                      </span>
+                    </Fragment>
+                  ) : (
+                    body
+                  )}
+                </Tag>
+              );
+            })}
+          </tr>
+        ))
+      }
+    </tbody>
+    {
+      foot.length > 0 && (
+        <tfoot>
+          {foot.map((row) => (
+            <tr>
+              {row.map((raw, i) => {
+                const c = norm(raw);
+                const Tag = rowHeader && i === 0 ? 'th' : 'td';
+                return (
+                  <Tag scope={Tag === 'th' ? 'row' : undefined} class:list={[{ 'is-num': num.has(i) }]}>
+                    {c.value !== undefined ? <data value={c.value}>{c.text}</data> : c.text}
+                  </Tag>
+                );
+              })}
+            </tr>
+          ))}
+        </tfoot>
+      )
+    }
+  </table>
+</div>
+
+<style>
+  .dt-wrap:focus-visible {
+    outline-offset: 2px;
+  }
+  .dt {
+    font-size: var(--fs-small);
+    line-height: 1.45;
+    color: var(--fg-2);
+  }
+  .dt-cap {
+    padding-bottom: var(--s-3);
+    color: var(--fg-3);
+  }
+  .dt :global(th),
+  .dt :global(td) {
+    padding: 9px var(--s-4) 9px 0;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .dt :global(thead th) {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.06em;
+    color: var(--fg-3);
+    border-bottom-color: var(--line-ui);
+  }
+  .dt :global(tbody th) {
+    font-weight: 500;
+    color: var(--fg);
+  }
+  .dt :global(tfoot) :global(th),
+  .dt :global(tfoot) :global(td) {
+    color: var(--fg);
+    border-bottom: 0;
+    border-top: 1px solid var(--line-ui);
+  }
+  .dt :global(.is-num) {
+    text-align: end;
+    font-family: var(--ff-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .dt :global(tr > :last-child) {
+    padding-inline-end: 0;
+  }
+  @media (max-width: 639.98px) {
+    .dt-sticky .dt :global(tr > :first-child) {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: linear-gradient(to left, var(--line) 1px, var(--bg) 1px);
+    }
+  }
+  .dt :global(.dt-short) {
+    display: none;
+  }
+  @media (max-width: 639.98px) {
+    .dt :global(.dt-short) {
+      display: inline;
+    }
+    .dt :global(.dt-long:has(+ .dt-short)) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+</style>

@@ -1,0 +1,135 @@
+/* ==========================================================================
+   motion.css — §5.1 fail-open rule, §5.2 intro before-states, §5.5 view
+   transitions. CSS never hides content without a way back: every "before"
+   state set under html[data-intro] carries an animation that returns it to
+   rest after 2.5s, even if no script ever runs.
+   ========================================================================== */
+
+/* ---- fail-open ------------------------------------------------------------ */
+@keyframes lj-failopen {
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+    font-variation-settings: normal;
+  }
+}
+
+/* §5.2 intro before-states. Only while html[data-intro] is present (the head boot sets it,
+   motion/intro.ts removes it at 1.4s or on skip). Contract for S1:
+   - [data-weigh="scan"]   : the hero line starts dim (wght 160) and weighs in as the head passes;
+   - [data-intro-line]     : the hairline under line 1 starts at scaleX(0) from the left;
+   - [data-intro-rise]     : sub / meta lines start masked below (mask-rise);
+   - [data-intro-dot]      : the 6px amber scan head (hidden until the intro moves it). */
+html[data-intro] [data-weigh='scan'] {
+  font-variation-settings: 'wght' var(--w-dim);
+  animation: lj-failopen 0s linear 2.5s forwards;
+}
+html[data-intro] [data-intro-line] {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  animation: lj-failopen 0s linear 2.5s forwards;
+}
+html[data-intro] [data-intro-rise] {
+  transform: translateY(105%);
+  animation: lj-failopen 0s linear 2.5s forwards;
+}
+html[data-intro] [data-intro-dot] {
+  opacity: 0;
+}
+html:not([data-intro]) [data-intro-dot] {
+  display: none;
+}
+
+/* ---- view transitions (§5.5) --------------------------------------------- */
+@keyframes lj-vt-out {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+@keyframes lj-vt-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+::view-transition-old(root) {
+  animation: lj-vt-out var(--d-s) var(--ease-exit) both;
+}
+::view-transition-new(root) {
+  animation: lj-vt-in var(--d-m) var(--ease-rise) 120ms both;
+}
+::view-transition-group(case-title-gt),
+::view-transition-group(case-title-fr),
+::view-transition-group(fr-matrix) {
+  animation-duration: 640ms;
+  animation-timing-function: var(--ease-snap);
+}
+
+/* the persisted canvas stays live: no snapshot cross-fade */
+#gl {
+  view-transition-name: gl;
+}
+::view-transition-old(gl) {
+  display: none;
+}
+::view-transition-new(gl) {
+  animation: none;
+}
+
+/* ---- navigation progress: a 1px scan under the header (>300ms fetch) ----- */
+@keyframes lj-progress {
+  from {
+    transform: translateX(-100%) scaleX(0.3);
+  }
+  to {
+    transform: translateX(100%) scaleX(0.3);
+  }
+}
+
+/* ---- the ACTIVE status ring: 2.4s breathing (static under reduced motion) */
+@keyframes lj-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.35);
+  }
+}
+
+/* ---- menu items rise (0.05 stagger, 0.6s rise) -------------------------- */
+@keyframes lj-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em);
+  }
+}
+
+/* ---- reduced motion: end states, instant hover (§7) ---------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

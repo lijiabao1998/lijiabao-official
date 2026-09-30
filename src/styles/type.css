@@ -1,0 +1,219 @@
+/* ==========================================================================
+   type.css — §2.2. Every size is a token; every weight is rest / lit.
+   Classes set --w-rest / --w-lit so motion can weigh in without guessing:
+   JS animates font-variation-settings only (weight-safety rule, §2.2).
+   ========================================================================== */
+
+html {
+  font-family: var(--ff-body);
+  font-size: 100%;
+  font-weight: var(--w-body);
+  line-height: 1.55;
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-size: var(--fs-body);
+  line-height: 1.55;
+}
+
+:lang(zh) {
+  line-break: strict;
+  text-autospace: ideograph-alpha ideograph-numeric;
+  text-spacing-trim: trim-start;
+}
+
+body:lang(zh) {
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
+p,
+li,
+dd,
+figcaption,
+blockquote {
+  text-wrap: pretty;
+}
+
+/* ---- display scale ------------------------------------------------------- */
+
+.t-xl,
+.t-l,
+.t-m,
+.t-s {
+  font-family: var(--ff-display);
+  font-weight: var(--w-rest);
+  text-wrap: balance;
+}
+
+.t-xl {
+  --w-rest: 560;
+  --w-lit: 760;
+  font-size: var(--fs-xl);
+  line-height: 0.92;
+  letter-spacing: -0.05em;
+}
+.t-l {
+  --w-rest: 560;
+  --w-lit: 760;
+  font-size: var(--fs-l);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+}
+.t-m {
+  --w-rest: 520;
+  --w-lit: 720;
+  font-size: var(--fs-m);
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+.t-s {
+  --w-rest: 500;
+  --w-lit: 700;
+  font-size: var(--fs-s);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+/* CJK leading / tracking: selected by the element's own language, so a zh line on /en/
+   (or an en run on /) gets the right metrics. */
+.t-xl:lang(zh) {
+  --w-rest: 600;
+  --w-lit: 820;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+.t-l:lang(zh) {
+  --w-rest: 600;
+  --w-lit: 820;
+  line-height: 1.04;
+  letter-spacing: 0;
+}
+.t-m:lang(zh) {
+  --w-rest: 560;
+  --w-lit: 760;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+}
+.t-s:lang(zh) {
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+}
+
+.t-h3 {
+  --w-rest: var(--w-h3);
+  --w-lit: 760;
+  font-family: var(--ff-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--w-rest);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.t-h3:lang(zh) {
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+.t-lede {
+  font-size: var(--fs-lede);
+  line-height: 1.45;
+  color: var(--fg);
+}
+.t-lede:lang(zh) {
+  line-height: 1.75;
+}
+
+.t-body {
+  font-size: var(--fs-body);
+}
+
+.t-small {
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.t-small:lang(zh) {
+  line-height: 1.7;
+}
+
+.t-mono,
+.t-label {
+  font-family: var(--ff-mono);
+  font-size: var(--fs-mono);
+  font-weight: var(--w-mono);
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.t-label:lang(en),
+.t-mono.is-caps:lang(en) {
+  text-transform: uppercase;
+}
+.t-mono:lang(zh),
+.t-label:lang(zh) {
+  letter-spacing: 0.08em;
+}
+
+.t-num {
+  --w-rest: var(--w-num);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-num);
+  font-weight: var(--w-num);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Hierarchy of colour, never of hue */
+.c-fg {
+  color: var(--fg);
+}
+.c-fg-2 {
+  color: var(--fg-2);
+}
+.c-fg-3 {
+  color: var(--fg-3);
+}
+.c-glim {
+  color: var(--glim);
+}
+
+.measure {
+  max-width: var(--measure);
+}
+
+.tnum,
+data {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* CJK fit-to-line (§2.2) lives in ui/Display.astro (--n / --n-narrow, 100cqi / --n). */
+
+/* rich text seams */
+[lang='he'] {
+  font-family: 'Arial Hebrew', 'Noto Sans Hebrew', 'Segoe UI', var(--ff-body);
+  unicode-bidi: isolate;
+}
+
+q {
+  quotes: none;
+}
+
+cite {
+  font-style: normal;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--ff-mono);
+  font-size: 0.92em;
+  letter-spacing: 0;
+}

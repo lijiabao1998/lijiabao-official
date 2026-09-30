@@ -1,0 +1,128 @@
+---
+// <Num k="gt.pass" source />  (§9.3, site law 4): a facts.ts value as <data value>, optionally with its
+// source (repo, path) and as-of date. In animated tiers an aria-hidden <Odometer> overlays the real text
+// (which stays in the DOM, selectable and read by screen readers); static / no-JS show the text itself.
+import { fact, isFactKey, type Fact } from '@data/facts';
+import Odometer from './Odometer.astro';
+import { localeOf, ts } from '../chrome/i18n';
+
+interface Props {
+  /** facts.ts key */
+  k: string;
+  /** show "Source: repo path" */
+  source?: boolean;
+  /** show "As of date" (defaults to `source`) */
+  asof?: boolean;
+  /** animate with an odometer overlay (#numbers) */
+  odometer?: boolean;
+  /** text before / after the number inside the figure (e.g. "$", "%"); keep it out of copy strings */
+  prefix?: string;
+  suffix?: string;
+  class?: string;
+  /** class for the number itself (e.g. "t-num") */
+  numClass?: string;
+}
+
+const { k, source = false, asof = source, odometer = false, prefix, suffix, class: cls, numClass } = Astro.props;
+const locale = localeOf(Astro);
+
+if (!isFactKey(k)) throw new Error(`[Num] unknown facts.ts key "${k}"`);
+const f: Fact = fact(k);
+
+const digits = f.digits ?? 0;
+const formatted =
+  typeof f.value === 'number'
+    ? new Intl.NumberFormat(locale === 'en' ? 'en' : 'zh-Hant-TW', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+      }).format(f.value)
+    : f.value;
+const text = `${prefix ?? ''}${formatted}${suffix ?? ''}`;
+
+// Proper names of non-repo sources (not translated copy).
+const SOURCE_NAME: Record<string, string> = {
+  'github-api': 'GitHub API',
+  pages: 'GitHub Pages',
+  site: 'lijiabao.dev',
+};
+const repo = SOURCE_NAME[f.source.repo] ?? f.source.repo;
+const path = f.source.repo === 'github-api' || f.source.repo === 'pages' ? undefined : f.source.path;
+const colon = locale === 'en' ? ': ' : '：';
+---
+<span class:list={['num', { 'num--odo': odometer }, cls]} data-num={k}>
+  <span class:list={['num-fig', numClass]}>
+    <data class="num-v" value={String(f.value)}>{text}</data>
+    {odometer && <Odometer value={text} />}
+  </span>
+  {
+    (source || asof) && (
+      <span class="num-src t-label">
+        {source && (
+          <span class="num-src-where">
+            {ts('common.source', locale)}
+            {colon}
+            <span class="num-repo">{repo}</span>
+            {path && (
+              <Fragment>
+                {' '}
+                <code class="num-path">{path}</code>
+              </Fragment>
+            )}
+          </span>
+        )}
+        {source && asof && <span class="num-sep" aria-hidden="true">{' · '}</span>}
+        {asof && (
+          <span class="num-asof">
+            {ts('common.asof', locale)}
+            {' '}
+            <time datetime={f.asOf}>{f.asOf}</time>
+          </span>
+        )}
+      </span>
+    )
+  }
+</span>
+
+<style>
+  .num {
+    display: inline-flex;
+    flex-direction: column;
+    gap: var(--s-2);
+  }
+  .num-fig {
+    position: relative;
+    display: inline-block;
+    font-variant-numeric: tabular-nums lining-nums;
+    white-space: nowrap;
+  }
+  .num-fig :global(.odo) {
+    display: none;
+  }
+  /* animated tiers: the odometer draws, the real text keeps the box (and stays selectable) */
+  :global(html[data-js]:not([data-tier='static'])) .num--odo .num-v {
+    color: transparent;
+  }
+  :global(html[data-js]:not([data-tier='static'])) .num--odo .num-fig :global(.odo) {
+    display: inline-flex;
+    position: absolute;
+    inset: 0;
+  }
+  .num-src {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0 0.25em;
+    color: var(--fg-3);
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  .num-path {
+    font-size: 1em;
+    color: var(--fg-2);
+    word-break: break-all;
+  }
+  @media print {
+    .num--odo .num-v {
+      color: inherit !important;
+    }
+  }
+</style>

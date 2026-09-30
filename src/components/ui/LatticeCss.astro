@@ -1,0 +1,95 @@
+---
+// <LatticeCss count={12513} cols={112} size="mini|full" />  (§6.3)
+// A pure-CSS isometric lattice with EXACTLY `count` cells: a cols × rows plane of cells (repeating-gradient
+// stripes ∩ a stripe mask), turned into a 2:1 diamond (scaleY(.5) rotate(45deg)); the unused tail of the last
+// row is covered by a strip in --lattice-bg (set it if the lattice sits on --bg-2). Cell i sits at (i mod cols, i div cols), matching gl/gen/grid.ts, so the static tier and
+// the GL grid show the same shape. 112 × 112 − 31 = 12,513. Decorative (aria-hidden): the figure's caption
+// and table carry the number. Owners may animate `clip-path` on .lattice (the mini lights left → right).
+interface Props {
+  count: number;
+  cols: number;
+  size?: 'mini' | 'full';
+  class?: string;
+}
+
+const { count, cols, size = 'full', class: cls } = Astro.props;
+if (!Number.isInteger(count) || !Number.isInteger(cols) || count < 1 || cols < 1) {
+  throw new Error(`[LatticeCss] count and cols must be positive integers (got ${count}, ${cols})`);
+}
+const rows = Math.ceil(count / cols);
+const missing = rows * cols - count;
+---
+<span
+  class:list={['lattice', `lattice--${size}`, cls]}
+  style={`--cols:${cols};--rows:${rows};--missing:${missing}`}
+  data-count={count}
+  data-cols={cols}
+  aria-hidden="true"
+>
+  <span class="lattice-plane"></span>
+</span>
+
+<style>
+  .lattice {
+    --lattice-c: var(--fg);
+    --lattice-bg: var(--bg);
+    /* half the gap between cells, as a fraction of one cell pitch (cells fill 1 − 2g) */
+    --g: 0.19;
+    position: relative;
+    display: block;
+    aspect-ratio: 2 / 1;
+  }
+  .lattice--full {
+    width: min(100%, 880px);
+  }
+  .lattice--mini {
+    width: 120px;
+  }
+  /* Cells = vertical stripes (background) ∩ horizontal stripes (mask). Repeating gradients are continuous,
+     so there are no tile-rounding slivers at the plane's edges; each stripe is centred in its pitch. */
+  .lattice-plane {
+    --tx: calc(100% / var(--cols));
+    --ty: calc(100% / var(--rows));
+    --rows-mask: repeating-linear-gradient(
+      180deg,
+      transparent 0 calc(var(--ty) * var(--g)),
+      #000 0 calc(var(--ty) * (1 - var(--g))),
+      transparent 0 var(--ty)
+    );
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    /* the rotated cols × rows rectangle's bounding box is (cols + rows) / √2 cells wide */
+    width: calc(100% * var(--cols) * 1.41421356 / (var(--cols) + var(--rows)));
+    aspect-ratio: var(--cols) / var(--rows);
+    transform: translate(-50%, -50%) scaleY(0.5) rotate(45deg);
+    background:
+      linear-gradient(var(--lattice-bg), var(--lattice-bg)) 100% 100% /
+        calc(100% * var(--missing) / var(--cols)) calc(100% / var(--rows)) no-repeat,
+      repeating-linear-gradient(
+        90deg,
+        transparent 0 calc(var(--tx) * var(--g)),
+        var(--lattice-c) 0 calc(var(--tx) * (1 - var(--g))),
+        transparent 0 var(--tx)
+      );
+    -webkit-mask-image: var(--rows-mask);
+    mask-image: var(--rows-mask);
+  }
+  /* At 120px a cell is < 1px: stripes would alias into moiré, so the mini is drawn at the lattice's mean
+     coverage — the same diamond of 12,513 cells, too dense to resolve. */
+  .lattice--mini .lattice-plane {
+    background:
+      linear-gradient(var(--lattice-bg), var(--lattice-bg)) 100% 100% /
+        calc(100% * var(--missing) / var(--cols)) calc(100% / var(--rows)) no-repeat,
+      color-mix(in srgb, var(--lattice-c) 45%, transparent);
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  @media (forced-colors: active) {
+    .lattice {
+      --lattice-c: CanvasText;
+      --lattice-bg: Canvas;
+      forced-color-adjust: none;
+    }
+  }
+</style>

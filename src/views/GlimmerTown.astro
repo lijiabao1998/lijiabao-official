@@ -1,0 +1,25 @@
+---
+// GlimmerTown (§3). SCAFFOLD (F0-shell) — owner S4. Sections in §3 order:
+//   #gt-hero · #gt-pass · #gt-lines · #gt-card · #gt-3d · #gt-score · #gt-open · #gt-undone · nav#gt-next
+import Base from '../layouts/Base.astro';
+import GtHero from '../components/gt/GtHero.astro';
+import GtPass from '../components/gt/GtPass.astro';
+import GtLines from '../components/gt/GtLines.astro';
+import GtCard from '../components/gt/GtCard.astro';
+import Gt3D from '../components/gt/Gt3D.astro';
+import GtScore from '../components/gt/GtScore.astro';
+import GtOpen from '../components/gt/GtOpen.astro';
+import GtUndone from '../components/gt/GtUndone.astro';
+import NextCase from '../components/shared/NextCase.astro';
+---
+<Base page="gt">
+  <GtHero />
+  <GtPass />
+  <GtLines />
+  <GtCard />
+  <Gt3D />
+  <GtScore />
+  <GtOpen />
+  <GtUndone />
+  <NextCase from="gt" />
+</Base>

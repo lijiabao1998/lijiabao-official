@@ -1,5 +1,15 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist", ".cache", "node_modules"],
+  "compilerOptions": {
+    "paths": {
+      "@i18n/*": ["./src/i18n/*"],
+      "@data/*": ["./src/data/*"],
+      "@gl/*": ["./src/gl/*"],
+      "@motion/*": ["./src/motion/*"],
+      "@ui/*": ["./src/components/ui/*"],
+      "@lib/*": ["./src/lib/*"]
+    }
+  }
 }

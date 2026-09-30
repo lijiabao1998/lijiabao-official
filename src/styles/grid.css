@@ -1,0 +1,106 @@
+/* ==========================================================================
+   grid.css — §2.3. 4 / 8 / 12 columns; flush left, ragged right.
+   Nothing is centred except the 404 digits.
+   ========================================================================== */
+
+.wrap {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+}
+
+/* spans: mobile-first full width; .md-* from 640px; .lg-* from 1024px */
+.grid > * {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.span-1 { grid-column: span 1; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+
+@media (min-width: 640px) {
+  .md-2 { grid-column: span 2; }
+  .md-3 { grid-column: span 3; }
+  .md-4 { grid-column: span 4; }
+  .md-5 { grid-column: span 5; }
+  .md-6 { grid-column: span 6; }
+  .md-8 { grid-column: 1 / -1; }
+  .md-start-3 { grid-column-start: 3; }
+  .md-start-5 { grid-column-start: 5; }
+}
+
+@media (min-width: 1024px) {
+  .lg-2 { grid-column: span 2; }
+  .lg-3 { grid-column: span 3; }
+  .lg-4 { grid-column: span 4; }
+  .lg-5 { grid-column: span 5; }
+  .lg-6 { grid-column: span 6; }
+  .lg-7 { grid-column: span 7; }
+  .lg-8 { grid-column: span 8; }
+  .lg-9 { grid-column: span 9; }
+  .lg-10 { grid-column: span 10; }
+  .lg-12 { grid-column: 1 / -1; }
+  .lg-start-2 { grid-column-start: 2; }
+  .lg-start-3 { grid-column-start: 3; }
+  .lg-start-4 { grid-column-start: 4; }
+  .lg-start-5 { grid-column-start: 5; }
+  .lg-start-6 { grid-column-start: 6; }
+  .lg-start-7 { grid-column-start: 7; }
+  .lg-start-8 { grid-column-start: 8; }
+  .lg-start-9 { grid-column-start: 9; }
+}
+
+/* ---- sections ------------------------------------------------------------- */
+.sec {
+  padding-block: var(--sec-pad);
+}
+.sec + .sec {
+  border-top: 1px solid var(--line);
+}
+.sec-tight {
+  padding-block: calc(var(--sec-pad) * 0.5);
+}
+
+/* vertical rhythm on the 8px baseline */
+.stack > * + * {
+  margin-top: var(--flow, var(--s-5));
+}
+.stack-s > * + * {
+  margin-top: var(--s-3);
+}
+.stack-l > * + * {
+  margin-top: var(--s-7);
+}
+
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-3);
+  align-items: baseline;
+}
+
+/* responsive visibility */
+@media (max-width: 639.98px) {
+  .hide-sm {
+    display: none !important;
+  }
+}
+@media (min-width: 640px) {
+  .only-sm {
+    display: none !important;
+  }
+}
+@media (max-width: 1023.98px) {
+  .only-lg {
+    display: none !important;
+  }
+}

@@ -1,0 +1,196 @@
+// src/i18n/ns/gt.ts — spec §4.3 (GlimmerTown).
+// Snapshot 2026-09-30T13:44Z updated the lab line (292 commits, T701, v14.05, 94 pixel guards,
+// 8.70 MB game file) and the 3D line (141 commits, D030); see facts.ts SNAPSHOT_DIFF / notes.
+import { defineNs, type DictShape, type ZhEntry } from '../types.ts';
+
+const zh = {
+  // ── Hero and PASS grid ───────────────────────────────────────────────────────────────────
+  'gt.label': { zh: '作品 · 遊戲', cls: 'F' },
+  'gt.title': { zh: '微光小鎮', cls: 'F', display: true },
+  'gt.alias': { zh: 'Glimmerville', cls: 'F' },
+  'gt.tagline': { zh: '同一座城、三種時間。', cls: 'O', display: true, src: 'READMEs [voice, glimmer]; en is T' },
+  'gt.lead': {
+    zh: '微光小鎮是一座原創的等距像素城市。業主定方向、做最後決定；一組來自不同廠商的模型，照同一套成文規則施工：驗收條件寫在動手之前，守衛全綠才合併，沒做成的事照實記下。',
+    cls: 'F',
+  },
+  // list: fact chips
+  'gt.chips': { zh: ['一個 HTML 檔', '零依賴', '零外部素材', '可離線（PWA）', '手機可玩'], cls: 'F' },
+  'gt.pass.title': { zh: '{gt.pass} 個 PASS', cls: 'F', display: true },
+  'gt.pass.lead': { zh: '主線的 Node 測試套件 `test_fixde.js` 目前 PASS={gt.pass}。每一格光，是一個通過的檢查。', cls: 'F' },
+  'gt.pass.legend': { zh: '1 ◆＝1 個 PASS', cls: 'F' },
+  // aria-hidden readout; {x} = lit cells (runtime)
+  'gt.pass.lit': { zh: '已點亮 {x}／{gt.pass}', cls: 'F' },
+  'gt.pass.table.caption': { zh: '微光小鎮主線（快照 {snapshot.asOf}）', cls: 'F' },
+  // list: table rows, each "label · value" (split on the first ' · ')
+  'gt.pass.table': {
+    zh: [
+      '版本 · v11.210（T601）',
+      '程式 · {gt.codeLines} 行，約 {gt.sizeMb} MB，單一 `index.html`',
+      '測試 · PASS={gt.pass}',
+      '任務卡 · {gt.cards} 張',
+      'CHANGELOG · {gt.changelog} 條，一卡一行、帶日期',
+      'Commits · {commits.gt}（2026-07-12 → 2026-09-30）',
+    ],
+    cls: 'F',
+  },
+
+  // ── Lines and timeline ───────────────────────────────────────────────────────────────────
+  'gt.lines.title': { zh: '同一座城，三條線', cls: 'F', display: true },
+  'gt.main.name': { zh: '主線', cls: 'F', display: true },
+  'gt.main.desc': { zh: '紀律嚴格的 2D 正式版。', cls: 'F' },
+  'gt.main.stats': { zh: '{commits.gt} commits · v11.210 · PASS={gt.pass} · 沒有公開 demo（Pages 回 404）', cls: 'F' },
+  'gt.lab.name': { zh: '實驗線', cls: 'F', display: true },
+  'gt.lab.desc': { zh: '美術第一的 2D 分支：T420 分岔，自 T531 v12.87 起獨立演進。', cls: 'F' },
+  'gt.lab.quote': { zh: '「實驗線美術第一，其它的都是美術起來了才重要。」', cls: 'O', src: '[voice, glimmer]; en is T' },
+  'gt.lab.stats': {
+    zh: '{commits.gtlab} commits · T532–T701 · v14.05 · {gtlab.guards} 支像素守衛 · {gtlab.prs} 個 PR',
+    cls: 'F',
+    src: 'snapshot 2026-09-30 (brief: 287 · T532–T699 · v14.03 · 92)',
+  },
+  'gt.3d.name': { zh: '3D 線', cls: 'F', display: true },
+  'gt.3d.desc': { zh: '建造、一生、考古。目前只開放建造。', cls: 'F' },
+  'gt.3d.stats': { zh: '{commits.gt3d} commits · D000–D030 · 手機可直接開', cls: 'F', src: 'snapshot 2026-09-30 (brief: 138 · D000–D029)' },
+  'gt.tl.1': { zh: '2026-07-12 · 主線第一個 commit：「v1.0 基線（重建還原版）」', cls: 'R', src: '[glimmer]' },
+  'gt.tl.2': { zh: '2026-08-08 · T420 · v11.46 · {gt.forkAssertions} 條斷言通過 · 分成桌面線與移動線', cls: 'R', src: '[glimmer]' },
+  'gt.tl.3': { zh: '2026-09-13 · T531 v12.87 · 實驗線的自走起點', cls: 'R', src: '[glimmer]' },
+  'gt.tl.4': { zh: '2026-09-24 · D000 · 3D 線開線', cls: 'F' },
+  'gt.tl.5': {
+    zh: '2026-09-30 · 主線 T601 v11.210 · 實驗線 T701 v14.05 · 3D 線 D030',
+    cls: 'F',
+    src: 'snapshot 2026-09-30 (brief: lab T699 v14.03 · 3D D029)',
+  },
+  'gt.tl.note': {
+    zh: '兩條 2D 線的 T 編號各自獨立，不合併。實驗線倉庫的第一個 commit（2026-09-13）早於建倉，是匯入的本地歷史。',
+    cls: 'R',
+    src: '[glimmer]',
+  },
+
+  // ── Life of a card ── gt.card.N is a list of parts: [step name, detail?] ─────────────────
+  'gt.card.title': { zh: '一張卡的一生', cls: 'F', display: true },
+  // display list: the seven step names alone (the display face sets these; details use body text)
+  'gt.card.names': { zh: ['量測', '出卡', '施工', '守衛', '全綠', '合', '記錄'], cls: 'OD', display: true, src: 'GlimmerTown-lab AUTORUN.md' },
+  'gt.card.1': { zh: ['量測'], cls: 'OD', src: 'GlimmerTown-lab AUTORUN.md; en is T' },
+  'gt.card.2': { zh: ['出卡', '改什麼、驗收條件、回滾方式'], cls: 'OD', src: 'GlimmerTown-lab AUTORUN.md; en is T' },
+  'gt.card.3': { zh: ['施工', '各自的 git worktree「車位」'], cls: 'OD', src: 'GlimmerTown docs/COLLAB.md; en is T' },
+  'gt.card.4': { zh: ['守衛', '寫守衛、跑斷言'], cls: 'OD', src: 'GlimmerTown-lab AUTORUN.md; en is T' },
+  'gt.card.5': { zh: ['全綠', '煙霧測試全綠才 commit'], cls: 'OD', src: 'GlimmerTown-lab AUTORUN.md; en is T' },
+  'gt.card.6': { zh: ['合', '只有業主點頭才合'], cls: 'OD', src: 'GlimmerTown-lab AGENTS.md; en is T' },
+  'gt.card.7': { zh: ['記錄', 'CHANGELOG 一卡一行，寫下被否決的方案與依據'], cls: 'OD', src: 'GlimmerTown CHANGELOG rule; en is T' },
+  'gt.card.detail': {
+    zh: '影響整張畫面的改動，先做 {gtlab.compareMin}–{gtlab.compareMax} 檔對照圖給業主挑。每個新效果都掛一個逃生閥，可以關掉、回到舊畫面。',
+    cls: 'R',
+    src: '[glimmer]',
+  },
+  'gt.card.quote': { zh: '「3D 不是賣點，玩家做的事才是。」', cls: 'OD', src: 'GlimmerTown3D-lab docs/D000-vision.md; en is T' },
+
+  // ── 3D, score, links, undone ─────────────────────────────────────────────────────────────
+  'gt.3d.title': { zh: '同一座城、三種時間', cls: 'O', display: true, src: 'READMEs; en is T' },
+  'gt.3d.build': { zh: '建造：你親手蓋出一座城。〔開放中〕', cls: 'OD', src: 'GlimmerTown3D-lab README; en is T' },
+  'gt.3d.life': { zh: '一生：一個市民在這座城裡活完一輩子，城市在他身邊長大。〔暫停〕', cls: 'OD', src: 'GlimmerTown3D-lab README; en is T' },
+  'gt.3d.arch': { zh: '考古：數百年後，城市已經荒廢；你走進廢墟，讀出它的歷史。〔暫停〕', cls: 'OD', src: 'GlimmerTown3D-lab README; en is T' },
+  'gt.3d.decision': { zh: '業主 2026-09-25 定案：全力做建造；一生和考古暫停，世界歷史照樣記錄。', cls: 'F' },
+  'gt.3d.parity': {
+    zh: '與 2D 程式逐位對拍：D011，{gt3d.parityMaps} 張圖、{gt3d.parityOps} 筆操作全部相等；D024，{gt3d.parity2Maps} 張圖、{gt3d.parity2Counts} 個計數相等；故意改壞原文的突變測試全部轉紅。',
+    cls: 'R',
+    src: '[glimmer]',
+  },
+  'gt.3d.gpu': { zh: '增量重建：每次重建的 GPU 上傳量，從約 {gt3d.gpuBeforeMb} MB 降到約 {gt3d.gpuAfterKb} KB。', cls: 'F' },
+  'gt.score.title': { zh: '自評計分卡', cls: 'F', display: true },
+  'gt.score': { zh: '`docs/SURPASS.md`（對照 TheoTown）：{gt.surpass} 項判準，自評全部標為完成。', cls: 'F' },
+  'gt.score.redline': { zh: '原創紅線：「不用它的素材、不看它的代碼、不抄它的名字」。', cls: 'OD', src: 'GlimmerTown docs/SURPASS.md; en is T' },
+  'gt.open.title': { zh: '可以打開的', cls: 'F', display: true },
+  'gt.open.3d': { zh: '微光小鎮 3D · 可玩，手機可開 · {gt3d.demoMb} MB ↗', cls: 'F' },
+  'gt.open.shots': { zh: '實驗線樣張 · {gtlab.shots} 張白天、黃昏、夜景截圖 ↗', cls: 'F' },
+  'gt.open.lab': { zh: '實驗線遊戲 · 單檔 {gtlab.demoMb} MB，載入很重，完整下載可能逾時 ↗', cls: 'F', src: 'HEAD 2026-09-30 (brief: 8.37 MB)' },
+  'gt.open.main': { zh: '主線目前沒有公開 demo；README 說明如何自己架站。', cls: 'F' },
+  'gt.open.repos': { zh: '倉庫：GlimmerTown · GlimmerTown-lab · GlimmerTown3D-lab ↗', cls: 'F' },
+  'gt.undone.title': { zh: '沒做成的事', cls: 'OD', display: true, src: 'GlimmerTown-lab AUTORUN.md' },
+  'gt.undone.1': { zh: '主線還沒有公開 demo（Pages 回 404）。', cls: 'F' },
+  'gt.undone.2': { zh: '一生、考古兩種玩法暫停（2026-09-25 定案）。', cls: 'F' },
+  'gt.undone.3': { zh: '實驗線遊戲是 {gtlab.demoMb} MB 的單檔，完整下載可能逾時。', cls: 'F' },
+  'gt.undone.4': { zh: '「市民一生」三種原型已做好，等業主挑。', cls: 'R', src: '[glimmer]' },
+  'gt.undone.5': { zh: '`ARCH.md` 與 `LINEAGE.md` 保留了一次數字量法錯誤的更正。', cls: 'R', src: '[glimmer]' },
+  'gt.next': { zh: '下一個：前沿實驗室 →', cls: 'F', display: true },
+} satisfies Record<string, ZhEntry>;
+
+const en = {
+  'gt.label': 'Work · Game',
+  'gt.title': 'GlimmerTown',
+  'gt.alias': [{ lang: 'zh-Hant', text: '微光小鎮' }, ' · Glimmerville'],
+  'gt.tagline': 'One city, three times.',
+  'gt.lead':
+    'GlimmerTown is one original isometric city. The owner sets the direction and makes the final call; models from different vendors build under one written rulebook. Acceptance criteria come before the work, merges happen only when the guards are green, and what failed is recorded as it happened.',
+  'gt.chips': ['One HTML file', 'No dependencies', 'No external assets', 'Works offline (PWA)', 'Plays on a phone'],
+  'gt.pass.title': '{gt.pass} PASS',
+  'gt.pass.lead': "The main line's Node test suite, `test_fixde.js`, reports PASS={gt.pass}. Each lit cell is one passing check.",
+  'gt.pass.legend': '1 ◆ = 1 PASS',
+  'gt.pass.lit': 'Lit {x} / {gt.pass}',
+  'gt.pass.table.caption': 'GlimmerTown main line (snapshot {snapshot.asOf})',
+  'gt.pass.table': [
+    'Version · v11.210 (T601)',
+    'Code · {gt.codeLines} lines, about {gt.sizeMb} MB, one `index.html`',
+    'Tests · PASS={gt.pass}',
+    'Task cards · {gt.cards}',
+    'Changelog · {gt.changelog} dated lines, one per card',
+    'Commits · {commits.gt} (2026-07-12 → 2026-09-30)',
+  ],
+
+  'gt.lines.title': 'One city, three lines',
+  'gt.main.name': 'Main line',
+  'gt.main.desc': 'The strict 2D production build.',
+  'gt.main.stats': '{commits.gt} commits · v11.210 · PASS={gt.pass} · no public demo (Pages returns 404)',
+  'gt.lab.name': 'Art lab',
+  'gt.lab.desc': 'The art-first 2D branch: forked at T420, evolving on its own since T531 v12.87.',
+  'gt.lab.quote': '"On the lab line, art comes first; everything else matters once the art is there."',
+  'gt.lab.stats': '{commits.gtlab} commits · T532–T701 · v14.05 · {gtlab.guards} pixel guards · {gtlab.prs} PRs',
+  'gt.3d.name': '3D line',
+  'gt.3d.desc': 'Build, a lifetime, archaeology. Only build is active now.',
+  'gt.3d.stats': '{commits.gt3d} commits · D000–D030 · opens on a phone',
+  'gt.tl.1': '2026-07-12 · main line\'s first commit: "v1.0 baseline (rebuilt restoration)"',
+  'gt.tl.2': '2026-08-08 · T420 · v11.46 · {gt.forkAssertions} assertions passing · split into desktop and mobile lines',
+  'gt.tl.3': "2026-09-13 · T531 v12.87 · the lab line's own starting point",
+  'gt.tl.4': '2026-09-24 · D000 · the 3D line opens',
+  'gt.tl.5': '2026-09-30 · main T601 v11.210 · lab T701 v14.05 · 3D D030',
+  'gt.tl.note':
+    "The two 2D lines number their cards independently and never merge back. The lab repo's first commit (2026-09-13) predates the repo; it is imported local history.",
+
+  'gt.card.title': 'The life of one card',
+  'gt.card.names': ['Measure', 'Card', 'Build', 'Guard', 'Green', 'Merge', 'Record'],
+  'gt.card.1': ['Measure'],
+  'gt.card.2': ['Card', 'what changes, acceptance criteria, how to roll back'],
+  'gt.card.3': ['Build', 'each in its own git worktree "bay"'],
+  'gt.card.4': ['Guard', 'write guards, run assertions'],
+  'gt.card.5': ['Green', 'smoke tests green before commit'],
+  'gt.card.6': ['Merge', "only on the owner's nod"],
+  'gt.card.7': ['Record', 'one changelog line per card, rejected options and reasons included'],
+  'gt.card.detail':
+    'Changes that affect the whole frame come as {gtlab.compareMin}–{gtlab.compareMax} comparison options for the owner to pick. Every new effect has an escape hatch back to the old look.',
+  'gt.card.quote': '"3D is not the selling point; what the player does is."',
+
+  'gt.3d.title': 'One city, three times',
+  'gt.3d.build': 'Build: you build a city with your own hands. [Active]',
+  'gt.3d.life': 'A lifetime: one citizen lives a whole life here while the city grows around them. [Paused]',
+  'gt.3d.arch': 'Archaeology: centuries later the city lies abandoned; you walk its ruins and read its history. [Paused]',
+  'gt.3d.decision': "Owner's decision, 2026-09-25: all effort on build; lifetime and archaeology are paused; world history is still recorded.",
+  'gt.3d.parity':
+    'Exact cross-checks against the 2D code: D011, {gt3d.parityMaps} maps and {gt3d.parityOps} operations all equal; D024, {gt3d.parity2Maps} maps and {gt3d.parity2Counts} counts equal; deliberately broken mutants all turn red.',
+  'gt.3d.gpu': 'Incremental rebuilds: GPU upload per rebuild cut from about {gt3d.gpuBeforeMb} MB to about {gt3d.gpuAfterKb} KB.',
+  'gt.score.title': 'Self-assessed scorecard',
+  'gt.score': '`docs/SURPASS.md` (against TheoTown): {gt.surpass} criteria, all marked done by self-assessment.',
+  'gt.score.redline': 'Originality red line: "Don\'t use its assets, don\'t read its code, don\'t copy its names."',
+  'gt.open.title': 'What you can open',
+  'gt.open.3d': 'GlimmerTown 3D · playable, works on phones · {gt3d.demoMb} MB ↗',
+  'gt.open.shots': 'Lab shots · {gtlab.shots} day, dusk and night screenshots ↗',
+  'gt.open.lab': 'Lab game · a single {gtlab.demoMb} MB file, slow to load; a full download can time out ↗',
+  'gt.open.main': 'The main line has no public demo; its README explains how to host it yourself.',
+  'gt.open.repos': 'Repos: GlimmerTown · GlimmerTown-lab · GlimmerTown3D-lab ↗',
+  'gt.undone.title': "What didn't get done",
+  'gt.undone.1': 'The main line has no public demo yet (Pages returns 404).',
+  'gt.undone.2': 'Lifetime and archaeology are paused (decided 2026-09-25).',
+  'gt.undone.3': 'The lab game is a single {gtlab.demoMb} MB file; a full download can time out.',
+  'gt.undone.4': 'Three "citizen lifetime" prototypes are built and waiting for the owner\'s pick.',
+  'gt.undone.5': '`ARCH.md` and `LINEAGE.md` keep the correction of a counting-method error.',
+  'gt.next': 'Next: Frontier Lab →',
+} satisfies DictShape<typeof zh>;
+
+export default defineNs(zh, en);

@@ -1,0 +1,16 @@
+---
+// §7 head boot: inline, before first paint, ≤ 1 KB. scripts/headers.mjs hashes this exact text for the CSP,
+// so it holds no Astro expressions and is byte-identical on every page. The §7 lines are verbatim; the outer
+// block only keeps its bindings out of the global scope. The data-intro rule is §5.2: motion full, tier not
+// static, home, no `lj.v` (localStorage, else sessionStorage), and a full load (ClientRouter never re-runs it).
+---
+<script is:inline>{
+const d=document.documentElement; let t='lite', o=null;
+try{ o=localStorage.getItem('lj.tier') }catch{}
+const c=navigator.connection;
+if(o) t=o; else if(c?.saveData || /(^|-)2g/.test(c?.effectiveType||'') || !('WebGL2RenderingContext' in window)
+        || matchMedia('(forced-colors: active)').matches) t='static';
+d.dataset.tier=t; d.dataset.motion=matchMedia('(prefers-reduced-motion: reduce)').matches?'reduced':'full';
+d.dataset.js=''; /* data-intro rule from §5.2 */
+if(d.dataset.motion==='full'&&t!=='static'&&/^\/(en\/?)?$/.test(location.pathname)&&!location.hash){let v=null;try{v=localStorage.getItem('lj.v')}catch{try{v=sessionStorage.getItem('lj.v')}catch{}}if(v===null)d.dataset.intro=''}
+}</script>

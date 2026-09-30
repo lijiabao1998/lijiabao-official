@@ -1,0 +1,85 @@
+---
+// Tier-aware legend (§1, site law 3): `1 ● = k unit`, always printing the live k (1 in every tier in v1).
+// The k value sits in [data-legend-k] so the engine side can rewrite it if k ever changes.
+// A figure-specific legend key (e.g. hero.fig.legend, gt.pass.legend) renders as-is instead; in it, an
+// `amber` glyph index marks which ● is the amber one (e.g. the hero's "latest in each repo").
+import { localeOf, ts } from '../chrome/i18n';
+
+interface Props {
+  unit?: 'commit' | 'pass' | 'card';
+  k?: number;
+  /** dictionary key of a figure-specific legend (used verbatim) */
+  legend?: string;
+  /** index of the glyph (●◆○) that is drawn amber in a figure-specific legend */
+  amber?: number;
+  class?: string;
+}
+
+const { unit = 'commit', k = 1, legend, amber, class: cls } = Astro.props;
+const locale = localeOf(Astro);
+
+type Part = { kind: 'text' | 'glyph' | 'k'; text: string; amber?: boolean };
+const parts: Part[] = [];
+const GLYPH = /([●◆○◇◐])/u;
+
+let g = 0;
+const pushText = (s: string) => {
+  for (const piece of s.split(GLYPH)) {
+    if (!piece) continue;
+    if (GLYPH.test(piece)) {
+      parts.push({ kind: 'glyph', text: piece, amber: amber !== undefined && g === amber });
+      g++;
+    } else parts.push({ kind: 'text', text: piece });
+  }
+};
+
+if (legend) {
+  pushText(ts(legend, locale));
+} else {
+  const unitText = ts(`fig.unit.${unit}`, locale, { k });
+  const template = ts('fig.legend', locale, { k: '{k}', unit: unitText });
+  const [before, ...after] = template.split('{k}');
+  pushText(before ?? '');
+  if (after.length) {
+    parts.push({ kind: 'k', text: String(k) });
+    pushText(after.join(String(k)));
+  }
+}
+---
+<span class:list={['legend', cls]} data-legend>
+  {
+    parts.map((p) =>
+      p.kind === 'k' ? (
+        <data class="legend-k" value={p.text} data-legend-k>
+          {p.text}
+        </data>
+      ) : p.kind === 'glyph' ? (
+        <span class:list={['legend-g', { 'is-amber': p.amber }]}>{p.text}</span>
+      ) : (
+        p.text
+      ),
+    )
+  }
+</span>
+
+<style>
+  .legend {
+    display: inline;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    color: var(--fg-2);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .legend-g {
+    color: var(--fg);
+  }
+  .legend-g.is-amber {
+    color: var(--glim);
+  }
+  .legend-k {
+    color: var(--fg);
+  }
+</style>

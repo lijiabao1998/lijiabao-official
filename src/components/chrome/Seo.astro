@@ -1,0 +1,58 @@
+---
+// <title>, description, canonical, hreflang (zh-Hant / en / x-default → zh), Open Graph + Twitter card.
+// OG images are S6's build output: public/og/{zh,en}-{home,gt,fr}.png (1200×630).
+import type { Locale } from '@i18n/types';
+import { PAGE_PATH, localePath, localeTag, ts, type PageId } from './i18n';
+
+interface Props {
+  locale: Locale;
+  page: PageId;
+}
+
+const { locale, page } = Astro.props;
+const site = Astro.site ?? new URL('https://lijiabao.dev');
+const abs = (p: string) => new URL(p, site).href;
+
+const title = ts(`meta.${page}.title`, locale);
+const description = page === 'nf' ? ts('nf.body', locale) : ts(`meta.${page}.desc`, locale);
+const ogPage = page === 'nf' ? 'home' : page;
+const ogAlt = ts(`meta.og.${ogPage}`, locale);
+const ogImage = abs(`/og/${localeTag(locale)}-${ogPage}.png`);
+
+const path = PAGE_PATH[page];
+const canonical = path ? abs(localePath(locale, path)) : null;
+const zhUrl = path ? abs(localePath('zh-Hant', path)) : null;
+const enUrl = path ? abs(localePath('en', path)) : null;
+const siteName = ts('site.name', locale);
+---
+<title>{title}</title>
+<meta name="description" content={description} />
+{page === 'nf' && <meta name="robots" content="noindex" />}
+{canonical && <link rel="canonical" href={canonical} />}
+{zhUrl && <link rel="alternate" hreflang="zh-Hant" href={zhUrl} />}
+{enUrl && <link rel="alternate" hreflang="en" href={enUrl} />}
+{zhUrl && <link rel="alternate" hreflang="x-default" href={zhUrl} />}
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="sitemap" href="/sitemap.xml" />
+<meta name="theme-color" content="#0B0B0C" />
+<meta name="color-scheme" content="dark" />
+<meta name="format-detection" content="telephone=no" />
+<meta property="og:type" content={page === 'home' ? 'profile' : 'website'} />
+<meta property="og:site_name" content="lijiabao.dev" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+{canonical && <meta property="og:url" content={canonical} />}
+<meta property="og:locale" content={locale === 'en' ? 'en_US' : 'zh_TW'} />
+<meta property="og:locale:alternate" content={locale === 'en' ? 'zh_TW' : 'en_US'} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content={ogAlt} />
+{page === 'home' && <meta property="profile:username" content={ts('site.handle', locale)} />}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+<meta name="twitter:image:alt" content={ogAlt} />
+<meta name="author" content={siteName} />

@@ -31,3 +31,6 @@ pnpm-debug.log*
 
 # private source photo: only the sampled glimmer data (src/assets/generated, public/gl) is published
 src/assets/portrait.png
+
+# local caches (Astro + Vite cacheDir; node_modules is shared across worktrees)
+.cache/

@@ -1,0 +1,28 @@
+---
+// Frontier (§3). SCAFFOLD (F0-shell) — owner S5. Sections in §3 order:
+//   #fr-hero · #fr-round · #fr-rules · #fr-labs · #fr-math · #fr-review · #fr-gov · #fr-bounds · #fr-undone
+//   · nav#fr-next
+import Base from '../layouts/Base.astro';
+import FrHero from '../components/fr/FrHero.astro';
+import FrRound from '../components/fr/FrRound.astro';
+import FrRules from '../components/fr/FrRules.astro';
+import FrLabs from '../components/fr/FrLabs.astro';
+import FrMath from '../components/fr/FrMath.astro';
+import FrReview from '../components/fr/FrReview.astro';
+import FrGov from '../components/fr/FrGov.astro';
+import FrBounds from '../components/fr/FrBounds.astro';
+import FrUndone from '../components/fr/FrUndone.astro';
+import NextCase from '../components/shared/NextCase.astro';
+---
+<Base page="fr">
+  <FrHero />
+  <FrRound />
+  <FrRules />
+  <FrLabs />
+  <FrMath />
+  <FrReview />
+  <FrGov />
+  <FrBounds />
+  <FrUndone />
+  <NextCase from="fr" />
+</Base>

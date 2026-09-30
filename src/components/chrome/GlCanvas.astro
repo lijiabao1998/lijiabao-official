@@ -1,0 +1,6 @@
+---
+// The one WebGL2 canvas (§3, §6.0). Persisted across ClientRouter swaps so the context and compiled programs
+// survive; the engine (motion/boot → gl/engine) mounts it once. Hidden in the static tier, with no JS, on
+// context loss and under forced colours (tiers.css); the DOM posters take over.
+---
+<canvas id="gl" aria-hidden="true" transition:persist="gl"></canvas>

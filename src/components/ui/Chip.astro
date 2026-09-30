@@ -1,0 +1,151 @@
+---
+// Figure chip (§2.4): DATA 資料 / SCHEMATIC 示意 / PORTRAIT 肖像 — pill, 1px --line-ui, mono.
+// The definition shows on focus immediately, on hover after 300ms, and on tap (toggletip); Esc dismisses it
+// (WCAG 1.4.13). Failure and success chips share size, position and motion.
+import { SNAPSHOT } from '@data/facts';
+import { localeOf, ts } from '../chrome/i18n';
+
+interface Props {
+  kind: 'DATA' | 'SCHEMATIC' | 'PORTRAIT';
+  /** snapshot date for the DATA definition; defaults to the committed snapshot */
+  date?: string;
+  /** id for the definition element (unique per page); defaults to one derived from `for` + kind */
+  id?: string;
+  /** owning figure id, used to derive a unique definition id */
+  for?: string;
+  class?: string;
+}
+
+const { kind, date = SNAPSHOT.asOf, id, for: owner, class: cls } = Astro.props;
+const locale = localeOf(Astro);
+const defId = id ?? `${owner ?? 'chip'}-${kind.toLowerCase()}-def`;
+const def = ts(`chip.${kind}.def`, locale, kind === 'DATA' ? { date } : undefined);
+---
+<span class:list={['chip-wrap', cls]} data-chip>
+  <button type="button" class="chip" data-kind={kind} aria-describedby={defId} aria-expanded="false">
+    <span class="chip-mark" aria-hidden="true"></span>
+    {ts(`chip.${kind}`, locale)}
+  </button>
+  <span id={defId} role="tooltip" class="chip-def t-small">{def}</span>
+</span>
+
+<script>
+  function bind() {
+    for (const wrap of document.querySelectorAll<HTMLElement>('[data-chip]:not([data-chip-ready])')) {
+      wrap.dataset.chipReady = '';
+      const btn = wrap.querySelector<HTMLButtonElement>('.chip');
+      if (!btn) continue;
+      const set = (open: boolean) => {
+        wrap.toggleAttribute('data-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+      };
+      btn.addEventListener('click', () => set(!wrap.hasAttribute('data-open')));
+      btn.addEventListener('blur', () => set(false));
+      wrap.addEventListener('pointerleave', () => wrap.removeAttribute('data-dismissed'));
+      btn.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        set(false);
+        wrap.setAttribute('data-dismissed', '');
+      });
+      btn.addEventListener('focus', () => wrap.removeAttribute('data-dismissed'));
+    }
+  }
+  document.addEventListener('astro:page-load', bind);
+</script>
+
+<style>
+  .chip-wrap {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: var(--hit-min);
+    padding: 3px 11px 3px 9px;
+    border: 1px solid var(--line-ui);
+    border-radius: 999px;
+    background: transparent;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+    color: var(--fg);
+    cursor: help;
+    transition: border-color var(--d-s) var(--ease-rise);
+  }
+  .chip:lang(en) {
+    text-transform: uppercase;
+  }
+  .chip:hover,
+  [data-open] > .chip {
+    border-color: var(--fg-2);
+  }
+  /* kind marks: DATA = a filled point (a record), SCHEMATIC = a hollow ring, PORTRAIT = half */
+  .chip-mark {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .chip[data-kind='SCHEMATIC'] .chip-mark {
+    background: none;
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+  .chip[data-kind='PORTRAIT'] .chip-mark {
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+
+  .chip-def {
+    position: absolute;
+    z-index: 5;
+    left: 0;
+    top: calc(100% + 8px);
+    width: max-content;
+    max-width: min(34ch, 80vw);
+    padding: 10px 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-ui);
+    color: var(--fg);
+    font-family: var(--ff-body);
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    transition:
+      opacity var(--d-xs) var(--ease-rise),
+      transform var(--d-xs) var(--ease-rise),
+      visibility 0s linear var(--d-xs);
+    pointer-events: none;
+  }
+  .chip-def:lang(zh) {
+    max-width: min(20em, 80vw);
+  }
+  /* hover: after 300ms; focus / tap: immediately; Esc: dismissed until pointer leaves or focus returns */
+  .chip-wrap:hover:not([data-dismissed]) .chip-def {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 300ms, 300ms, 0s;
+    pointer-events: auto;
+  }
+  .chip-wrap:is(:has(.chip:focus-visible), [data-open]):not([data-dismissed]) .chip-def {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+    pointer-events: auto;
+  }
+  @media (forced-colors: active) {
+    .chip,
+    .chip-def {
+      border-color: CanvasText;
+    }
+  }
+</style>

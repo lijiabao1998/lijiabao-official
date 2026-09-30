@@ -1,0 +1,72 @@
+---
+// The page shell (§3), in DOM order: a.skip → header#top (not persisted) → canvas#gl (persisted) →
+// main#main[data-layout] → footer#colophon (fieldset#tier). <html data-tier="static"> is the SSR default;
+// the inline head boot (§7) sets data-tier / data-motion / data-js (and data-intro on home) before paint.
+//
+// Fonts (§2.2): Geist (latin preloaded) and Geist Mono everywhere; the two Noto Sans TC glyph subsets only on
+// zh pages — the hero subset (the LCP h1 + wordmark) preloaded on the zh home only.
+import { Font } from 'astro:assets';
+import { ClientRouter } from 'astro:transitions';
+import '../styles/tokens.css';
+import '../styles/base.css';
+import '../styles/type.css';
+import '../styles/grid.css';
+import '../styles/motion.css';
+import '../styles/tiers.css';
+import '../styles/print.css';
+import Footer from '../components/chrome/Footer.astro';
+import GlCanvas from '../components/chrome/GlCanvas.astro';
+import HeadBoot from '../components/chrome/HeadBoot.astro';
+import Header from '../components/chrome/Header.astro';
+import JsonLd from '../components/chrome/JsonLd.astro';
+import Seo from '../components/chrome/Seo.astro';
+import SkipLink from '../components/chrome/SkipLink.astro';
+import Sprite from '../components/chrome/Sprite.astro';
+import { localeOf, type PageId } from '../components/chrome/i18n';
+
+interface Props {
+  page: PageId;
+  /** extra JSON-LD nodes for this page (merged into the @graph) */
+  jsonld?: Record<string, unknown>[];
+}
+
+const { page, jsonld = [] } = Astro.props;
+const locale = localeOf(Astro);
+const zh = locale === 'zh-Hant';
+---
+<!doctype html>
+<html lang={locale} data-tier="static">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <HeadBoot />
+    <Seo locale={locale} page={page} />
+    <Font cssVariable="--font-display" preload={[{ subset: 'latin' }]} />
+    <Font cssVariable="--font-mono" />
+    {zh && <Font cssVariable="--font-cjk-hero" preload={page === 'home'} />}
+    {zh && <Font cssVariable="--font-cjk-display" />}
+    <JsonLd locale={locale} page={page} extra={jsonld} />
+    <ClientRouter />
+  </head>
+  <body>
+    <SkipLink />
+    <Sprite />
+    <Header page={page} />
+    <GlCanvas />
+    <main id="main" data-layout={page} tabindex="-1">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      // The always-loaded runtime entry (static-tier safe, no GSAP): wires the astro:* lifecycle and
+      // dynamically imports motion/boot.ts (GSAP, Lenis, engine) only when the tier is not static.
+      import '@motion/lifecycle';
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  #main:focus {
+    outline: none;
+  }
+</style>

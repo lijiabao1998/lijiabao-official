@@ -1,0 +1,135 @@
+---
+// <Display k="hero.line" as="span" size="xl" animate hole /> — display type from the dictionary
+// (spec §2.2 CJK fit-to-line, §8 display text, §9.3).
+//
+// - Authored lines (string[]) render one block per line and fit the line to its container with no
+//   JavaScript: `--n` = the longest line in em (full-width = 1, Latin = 0.56, plus CJK tracking),
+//   `font-size: min(var(--fs), 100cqi / var(--n))`. The root is the inline-size container, so place
+//   it in normal block flow (not in a shrink-to-fit flex/grid track).
+// - `narrow` lines (entry.narrow) replace them under 640px (`--n-narrow`); only one set is ever
+//   displayed, so assistive tech and innerText see a single copy.
+// - A single string is set in the display size and wraps (`text-wrap: balance`).
+// - `animate` (hero line, #not, manifesto: blocks that animate by character) adds an sr-only full
+//   text and marks the visual copies aria-hidden. Everything else is a single copy.
+// - `hole` → [data-gl-hole]; `weigh` → [data-weigh]. Draft builds add data-copy(-status).
+// - Only keys flagged `display: true` belong here: the display face's CJK subset is built from them.
+import type { HTMLAttributes, HTMLTag } from 'astro/types';
+import type { Key, Locale } from '../../i18n/types.ts';
+import {
+  DRAFT, fill, fitUnits, isSegs, linesOf, localeOf, pick, plain, resolve, runsOf, tNarrow, type Vars,
+} from '../../i18n/t.ts';
+
+type Size = 'xl' | 'l' | 'm' | 's' | 'h3';
+
+type Props = Omit<HTMLAttributes<'span'>, 'style'> & {
+  k: Key;
+  as?: HTMLTag;
+  /** Type step: --fs-xl | --fs-l | --fs-m | --fs-s | --fs-h3 (default m). */
+  size?: Size;
+  /** Animated by character: sr-only text + aria-hidden visual copy. */
+  animate?: boolean;
+  /** Keep glimmers out from under this text ([data-gl-hole]). */
+  hole?: boolean;
+  weigh?: 'scan' | 'hover' | 'scroll';
+  vars?: Vars;
+  locale?: Locale;
+  style?: string;
+};
+
+const {
+  k, as = 'span', size = 'm', animate = false, hole = false, weigh, vars, locale: forced,
+  class: className, style = '', ...attrs
+} = Astro.props;
+
+const locale: Locale = forced ?? localeOf(Astro);
+const r = resolve(k);
+const val = r ? fill(pick(r.entry, locale), locale, vars, r.key) : null;
+
+/** CJK tracking per step (spec §2.2), added to the fit width of CJK lines. */
+const TRACK: Record<Size, number> = { xl: 0, l: 0, m: 0.01, s: 0.02, h3: 0.02 };
+const track = locale === 'zh-Hant' ? TRACK[size] : 0;
+
+const lines = val === null || val === '' ? [] : linesOf(val);
+const fit = Array.isArray(val) && !isSegs(val) && lines.length > 0;
+const narrow = fit ? tNarrow(k, locale, vars) : null;
+const n = fit ? Math.max(...lines.map((l) => fitUnits(l, track))) : 0;
+const nn = narrow ? Math.max(...narrow.map((l) => fitUnits(l, track))) : 0;
+const sr = animate && val !== null ? plain(val) : '';
+const hidden = animate ? 'true' : undefined;
+const vars$ = `${fit ? `--n:${n};` : ''}${narrow ? `--n-narrow:${nn};` : ''}${style}`;
+const Tag = as;
+---
+{lines.length > 0 && r && (
+  <Tag
+    {...attrs}
+    class:list={['display', `display--${size}`, fit ? 'display--fit' : 'display--free', narrow && 'display--has-narrow', className]}
+    style={vars$ || undefined}
+    data-display={r.key}
+    data-size={size}
+    data-weigh={weigh}
+    data-gl-hole={hole ? '' : undefined}
+    data-copy={DRAFT ? r.key : undefined}
+    data-copy-status={r.proposed ? 'proposed' : undefined}
+  >{sr && <span class="display__sr">{sr}</span>}<span class="display__set display__set--wide" aria-hidden={hidden}>{lines.map((line) => (<span class="display__line">{runsOf(line).map((run) => run.code ? <code lang={run.lang} dir={run.dir}>{run.text}</code> : run.lang ? <span lang={run.lang} dir={run.dir}>{run.text}</span> : run.text)}</span>))}</span>{narrow && (<span class="display__set display__set--narrow" aria-hidden={hidden}>{narrow.map((line) => (<span class="display__line">{runsOf(line).map((run) => run.code ? <code>{run.text}</code> : run.lang ? <span lang={run.lang} dir={run.dir}>{run.text}</span> : run.text)}</span>))}</span>)}</Tag>
+)}
+
+<style>
+  .display {
+    display: block;
+    container-type: inline-size;
+    font-family: var(--ff-display);
+    font-kerning: normal;
+  }
+  .display--xl { --fs: var(--fs-xl); }
+  .display--l { --fs: var(--fs-l); }
+  .display--m { --fs: var(--fs-m); }
+  .display--s { --fs: var(--fs-s); }
+  .display--h3 { --fs: var(--fs-h3); }
+
+  .display__set { display: block; font-size: var(--fs); }
+  .display__line { display: block; }
+  .display--fit .display__set--wide { font-size: min(var(--fs), 100cqi / var(--n)); }
+  .display--fit .display__line { white-space: nowrap; }
+  .display--free .display__line { text-wrap: balance; }
+  .display__set--narrow { display: none; }
+
+  @media (max-width: 639.98px) {
+    .display--has-narrow .display__set--wide { display: none; }
+    .display--has-narrow .display__set--narrow {
+      display: block;
+      font-size: min(var(--fs), 100cqi / var(--n-narrow));
+    }
+  }
+
+  /* Visually hidden, still read (same as the global .sr-only). */
+  .display__sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Typographic defaults per step (spec §2.2), zero specificity so type.css can override them.
+     Latin first, then CJK (the zh pages). Lit weight = rest + 200 is applied by motion. */
+  :where(.display) {
+    line-height: 1.1;
+    font-weight: 520;
+    letter-spacing: 0;
+    line-break: strict;
+  }
+  :where(.display--xl) { line-height: 0.92; font-weight: 560; letter-spacing: -0.05em; }
+  :where(.display--l) { line-height: 0.92; font-weight: 560; letter-spacing: -0.045em; }
+  :where(.display--m) { line-height: 1; font-weight: 520; letter-spacing: -0.035em; }
+  :where(.display--s) { line-height: 1.1; font-weight: 500; letter-spacing: -0.02em; }
+  :where(.display--h3) { line-height: 1.2; font-weight: 560; letter-spacing: -0.01em; }
+  :where(.display--xl:lang(zh-Hant)) { line-height: 1.04; font-weight: 600; letter-spacing: 0; }
+  :where(.display--l:lang(zh-Hant)) { line-height: 1.04; letter-spacing: 0; }
+  :where(.display--m:lang(zh-Hant)) { line-height: 1.12; letter-spacing: 0.01em; }
+  :where(.display--s:lang(zh-Hant)) { line-height: 1.25; letter-spacing: 0.02em; }
+  :where(.display--h3:lang(zh-Hant)) { line-height: 1.4; letter-spacing: 0.02em; }
+</style>

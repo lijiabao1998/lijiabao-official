@@ -1,0 +1,217 @@
+---
+// The HUD (§3, §7, §8): tier + glimmer readout, an early Tab stop that jumps to the tier control —
+// the WCAG 2.2.2 pause stop. It never imports the engine: it listens to `lj:tier` {tier, src, count}
+// and watches the <html> data attributes. Copy arrives as data-i18n-* templates written at build time.
+import { localeOf, numberFormat, tpl, ts } from './i18n';
+
+interface Props {
+  /** `hud` for the header instance (the §3 `a#hud`); omit for the copy inside the mobile menu. */
+  id?: string;
+  class?: string;
+}
+
+const { id, class: cls } = Astro.props;
+const locale = localeOf(Astro);
+
+const text = tpl('hud.text', locale, ['tier', 'n']);
+const aria = tpl('hud.aria', locale, ['tier', 'n']);
+const label = {
+  full: ts('tier.full', locale),
+  lite: ts('tier.lite', locale),
+  static: ts('tier.static', locale),
+  still: ts('tier.still', locale),
+};
+const msg = {
+  nowebgl: ts('tier.noWebgl', locale),
+  lost: ts('tier.lost', locale),
+  frozen: ts('tier.frozen', locale),
+  promoted: ts('tier.promoted', locale),
+  demoted: ts('tier.demoted', locale),
+};
+
+// SSR state = the SSR tier (static) and no live glimmers; the script re-renders on astro:page-load.
+const n0 = numberFormat(locale).format(0);
+const parts = text.split(/(\{tier\}|\{n\})/).filter(Boolean);
+const ssrAria = aria.replace('{tier}', label.static).replace('{n}', n0);
+---
+<a
+  id={id}
+  class:list={['hud', 'js-only', cls]}
+  href="#tier"
+  aria-label={ssrAria}
+  data-hud
+  data-parity-ignore
+  data-i18n-text={text}
+  data-i18n-aria={aria}
+  data-i18n-full={label.full}
+  data-i18n-lite={label.lite}
+  data-i18n-static={label.static}
+  data-i18n-still={label.still}
+  data-i18n-nowebgl={msg.nowebgl}
+  data-i18n-lost={msg.lost}
+  data-i18n-frozen={msg.frozen}
+  data-i18n-promoted={msg.promoted}
+  data-i18n-demoted={msg.demoted}
+>
+  <span class="hud-dot" aria-hidden="true"></span>
+  <span class="hud-body">
+    <span class="hud-text" data-hud-text>
+      {
+        parts.map((p) =>
+          p === '{tier}' ? (
+            <span class="hud-tier" data-hud-tier>{label.static}</span>
+          ) : p === '{n}' ? (
+            <span class="hud-n tnum" data-hud-n>{n0}</span>
+          ) : (
+            p
+          ),
+        )
+      }
+    </span>
+    <span class="hud-msg" data-hud-msg hidden></span>
+  </span>
+</a>
+
+<script>
+  import { last, on } from '@lib/events';
+
+  const root = document.documentElement;
+  let count = last('lj:tier')?.count ?? last('lj:gl')?.count ?? 0;
+  let flash = '';
+  let flashTimer = 0;
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const fill = (t: string, v: Record<string, string>) => t.replace(/\{(\w+)\}/g, (m, k: string) => v[k] ?? m);
+
+  /** Rebuild the readout from its template so [data-hud-tier] / [data-hud-n] exist for the intro tick. */
+  function paint(host: HTMLElement, template: string, tier: string, n: string) {
+    const out: (Node | string)[] = [];
+    for (const part of template.split(/(\{tier\}|\{n\})/)) {
+      if (!part) continue;
+      if (part !== '{tier}' && part !== '{n}') {
+        out.push(part);
+        continue;
+      }
+      const s = document.createElement('span');
+      if (part === '{tier}') {
+        s.className = 'hud-tier';
+        s.dataset.hudTier = '';
+        s.textContent = tier;
+      } else {
+        s.className = 'hud-n tnum';
+        s.dataset.hudN = '';
+        s.textContent = n;
+      }
+      out.push(s);
+    }
+    host.replaceChildren(...out);
+  }
+
+  function render() {
+    const tier = root.dataset.tier ?? 'static';
+    const gl = root.dataset.gl ?? '';
+    const reduced = root.dataset.motion === 'reduced';
+    const n = new Intl.NumberFormat(root.lang === 'en' ? 'en' : 'zh-Hant-TW').format(count);
+    // transient notices win for 3s; otherwise the persistent GL state explains a static page
+    const msgKey = flash || (gl === 'none' ? 'nowebgl' : gl === 'lost' || gl === 'frozen' ? gl : '');
+    for (const el of document.querySelectorAll<HTMLElement>('[data-hud]')) {
+      const d = el.dataset;
+      const label = (reduced ? d.i18nStill : d[`i18n${cap(tier)}`]) ?? tier;
+      const msg = msgKey ? (d[`i18n${cap(msgKey)}`] ?? '') : '';
+      const text = el.querySelector<HTMLElement>('[data-hud-text]');
+      if (text) paint(text, d.i18nText ?? '', label, n);
+      const m = el.querySelector<HTMLElement>('[data-hud-msg]');
+      if (m) {
+        m.textContent = msg;
+        m.hidden = !msg;
+      }
+      el.setAttribute('aria-label', fill(d.i18nAria ?? '', { tier: label, n }) + (msg ? ` ${msg}` : ''));
+    }
+  }
+
+  function notice(key: string) {
+    flash = key;
+    window.clearTimeout(flashTimer);
+    flashTimer = window.setTimeout(() => {
+      flash = '';
+      render();
+    }, 3000);
+  }
+
+  // 'lj:tier' = a tier change, or (same tier, src 'auto', no reason) a live glimmer count update.
+  on('lj:tier', (d) => {
+    if (Number.isFinite(d.count)) count = d.count;
+    if (d.reason === 'promoted' || d.reason === 'demoted') notice(d.reason);
+    render();
+  });
+  on('lj:gl', (d) => {
+    if (Number.isFinite(d.count)) count = d.count;
+    render();
+  });
+
+  // <html> survives ClientRouter swaps, so one observer covers every page (tier, motion, GL state).
+  new MutationObserver(render).observe(root, {
+    attributes: true,
+    attributeFilter: ['data-tier', 'data-motion', 'data-gl'],
+  });
+  document.addEventListener('astro:page-load', render);
+</script>
+
+<style>
+  .hud {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--hit);
+    padding-inline: 4px;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    color: var(--fg-2);
+    white-space: nowrap;
+    transition: color var(--d-s) var(--ease-rise);
+  }
+  .hud:is(:hover, :focus-visible) {
+    color: var(--fg);
+  }
+  .hud-body {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hud-tier {
+    display: inline-block;
+    min-inline-size: 2em;
+  }
+  :global(:root:lang(en)) .hud-tier {
+    min-inline-size: 7ch;
+  }
+  .hud-n {
+    display: inline-block;
+    min-inline-size: 5ch;
+    text-align: end;
+  }
+  .hud-msg {
+    font-size: 0.92em;
+    color: var(--fg-3);
+    max-inline-size: 28ch;
+    white-space: normal;
+  }
+  /* the dot is a glimmer only while a live GL scene is allowed to draw; otherwise a ring */
+  .hud-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex: none;
+    box-shadow: inset 0 0 0 1px var(--fg-3);
+    transition:
+      background-color var(--d-s) var(--ease-rise),
+      box-shadow var(--d-s) var(--ease-rise);
+  }
+  :global(html[data-gl='ok']:not([data-tier='static'])) .hud-dot {
+    background: var(--glim);
+    box-shadow: none;
+  }
+</style>

@@ -1,0 +1,122 @@
+---
+// footer#colophon (§3 row 9): the tier fieldset, 僅代表個人觀點, the privacy line, colophon and fonts,
+// the snapshot date, © and back to top. The name closes the page sitting on a baseline.
+import TierFieldset from './TierFieldset.astro';
+import { localeOf, ts } from './i18n';
+
+const locale = localeOf(Astro);
+---
+<footer id="colophon" class="ftr">
+  <div class="wrap grid ftr-top">
+    <div class="ftr-tier md-8 lg-7">
+      <TierFieldset />
+    </div>
+    <div class="ftr-notes md-8 lg-4 lg-start-9">
+      <p class="ftr-say">{ts('footer.disclaimer', locale)}</p>
+      <p class="ftr-say c-fg-2">{ts('footer.privacy', locale)}</p>
+      <p class="ftr-meta t-mono">{ts('footer.snapshot', locale)}</p>
+      <p class="ftr-small t-mono c-fg-3">{ts('footer.colophon', locale)}</p>
+      <p class="ftr-small t-mono c-fg-3">{ts('footer.type', locale)}</p>
+    </div>
+  </div>
+
+  <div class="wrap ftr-base">
+    <p class="ftr-mark" aria-hidden="true">
+      <span class="ftr-mark-name">{ts('site.name', locale)}</span><span class="ftr-mark-dot"></span>
+    </p>
+    <div class="ftr-legal">
+      <p class="t-mono c-fg-3">{ts('footer.copy', locale)}</p>
+      <a class="link t-mono ftr-top-link" href="#top">{ts('footer.top', locale)}</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Tables live in <details>: open them for printing, restore afterwards (§2.1 print).
+  let opened: HTMLDetailsElement[] = [];
+  window.addEventListener('beforeprint', () => {
+    opened = [...document.querySelectorAll<HTMLDetailsElement>('details:not([open])')];
+    for (const d of opened) d.open = true;
+  });
+  window.addEventListener('afterprint', () => {
+    for (const d of opened) d.open = false;
+    opened = [];
+  });
+</script>
+
+<style>
+  .ftr {
+    border-top: 1px solid var(--line);
+    padding-top: var(--s-9);
+    padding-bottom: max(var(--s-6), env(safe-area-inset-bottom));
+    background: var(--bg);
+  }
+  .ftr-top {
+    row-gap: var(--s-8);
+  }
+  .ftr-notes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+  .ftr-say {
+    font-size: var(--fs-body);
+    color: var(--fg);
+  }
+  .ftr-meta {
+    margin-top: var(--s-3);
+    color: var(--fg-2);
+  }
+  .ftr-small {
+    line-height: 1.6;
+  }
+
+  .ftr-base {
+    margin-top: var(--s-10);
+  }
+  .ftr-mark {
+    --w-rest: 560;
+    display: flex;
+    align-items: baseline;
+    padding-bottom: 0.06em;
+    border-bottom: 1px solid var(--line-ui);
+    font-family: var(--ff-display);
+    font-size: var(--fs-l);
+    font-weight: var(--w-rest);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    color: var(--fg);
+    white-space: nowrap;
+    overflow: clip;
+  }
+  .ftr-mark:lang(zh) {
+    --w-rest: 600;
+    line-height: 1.04;
+    letter-spacing: 0;
+  }
+  .ftr-mark-dot {
+    width: 0.2em;
+    height: 0.2em;
+    margin-inline-start: 0.08em;
+    border-radius: 50%;
+    background: var(--glim);
+    align-self: baseline;
+  }
+  .ftr-legal {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3) var(--s-5);
+    padding-top: var(--s-3);
+  }
+  .ftr-top-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--hit);
+    color: var(--fg-2);
+  }
+  .ftr-top-link:is(:hover, :focus-visible) {
+    color: var(--fg);
+  }
+</style>

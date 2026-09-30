@@ -1,0 +1,57 @@
+---
+// <Proposed k="manifesto.reading" as="div"> …block… </Proposed>
+// Wraps a block whose copy is gated by a P/PE key (spec §4.0):
+// - resolve(k) is null (not approved, `fallback: null`, or feature off) → renders nothing;
+// - production, approved or falling back to a fact → renders the wrapper with the slot;
+// - draft builds (PUBLIC_DRAFT=1), unapproved → dashed amber outline + 「提案 PROPOSED」 tag,
+//   data-copy / data-copy-status="proposed" (build:prod fails if that attribute reaches dist).
+// The slot renders its own <T>/<Display> with the same key; they apply the same gating.
+import type { HTMLTag } from 'astro/types';
+import type { Key, Locale } from '../../i18n/types.ts';
+import { localeOf, resolve, tStr } from '../../i18n/t.ts';
+
+interface Props {
+  k: Key;
+  /** Wrapper element (default div). */
+  as?: HTMLTag;
+  class?: string;
+  id?: string;
+  locale?: Locale;
+}
+
+const { k, as = 'div', class: className, id, locale: forced } = Astro.props;
+const locale: Locale = forced ?? localeOf(Astro);
+const r = resolve(k);
+const proposed = r?.proposed === true;
+const Tag = as;
+---
+{r && (
+  <Tag
+    id={id}
+    class:list={[className, proposed && 'proposed']}
+    data-copy={proposed ? k : undefined}
+    data-copy-status={proposed ? 'proposed' : undefined}
+  ><slot />{proposed && <span class="proposed__tag" title={tStr('common.proposed', locale)}>{tStr('common.proposed.tag', locale)}</span>}</Tag>
+)}
+
+<style>
+  .proposed {
+    position: relative;
+    outline: 1px dashed var(--glim, #ffb547);
+    outline-offset: 6px;
+  }
+  .proposed__tag {
+    position: absolute;
+    top: -6px;
+    left: 0;
+    translate: 0 -100%;
+    padding: 2px 8px;
+    border: 1px solid var(--glim, #ffb547);
+    border-radius: 999px;
+    background: var(--bg, #0b0b0c);
+    color: var(--glim, #ffb547);
+    font: 500 0.75rem/1.4 var(--ff-mono, ui-monospace, monospace);
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+</style>

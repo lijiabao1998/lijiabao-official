@@ -36,7 +36,7 @@ const bins = new Map<string, Promise<Decoded>>();
 function bin(key: string): Promise<Decoded> {
   let p = bins.get(key);
   if (!p) {
-    const url = (manifest as Record<string, string | undefined>)[key];
+    const url = (manifest as unknown as Record<string, string | undefined>)[key];
     p = url
       ? fetch(url)
           .then((r) => {

@@ -10,7 +10,7 @@ export interface Labelled {
 
 /** Splits at the first full-width colon or an ASCII colon followed by a space. No colon → no label. */
 export function splitLabel(s: string): Labelled {
-  const m = /^(.*?)(?:：|:\s+)([\s\S]*)$/u.exec(s);
+  const m = /^(.*?)(?:\uFF1A|:\s+)([\s\S]*)$/u.exec(s);
   if (!m || !m[1]) return { label: '', body: s.trim() };
   return { label: m[1].trim(), body: (m[2] ?? '').trim() };
 }
@@ -18,7 +18,7 @@ export function splitLabel(s: string): Labelled {
 /** 「A／B／C」 or "A / B / C" → items (the status vocabularies). */
 export function splitSlash(s: string): string[] {
   return s
-    .split(/\s*／\s*|\s+\/\s+/u)
+    .split(/\s*\uFF0F\s*|\s+\/\s+/u)
     .map((x) => x.trim())
     .filter(Boolean);
 }

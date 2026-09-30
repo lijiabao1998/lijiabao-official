@@ -48,22 +48,15 @@ export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
     for (const m of masks) m.setAttribute('data-masking', '');
 
     gsap.set(todo, { animation: 'none' });
-    gsap.set(
-      todo.filter((el) => kindOf(el) === 'soft'),
-      { y: 24, opacity: 0 },
-    );
-    gsap.set(
-      todo.filter((el) => kindOf(el) === 'fade'),
-      { opacity: 0 },
-    );
-    gsap.set(
-      todo.filter((el) => kindOf(el) === 'mask'),
-      { yPercent: 105 },
-    );
-    gsap.set(
-      todo.filter((el) => kindOf(el) === 'clip'),
-      { clipPath: 'inset(0% 100% 0% 0%)' },
-    );
+    // Only set kinds that are present: gsap.set([]) logs "GSAP target not found".
+    const preset = (kind: Kind, vars: gsap.TweenVars): void => {
+      const els = todo.filter((el) => kindOf(el) === kind);
+      if (els.length) gsap.set(els, vars);
+    };
+    preset('soft', { y: 24, opacity: 0 });
+    preset('fade', { opacity: 0 });
+    preset('mask', { yPercent: 105 });
+    preset('clip', { clipPath: 'inset(0% 100% 0% 0%)' });
 
     const play = (batch: Element[]): void => {
       const each = stagger(STAGGER.item, batch.length);

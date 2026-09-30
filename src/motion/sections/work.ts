@@ -16,7 +16,7 @@ import { DUR, EASE, STAGGER, stagger } from '../eases';
 import { qs, qsa } from '../../lib/dom';
 
 /** CJK text (1em advances): safe to weigh per character (§2.2 weight-safety rule). */
-export const hasHan = (s: string): boolean => /[㐀-鿿豈-﫿]/.test(s);
+export const hasHan = (s: string): boolean => /[\u3400-\u9FFF\uF900-\uFAFF]/.test(s);
 
 /** Seconds the hover weigh takes to leave (§5.3), expressed as a timeScale on the 0.35s tween. */
 export const LEAVE_SCALE = 0.35 / 0.25;

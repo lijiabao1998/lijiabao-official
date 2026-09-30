@@ -80,7 +80,7 @@ type Fs = { readFileSync(p: URL): { buffer: ArrayBuffer; byteOffset: number; byt
 const fs = (await import('node:fs' as string)) as Fs;
 
 describe('commits.bin', () => {
-  const entry = (manifest as Record<string, { url: string; count: number; mode: string }>).field!;
+  const entry = (manifest as unknown as Record<string, { url: string; count: number; mode: string }>).field!;
   const file = fs.readFileSync(new URL(`../../public${entry.url}`, import.meta.url));
   const bin = file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength);
   const d = decode(bin);

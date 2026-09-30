@@ -50,7 +50,7 @@ export function shift(tops: readonly number[], i: number): number {
   return (tops[tops.length - 1] ?? 0) - (tops[i] ?? 0);
 }
 
-const hasHan = (s: string): boolean => /[㐀-鿿豈-﫿]/.test(s);
+const hasHan = (s: string): boolean => /[\u3400-\u9FFF\uF900-\uFAFF]/.test(s);
 
 interface Statement {
   st: HTMLElement;

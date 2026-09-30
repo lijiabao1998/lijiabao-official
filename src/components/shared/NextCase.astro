@@ -140,6 +140,14 @@ const perChar = /[㐀-鿿豈-﫿]/u.test(title) ? Array.from(title) : null;
     line-height: 1;
     transition: transform 0.5s var(--ease-settle);
   }
+  /* 320–479px: "GlimmerTown →" at the --fs-l floor (2.75rem) is wider than the column; the title never wraps,
+     so the row scales with the viewport instead (integration fix, S5 report). */
+  @media (max-width: 479.98px) {
+    .nc-title,
+    .nc-arrow {
+      font-size: min(var(--fs-l), 11vw);
+    }
+  }
   .nc-link:is(:hover, :focus-visible) .nc-arrow {
     color: var(--glim);
   }

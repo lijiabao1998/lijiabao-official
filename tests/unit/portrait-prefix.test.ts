@@ -200,7 +200,7 @@ describe('committed portrait bins', () => {
     const u8 = fs.readFileSync(new URL(`../../public${url}`, import.meta.url));
     return u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
   };
-  const m = manifest as Record<string, string | undefined>;
+  const m = manifest as unknown as Record<string, string | undefined>;
 
   it('the manifest names both bins with content hashes', () => {
     expect(m.portrait).toMatch(/^\/gl\/portrait-a\.[0-9a-f]{8}\.bin$/);

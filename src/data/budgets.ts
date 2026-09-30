@@ -27,15 +27,25 @@ export const budgets = {
      * Static tier: ClientRouter + prefetch, the lifecycle entry, prefs/events, HUD, tier fieldset.
      * RFC S6 2026-09-30: 10 → 11. check-dist measured the F0 build at 10.5 KB (gzip -9, per file): ClientRouter
      * with prefetch is 5.7 KB, not the probe's 5.6, and the runtime entry, HUD and tier switch add 4.8 KB.
+     * RFC integration 2026-10-01: 11 → 12. S3's TierCards (the way out of static) and the portrait caption
+     * sync are static-tier component scripts on home: 11.8 KB measured.
+     * liteHomeGt RFC integration 2026-10-01: 82 → 84 (home measured 83.5 KB after S1–S3).
+     * The first-view totals below are held at their published values (they are what `tier.cap` prints);
+     * measured today: zh lite 241, zh static 145, en lite 194, en static 97.
      */
-    static: 11,
+    static: 12,
     /** lite/full, home and GlimmerTown: ClientRouter 5.6 + motion core + app. */
-    liteHomeGt: 82,
+    liteHomeGt: 84,
     /** lite/full, Frontier (+ Flip, lazy). */
     liteFr: 92,
   },
-  /** GL engine + 3 scenes, lazy chunks. */
-  gl: 9,
+  /**
+   * GL engine + 3 scenes + inspect, lazy chunks (the union any page can load).
+   * RFC integration 2026-10-01: 9 → 16. Measured after merging S1/S3/S4: engine 7.5, field 2.1, inspect 2.2,
+   * portrait 2.0, grid 1.6 (incl. gen/grid) = 15.6 KB. The spec's 9 was a pre-build estimate; a page only
+   * fetches its own scenes (home ≈ 13.4, GlimmerTown ≈ 9.3). Cut order §10 #2 (inspect) would save 2.2.
+   */
+  gl: 16,
   bins: {
     commits: 18,
     /** raw */

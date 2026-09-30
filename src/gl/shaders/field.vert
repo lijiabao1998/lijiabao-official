@@ -53,7 +53,8 @@ void main() {
   if (uPulse.w > 0.) {
     float pt = uTime - uPulse.z;
     float pr = length(p - uPulse.xy);
-    a += lit * uPulse.w * exp(-pow((pr - pt * 600.) / 24., 2.)) * exp(-pt * 2.);
+    float pq = (pr - pt * 600.) / 24.;   // squared, not pow(): pow() of a negative base is undefined in GLSL
+    a += lit * uPulse.w * exp(-pq * pq) * exp(-pt * 2.);
   }
 
   vA = a;

@@ -490,10 +490,13 @@ if (manifest) {
     if (/\.bin$/.test(s) && !fileSet.has(s.replace(/^\/+/, ''))) g.fail(`gl-manifest.json names ${s}, which is not in dist`);
   }
 }
+// scenes computed entirely on the GPU from gen/* (no binary, load() ignores its key): S4's PASS grid
+const DATALESS_SCENES = new Set(['grid']);
 for (const page of pages) {
   for (const el of page.doc.elements) {
     const src = el.attrs.get('data-gl-src');
     if (src === undefined) continue;
+    if (DATALESS_SCENES.has(src) && el.attrs.get('data-gl-scene') === src) continue;
     if (!manifest) g.warn(`${page.file}: data-gl-src="${src}" but src/data/gl-manifest.json does not exist yet (the poster stays)`);
     else if (!Object.prototype.hasOwnProperty.call(manifest, src)) g.fail(`${page.file}: data-gl-src="${src}" is not a key of gl-manifest.json`);
   }

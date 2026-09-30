@@ -1,6 +1,7 @@
-// src/lib/perf.ts — measured-bytes readout for #vision (§3, §8 "measured-bytes readout").
-// F0 ships a working minimal implementation; S3 owns and may extend the body (keep the exports).
+// src/lib/perf.ts — measured-bytes readout for #vision (§3, §8 "measured-bytes readout"). Owner: S3.
 // Reads the Resource Timing buffer only (no network, no trackers). Numbers only — no copy here.
+// "This visit": the buffer keeps every same-origin request since the full page load, ClientRouter swaps included.
+// Static-tier safe (no GSAP, no engine).
 
 export interface ByteReadout {
   /** Bytes over the wire (0 for cache hits). */
@@ -52,6 +53,30 @@ export function measureBytes(): ByteReadout {
     r.entries++;
   }
   return r;
+}
+
+/** One request of this visit (the document first), in the order it started. */
+export interface Resource {
+  /** ms since the time origin */
+  start: number;
+  /** compressed body bytes (cache hits included) */
+  bytes: number;
+  /** served from cache (no transfer) */
+  cached: boolean;
+  kind: 'html' | Bucket;
+}
+
+/** Every same-origin request of this visit, sorted by start time (the byte ruler under the readout). */
+export function resources(): Resource[] {
+  const out: Resource[] = [];
+  if (typeof performance === 'undefined' || !performance.getEntriesByType) return out;
+  const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+  if (nav) out.push({ start: 0, bytes: nav.encodedBodySize, cached: nav.transferSize === 0, kind: 'html' });
+  for (const e of performance.getEntriesByType('resource') as PerformanceResourceTiming[]) {
+    if (!e.name.startsWith(location.origin)) continue;
+    out.push({ start: e.startTime, bytes: e.encodedBodySize, cached: e.transferSize === 0 && e.encodedBodySize > 0, kind: bucket(e) });
+  }
+  return out.sort((a, b) => a.start - b.start);
 }
 
 /** Calls `cb` now and whenever new resources finish (coalesced to one call per 250ms). Returns a stop fn. */

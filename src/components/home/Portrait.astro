@@ -1,6 +1,134 @@
 ---
-// STUB (F0-shell) — owner S3 replaces this file. Sub-component of About (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// figure#fig-portrait (§3 #about, §6.2): the glimmer portrait, chipped PORTRAIT (not data). No caption calls it
+// AI-generated; the photo itself never ships — only sampled glimmer data (public/gl) and the dot posters below.
+//
+// - Lite / full: the `portrait` GL scene draws into the stage; motion/sections/about.ts scrubs its assembly.
+//   While the glimmers load, the poster waits as a faint ghost of the face they will form, then fades out.
+// - Static, no JS, lost / no WebGL, forced colours: the AVIF / WebP dots poster (every point, assembled).
+// - The caption counts the points actually shown: the poster's in static, the tier's in lite / full. The script
+//   (static-safe) keeps it current; about.ts refines it with the engine's live count (the guard can halve it).
+import Figure from '@ui/Figure.astro';
+import { isOn } from '@data/features';
+import meta from '@data/portrait-meta.json';
+import { PT, tierCount } from '@gl/gen/portrait';
+import avif from '../../assets/generated/portrait-dots.avif';
+import webp from '../../assets/generated/portrait-dots.webp';
+import { localeOf, numberFormat, tpl, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const nf = numberFormat(locale);
+const posterN = meta.poster.points;
+const [before = '', after = ''] = tpl('about.caption', locale, ['n']).split('{n}');
 ---
+{
+  isOn('portrait') && (
+    <div
+      class="pt"
+      data-pt
+      data-n-static={posterN}
+      data-n-lite={tierCount('lite', false)}
+      data-n-full={tierCount('full', false)}
+      data-n-full-mobile={tierCount('full', true)}
+    >
+      <Figure id="fig-portrait" kind="PORTRAIT" scene="portrait" src="portrait" aspect={`${PT.W} / ${PT.H}`} stageClass="pt-stage">
+        <p slot="caption" class="pt-caption t-small">
+          {before}
+          <data value={posterN} data-pt-n>
+            {nf.format(posterN)}
+          </data>
+          {after}
+        </p>
+        <picture slot="poster" class="poster pt-poster">
+          <source type="image/avif" srcset={avif.src} />
+          <img src={webp.src} width={webp.width} height={webp.height} alt="" loading="lazy" decoding="async" />
+        </picture>
+        <span class="sr-only">{ts('a11y.portrait', locale)}</span>
+      </Figure>
+    </div>
+  )
+}
+
+<script>
+  import { on } from '@lib/events';
+  import { MQ, mq } from '@lib/dom';
+
+  const root = document.documentElement;
+
+  /** Points shown now: the poster's (static / no GL), else the tier's — or the engine's live count via about.ts. */
+  function sync() {
+    const box = document.querySelector<HTMLElement>('[data-pt]');
+    const out = box?.querySelector<HTMLDataElement>('[data-pt-n]');
+    if (!box || !out) return;
+    const d = box.dataset;
+    const tier = root.dataset.tier ?? 'static';
+    const gl = root.dataset.gl ?? '';
+    const stage = box.querySelector<HTMLElement>('[data-gl-scene]');
+    const drawn = tier !== 'static' && (gl === 'ok' || gl === 'frozen') && !stage?.hasAttribute('data-gl-failed');
+    let n = Number(d.nStatic);
+    if (drawn) {
+      const live = Number(stage?.dataset.ptCount);
+      n = live > 0 ? live : Number(tier === 'full' ? (mq(MQ.mobile).matches ? d.nFullMobile : d.nFull) : d.nLite);
+    }
+    if (!Number.isFinite(n) || out.value === String(n)) return;
+    out.value = String(n);
+    out.textContent = new Intl.NumberFormat(root.lang === 'en' ? 'en' : 'zh-Hant-TW').format(n);
+  }
+
+  let obs: MutationObserver | null = null;
+  function bind() {
+    obs?.disconnect();
+    obs = null;
+    const stage = document.querySelector<HTMLElement>('[data-pt] [data-gl-scene]');
+    if (stage) {
+      obs = new MutationObserver(sync);
+      obs.observe(stage, { attributes: true, attributeFilter: ['data-pt-count', 'data-gl-failed'] });
+    }
+    sync();
+  }
+
+  on('lj:tier', sync);
+  on('lj:gl', sync);
+  new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-tier', 'data-gl'] });
+  document.addEventListener('astro:page-load', bind);
+</script>
+
+<style>
+  .pt :global(.fig-frame) {
+    width: min(100%, calc(80svh * 553 / 720 + 2px));
+  }
+  .pt-caption {
+    margin-top: var(--s-3);
+    max-width: 44ch;
+    color: var(--fg-2);
+  }
+  .pt-caption:lang(zh) {
+    max-width: 26em;
+  }
+  .pt-caption data {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .pt-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .pt-poster {
+    transition: opacity var(--d-l) var(--ease-rise);
+  }
+  /* GL tiers: while this anchor waits for its first frame, the poster is a ghost of the face to come … */
+  :global(html[data-gl='ok']:not([data-tier='static'])) .pt :global(.pt-stage:not([data-gl-failed])) .pt-poster {
+    opacity: 0.16;
+  }
+  /* … and once the glimmers draw, it fades out (kept in flow, never covering them) */
+  :global(html[data-gl='ok']:not([data-tier='static'])) .pt :global(.pt-stage[data-gl-live]:not([data-gl-failed])) .pt-poster {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+  }
+  @media (forced-colors: active) {
+    .pt-poster {
+      opacity: 1 !important;
+    }
+  }
+</style>

@@ -1,8 +1,109 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-math" motion="fr-math"> (§3 order, §9.3).
+// #fr-math (§3, §4.4, §5.3): focus on MATH-001. The finding, the verified count (a Geist Mono odometer with its
+// source), the cross-checks, figure#fig-lattice (SVG, SCHEMATIC) with the n = 75 ring, what is NOT claimed, the Lean
+// note, and the Epoch AI non-affiliation line. Motion: motion/sections/fr-math.ts.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import Num from '@ui/Num.astro';
+import Status from '@ui/Status.astro';
+import T from '@ui/T.astro';
+import Lattice from './Lattice.astro';
+
+const NOT = ['fr.math.not.1', 'fr.math.not.2', 'fr.math.not.3'] as const;
 ---
 <Section id="fr-math" motion="fr-math" labelledby="fr-math-title">
   <Display k="fr.math.title" as="h2" size="m" id="fr-math-title" />
+
+  <div class="grid frm">
+    <div class="frm-copy lg-5" data-rise>
+      <T k="fr.math.body" as="p" class="frm-body t-lede" />
+      <div class="frm-stat">
+        <Num k="math.configs" odometer source numClass="t-num" />
+      </div>
+      <T k="fr.math.cross" as="p" class="frm-cross" />
+    </div>
+
+    <div class="lg-6 lg-start-7">
+      <Lattice />
+    </div>
+
+    <div class="lg-5" data-rise>
+      <Display k="fr.math.not.title" as="h3" size="h3" class="frm-not-title" />
+      <ul class="frm-not" role="list">
+        {
+          NOT.map((k) => (
+            <li>
+              <span class="frm-not-g" aria-hidden="true">
+                <Status code="notclaimed" quiet />
+              </span>
+              <T k={k} />
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    <div class="frm-notes lg-6 lg-start-7" data-rise>
+      <T k="fr.math.lean" as="p" class="frm-lean" />
+      <T k="fr.math.affil" as="p" class="frm-affil" />
+    </div>
+  </div>
 </Section>
+
+<style>
+  .frm {
+    row-gap: var(--s-8);
+    margin-top: clamp(40px, 5vw, 80px);
+    align-items: start;
+  }
+  .frm-copy {
+    display: grid;
+    gap: var(--s-6);
+  }
+  .frm-body {
+    max-width: 30em;
+  }
+  .frm-stat {
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line);
+  }
+  .frm-cross,
+  .frm-lean {
+    max-width: var(--measure);
+    color: var(--fg-2);
+  }
+
+  .frm-not-title {
+    margin-bottom: var(--s-4);
+  }
+  .frm-not {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .frm-not li {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr);
+    column-gap: var(--s-3);
+    align-items: baseline;
+    padding-block: var(--s-3);
+    border-top: 1px solid var(--line);
+  }
+  .frm-not-g {
+    align-self: center;
+    line-height: 0;
+    color: var(--fg-2);
+  }
+
+  .frm-notes {
+    display: grid;
+    gap: var(--s-4);
+  }
+  /* the Epoch AI line: stated plainly, never buried */
+  .frm-affil {
+    max-width: var(--measure);
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--line);
+  }
+</style>

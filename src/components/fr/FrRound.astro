@@ -1,8 +1,260 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-round" motion="fr-round"> (§3 order, §9.3).
+// #fr-round (§3, §4.4, §5.3): one research round, seven gates, and the record shelf of real failures.
+//
+// Server HTML (no JS, static tier, reduced motion, phones) is the END state: an ordered list of the seven stages,
+// every gate filled, every detail visible, then the shelf. On desktop with full motion, motion/sections/fr-round.ts
+// switches the block to [data-mode="pin"] (a horizontal track, pinned ≤ 150%): a round glimmer runs through the
+// seven gates, the active stage lights and its detail swaps in; from stage 6 (記錄 / Record) the failures rise at
+// the same weight as the passes. The DOM never moves: pinned or not, it is the same list in reading order.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import RecordShelf from './RecordShelf.astro';
+import { localeOf, tl } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+// Names from the display-flagged list (they are set in the display face); details from fr.stage.N = [name, detail].
+const names = tl('fr.stage.names', locale);
+const stages = names.map((name, i) => ({ name, detail: tl(`fr.stage.${i + 1}`, locale)[1] ?? '' }));
 ---
-<Section id="fr-round" motion="fr-round" labelledby="fr-round-title">
+<Section id="fr-round" motion="fr-round" labelledby="fr-round-title" class="frr">
   <Display k="fr.round.title" as="h2" size="m" id="fr-round-title" />
+
+  <div class="rd" data-rd>
+    <div class="rd-board">
+      <div class="rd-track" aria-hidden="true">
+        <span class="rd-fill" data-rd-fill></span>
+        <span class="rd-dot" data-rd-dot></span>
+      </div>
+      <ol class="rd-stages" role="list">
+        {
+          stages.map((s) => (
+            <li class="rd-stage" data-rd-stage>
+              <span class="rd-gate" aria-hidden="true" />
+              <span class="rd-num t-label" aria-hidden="true" />
+              <h3 class="rd-name t-s" data-rd-name>
+                {s.name}
+              </h3>
+              <div class="rd-detail" data-mask>
+                <p class="rd-text" data-rd-text>
+                  {s.detail}
+                </p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+
+    <RecordShelf />
+  </div>
 </Section>
+
+<style>
+  .rd {
+    --gate: 12px;
+    margin-top: clamp(48px, 6vw, 96px);
+  }
+  .rd-board {
+    position: relative;
+  }
+  .rd-track {
+    display: none;
+  }
+
+  /* ---- the list (end state) ------------------------------------------------ */
+  .rd-stages {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: rd;
+    border-bottom: 1px solid var(--line);
+  }
+  .rd-stage {
+    counter-increment: rd;
+    display: grid;
+    grid-template-columns: var(--gate) 2.25rem minmax(0, 1fr);
+    column-gap: var(--s-4);
+    row-gap: var(--s-2);
+    align-items: baseline;
+    padding-block: var(--s-5);
+    border-top: 1px solid var(--line);
+  }
+  .rd-gate {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    width: var(--gate);
+    height: var(--gate);
+    border-radius: 50%;
+    background: var(--fg);
+    box-shadow: inset 0 0 0 1.5px var(--fg);
+    outline: 1.5px solid transparent;
+    outline-offset: 3px;
+    transition:
+      background-color var(--d-m) var(--ease-rise),
+      box-shadow var(--d-m) var(--ease-rise),
+      outline-color var(--d-m) var(--ease-rise);
+  }
+  .rd-num {
+    grid-column: 2;
+    grid-row: 1;
+    color: var(--fg-3);
+  }
+  .rd-num::before {
+    content: counter(rd, decimal-leading-zero);
+  }
+  .rd-name {
+    grid-column: 3;
+    grid-row: 1;
+    color: var(--fg);
+    transition: color var(--d-m) var(--ease-rise);
+  }
+  .rd-detail {
+    grid-column: 3;
+    grid-row: 2;
+    max-width: 38em;
+    color: var(--fg-2);
+  }
+  .rd-text:lang(en)::first-letter {
+    text-transform: uppercase;
+  }
+  @media (min-width: 1024px) {
+    .rd-stage {
+      grid-template-columns: var(--gate) 3.5rem minmax(0, 5fr) minmax(0, 7fr);
+      column-gap: var(--gap);
+      padding-block: var(--s-6);
+    }
+    .rd-detail {
+      grid-column: 4;
+      grid-row: 1;
+    }
+  }
+
+  /* states written by fr-round.ts (absent = done: the end state) */
+  .rd-stage[data-state='todo'] .rd-gate {
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1.5px var(--line-ui);
+  }
+  .rd-stage[data-state='todo'] .rd-name {
+    color: var(--fg-3);
+  }
+  .rd-stage[data-state='active'] .rd-gate {
+    outline-color: var(--glim);
+  }
+
+  /* ---- pinned: a horizontal track through seven gates ------------------------ */
+  /* the pinned block must fit one screen from 1024 × 640 up: header clearance, gates + names, a 4-line detail slot,
+     then the shelf (fr-round.ts only pins when the viewport is at least that tall) */
+  .rd[data-mode='pin'] {
+    --rd-dh: calc(var(--fs-lede) * 1.5 * 4);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(20px, 4svh, 56px);
+    min-height: 100svh;
+    margin-top: 0;
+    padding-block: calc(var(--header-h) + var(--s-4)) var(--s-4);
+  }
+  .rd[data-mode='pin'] .rd-track {
+    display: block;
+    position: absolute;
+    z-index: 0;
+    top: calc(var(--gate) / 2);
+    left: calc(var(--gate) / 2);
+    right: calc((100% - 6 * var(--gap)) / 7 - var(--gate) / 2);
+    height: 1px;
+    background: var(--line-ui);
+  }
+  .rd[data-mode='pin'] .rd-fill {
+    position: absolute;
+    inset: 0;
+    background: var(--fg);
+    transform: scaleX(0);
+    transform-origin: 0 50%;
+  }
+  .rd[data-mode='pin'] .rd-dot {
+    position: absolute;
+    z-index: 2;
+    top: -4.5px;
+    left: -4.5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--glim);
+  }
+  .rd[data-mode='pin'] .rd-stages {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    column-gap: var(--gap);
+    padding-bottom: calc(var(--rd-dh) + clamp(20px, 3svh, 40px));
+    border: 0;
+  }
+  .rd[data-mode='pin'] .rd-stage {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-3);
+    padding: 0;
+    border: 0;
+  }
+  .rd[data-mode='pin'] .rd-stage {
+    gap: var(--s-2);
+  }
+  .rd[data-mode='pin'] .rd-gate {
+    position: relative;
+    z-index: 1;
+    margin-bottom: var(--s-2);
+  }
+  .rd[data-mode='pin'] .rd-name {
+    font-size: clamp(1.0625rem, 0.55rem + 1.05vw, 1.625rem);
+    line-height: 1.2;
+  }
+  .rd[data-mode='pin'] .rd-name:lang(zh) {
+    line-height: 1.35;
+  }
+  .rd[data-mode='pin'] .rd-detail {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: min(100%, 36em);
+    max-width: none;
+    height: var(--rd-dh);
+    font-size: var(--fs-lede);
+    line-height: 1.45;
+    color: var(--fg);
+    pointer-events: none;
+  }
+  .rd[data-mode='pin'] .rd-detail:lang(zh) {
+    line-height: 1.6;
+  }
+  .rd[data-mode='pin'] .rd-text {
+    opacity: 0;
+  }
+  .rd[data-mode='pin'] [data-state='active'] .rd-detail {
+    pointer-events: auto;
+  }
+  .rd[data-mode='pin'] [data-state='active'] .rd-text {
+    opacity: 1;
+  }
+  .rd[data-mode='pin'] [data-state='done'] .rd-name {
+    color: var(--fg-2);
+  }
+
+  @media (forced-colors: active) {
+    .rd-gate {
+      forced-color-adjust: none;
+      background: CanvasText;
+      box-shadow: none;
+    }
+    .rd-track,
+    .rd-fill {
+      background: CanvasText;
+    }
+    .rd-dot {
+      forced-color-adjust: none;
+      background: Highlight;
+    }
+  }
+</style>

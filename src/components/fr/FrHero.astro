@@ -1,9 +1,160 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-hero" motion="fr-hero"> (§3 order, §9.3).
-// The h1 carries transition:name="case-title-fr"; figure#fig-matrix carries transition:name="fr-matrix".
+// #fr-hero (§3, §4.4, §5.3). Label, the h1 (shared view-transition name with the home work row), the governance
+// quote with its source, the lead, "not a benchmark", five fact chips, the program dates, and figure#fig-matrix
+// (DOM, 1 governance core + 15 labs × 10 cards, DATA). Motion: motion/sections/fr-hero.ts (the light passes through
+// the h1 on a direct load, the chips settle, the spine and then the rows of the matrix light left → right).
+// Everything is readable at first paint: no pre-state hides or dims any of it.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Arrow from '@ui/Arrow.astro';
+import Matrix from './Matrix.astro';
+import { links } from '@data/links';
+import { localeOf, tl, ts } from '../chrome/i18n';
+import { splitCite } from './parts';
+
+const locale = localeOf(Astro);
+const { quote, cite } = splitCite(ts('fr.quote', locale));
+const chips = tl('fr.chips', locale);
+const external = ts('a11y.external', locale);
 ---
-<Section id="fr-hero" motion="fr-hero" label="fr.label" labelledby="fr-hero-title">
-  <h1 id="fr-hero-title" transition:name="case-title-fr"><Display k="fr.title" size="l" /></h1>
+<Section id="fr-hero" motion="fr-hero" label="fr.label" labelledby="fr-hero-title" class="frh">
+  <h1 id="fr-hero-title" class="frh-title" transition:name="case-title-fr" data-frh-title>
+    <Display k="fr.title" size="l" />
+  </h1>
+
+  <div class="grid frh-body">
+    <div class="lg-6">
+      <blockquote class="frh-quote" cite={links.docs.govReadme}>
+        <p class="frh-q">{quote}</p>
+        {
+          cite && (
+            <footer class="frh-cite t-label">
+              <span class="frh-cite-rule" aria-hidden="true" />
+              <cite>
+                <a class="link" href={links.docs.govReadme} rel="noopener">
+                  {cite}
+                  <span class="sr-only">{external}</span>
+                </a>
+              </cite>
+              <Arrow dir="up-right" />
+            </footer>
+          )
+        }
+      </blockquote>
+
+      <T k="fr.lead" as="p" class="frh-lead" />
+      <T k="fr.notbench" as="p" class="frh-notbench" />
+
+      <ul class="frh-chips" role="list">
+        {chips.map((c) => <li class="frh-chip" data-frh-chip>{c}</li>)}
+      </ul>
+      <T k="fr.dates" as="p" class="frh-dates t-small" />
+    </div>
+
+    <div class="lg-5 lg-start-8">
+      <Matrix />
+    </div>
+  </div>
 </Section>
+
+<style>
+  .frh.sec {
+    padding-top: calc(var(--header-h) + clamp(40px, 6vw, 104px));
+  }
+  .frh-title {
+    margin-bottom: clamp(40px, 6vw, 104px);
+  }
+
+  .frh-body {
+    row-gap: var(--s-9);
+    align-items: start;
+  }
+
+  /* the governance sentence: the page's thesis, set large in the text face (not a display key) */
+  .frh-quote {
+    margin: 0 0 var(--s-8);
+  }
+  .frh-q {
+    max-width: 21em;
+    font-size: var(--fs-h3);
+    line-height: 1.38;
+    font-weight: 450;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  /* CJK: break at the comma, not mid-phrase (keep-all), but never overflow a narrow screen */
+  .frh-q:lang(zh) {
+    max-width: 17em;
+    line-height: 1.6;
+    letter-spacing: 0.02em;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  .frh-cite {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    margin-top: var(--s-5);
+    color: var(--fg-3);
+  }
+  .frh-cite-rule {
+    width: 24px;
+    height: 1px;
+    background: var(--line-ui);
+  }
+  .frh-cite cite {
+    font-style: normal;
+  }
+  .frh-cite .link {
+    color: var(--fg-2);
+  }
+
+  .frh-lead,
+  .frh-notbench {
+    max-width: var(--measure);
+  }
+  .frh-lead {
+    color: var(--fg-2);
+  }
+  .frh-notbench {
+    margin-top: var(--s-5);
+    color: var(--fg);
+  }
+
+  .frh-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin: var(--s-7) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .frh-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 4px 13px;
+    border: 1px solid var(--line-ui);
+    border-radius: 999px;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums lining-nums;
+    color: var(--fg);
+    white-space: nowrap;
+  }
+  .frh-dates {
+    margin-top: var(--s-5);
+    color: var(--fg-3);
+  }
+
+  @media (forced-colors: active) {
+    .frh-chip {
+      border-color: CanvasText;
+    }
+  }
+</style>

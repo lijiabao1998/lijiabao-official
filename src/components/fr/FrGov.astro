@@ -1,8 +1,280 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-gov"> (§3 order, §9.3).
+// #fr-gov (§3, §4.4, §5.3): the governance core. `frontier.py` stats (numbers set in mono for emphasis; the words are
+// the dictionary's), its commands, the protocol path — drawn as versions with the labs that pin each one, counted
+// from src/data/labs.ts — then roles, the CI record and the branch-protection note, each with its source file.
+// "The protocol path draws": [data-rise="clip"] (generic reveal: a left → right wipe).
+// Styles are `is:global`, every rule namespaced under #fr-gov (keeps scoping attributes off ~80 small elements).
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import { LABS } from '@data/labs';
+import { links } from '@data/links';
+import { localeOf, ts, tv } from '../chrome/i18n';
+import { ghPath, labCode, runs, splitDots, splitLabel, versionsIn } from './parts';
+
+const locale = localeOf(Astro);
+const external = ts('a11y.external', locale);
+// the raw value keeps its `backticks` (ts() strips them), so the file name renders as code
+const rawStats = tv('fr.gov.stats', locale);
+const statRuns = splitDots(typeof rawStats === 'string' ? rawStats : ts('fr.gov.stats', locale)).map(runs);
+const cli = splitLabel(ts('fr.gov.cli', locale));
+const commands = splitDots(cli.body);
+const path = versionsIn(ts('fr.gov.protocol', locale));
+const pins = path.map((v) => ({ v, labs: LABS.filter((l) => l.protocol === v) }));
+const major = path[path.length - 1];
+
+const src = (url: string) => ({ url, text: ghPath(url) });
 ---
 <Section id="fr-gov" labelledby="fr-gov-title">
   <Display k="fr.gov.title" as="h2" size="m" id="fr-gov-title" />
+
+  <div class="grid gv">
+    <div class="gv-core lg-5" data-rise>
+      <ul class="gv-stats" role="list">
+        {
+          statRuns.map((rs) => (
+            <li>
+              {rs.map((r) =>
+                r.code ? (
+                  <code>{r.text}</code>
+                ) : r.num ? (
+                  <data class="gv-n" value={r.text.replace(/,/g, '')}>
+                    {r.text}
+                  </data>
+                ) : (
+                  r.text
+                ),
+              )}
+            </li>
+          ))
+        }
+      </ul>
+
+      <div class="gv-cli">
+        {cli.label && <p class="gv-cli-label t-label">{cli.label}</p>}
+        <ul class="gv-cmds" role="list">
+          {
+            commands.map((c) => (
+              <li>
+                <code>{c}</code>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <p class="gv-src">
+        {
+          [src(links.docs.govTool), src(links.docs.govStatus)].map((s) => (
+            <a class="link" href={s.url} rel="noopener">
+              {s.text}
+              <span class="sr-only">{external}</span>
+            </a>
+          ))
+        }
+      </p>
+    </div>
+
+    <div class="gv-proto lg-6 lg-start-7">
+      <ol class="gv-path" role="list" style={`--n:${pins.length}`} data-rise="clip">
+        {
+          pins.map((p, i) => (
+            <li
+              class:list={[
+                'gv-v',
+                {
+                  'gv-v--major': p.v === major,
+                  'gv-v--pre': pins[i + 1]?.v === major,
+                  'gv-v--pinned': p.labs.length > 0,
+                },
+              ]}
+            >
+              <span class="gv-node" aria-hidden="true" />
+              <span class="gv-ver">{p.v}</span>
+              {p.labs.length > 0 && (
+                <ul class="gv-pins" role="list">
+                  {p.labs.map((l) => (
+                    <li>{labCode(l.id)}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+      <T k="fr.gov.protocol" as="p" class="gv-text" data-rise />
+    </div>
+
+    <div class="gv-notes lg-6 lg-start-7">
+      <div class="gv-note" data-rise>
+        <T k="fr.gov.roles" as="p" class="gv-text" />
+      </div>
+      <div class="gv-note" data-rise>
+        <T k="fr.gov.ci" as="p" class="gv-text" />
+        <p class="gv-src">
+          <a class="link" href={links.docs.govExpansion} rel="noopener">
+            {ghPath(links.docs.govExpansion)}
+            <span class="sr-only">{external}</span>
+          </a>
+        </p>
+      </div>
+      <div class="gv-note" data-rise>
+        <T k="fr.gov.bp" as="p" class="gv-text" />
+        <p class="gv-src">
+          <a class="link" href={links.docs.govBranchProtection} rel="noopener">
+            {ghPath(links.docs.govBranchProtection)}
+            <span class="sr-only">{external}</span>
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
 </Section>
+
+<style is:global>
+  #fr-gov .gv {
+    row-gap: var(--s-8);
+    margin-top: clamp(40px, 5vw, 80px);
+    align-items: start;
+  }
+
+  /* frontier.py, in numbers */
+  #fr-gov .gv-stats {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-bottom: 1px solid var(--line);
+  }
+  #fr-gov .gv-stats li {
+    padding-block: var(--s-3);
+    border-top: 1px solid var(--line);
+    color: var(--fg-2);
+  }
+  #fr-gov .gv-stats code {
+    color: var(--fg);
+  }
+  #fr-gov .gv-n {
+    font-family: var(--ff-mono);
+    font-size: 1.35em;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  #fr-gov .gv-cli {
+    margin-top: var(--s-6);
+  }
+  #fr-gov .gv-cli-label {
+    margin-bottom: var(--s-3);
+    color: var(--fg-3);
+  }
+  #fr-gov .gv-cmds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  #fr-gov .gv-cmds code {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 3px 10px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    color: var(--fg);
+  }
+
+  #fr-gov .gv-src {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-5);
+    margin-top: var(--s-4);
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.02em;
+  }
+  #fr-gov .gv-src .link {
+    color: var(--fg-3);
+    overflow-wrap: anywhere;
+  }
+  #fr-gov .gv-src .link:is(:hover, :focus-visible) {
+    color: var(--fg);
+  }
+
+  /* the protocol path: versions on one rail; under each, the labs that pin it */
+  #fr-gov .gv-path {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+    margin: 0 0 var(--s-6);
+    padding: 0;
+    list-style: none;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.04em;
+  }
+  #fr-gov .gv-v {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    min-width: 0;
+  }
+  /* the rail, one segment per step; the step into the breaking (major) version is dashed */
+  #fr-gov .gv-v:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 13px;
+    right: 0;
+    border-top: 1px solid var(--line-ui);
+  }
+  #fr-gov .gv-v.gv-v--pre::after {
+    border-top-style: dashed;
+    border-top-color: var(--fg-2);
+  }
+  #fr-gov .gv-node {
+    position: relative;
+    z-index: 1;
+    width: 13px;
+    height: 13px;
+    border: 1.5px solid var(--fg-2);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+  #fr-gov .gv-v--pinned .gv-node {
+    border-color: var(--fg);
+    background: var(--fg);
+  }
+  #fr-gov .gv-ver {
+    font-weight: var(--w-mono);
+  }
+  #fr-gov .gv-v:not(.gv-v--pinned) .gv-ver {
+    color: var(--fg-3);
+  }
+  #fr-gov .gv-pins {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    letter-spacing: 0.06em;
+    line-height: 1.35;
+    color: var(--fg-2);
+  }
+
+  #fr-gov .gv-text {
+    max-width: var(--measure);
+    color: var(--fg-2);
+  }
+  #fr-gov .gv-note {
+    padding-block: var(--s-5);
+    border-top: 1px solid var(--line);
+  }
+  #fr-gov .gv-note .gv-src {
+    margin-top: var(--s-2);
+  }
+</style>

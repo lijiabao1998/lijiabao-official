@@ -1,6 +1,281 @@
 ---
-// STUB (F0-shell) — owner S5 replaces this file. Sub-component of FrHero (#fig-matrix) (§9.1); renders nothing yet.
-interface Props {
-  [key: string]: unknown;
-}
+// figure#fig-matrix (§3, §4.4, §6.4): the Frontier program as DOM — 1 governance core + 15 labs × 10 problem cards.
+// DATA, and the matrix IS its table (§8: "a real <table> … inline (the matrix)"):
+//   - the governance repo is the row-group header (<th scope="rowgroup">): the spine on the left;
+//   - one row per lab, its row header the lab name (the mono code is only its visual twin);
+//   - one cell per problem card: its ID for assistive tech (visually hidden); on screen the cell draws a ring, or ◆
+//     for the lab's first-round card, as ::before — and its light as ::after.
+// Card IDs only, never topics (§4.5). transition:name="fr-matrix" pairs the dots with the home mini matrix (§5.5).
+// Motion hooks (fr-hero.ts): [data-mx-light] the spine's light; .mx-row / .mx-c the rows and cards (--lit).
+//
+// Styles are `is:global` but every rule is namespaced under #fig-matrix: 150+ cells would otherwise each carry a
+// scoping attribute, and the case-page HTML budget (§8, 32 KB) is better spent on content.
+import Figure from '@ui/Figure.astro';
+import { GOV, LABS } from '@data/labs';
+import { SNAPSHOT } from '@data/facts';
+import { localeOf, ts } from '../chrome/i18n';
+import { labCode } from './parts';
+
+const locale = localeOf(Astro);
+// column headers: the card number shared by every lab (MATH-001 … MATH-010 → 001 … 010)
+const cols = (LABS[0]?.cards ?? []).map((id) => id.slice(id.indexOf('-') + 1));
+const govName = ts(GOV.nameKey, locale);
 ---
+<Figure id="fig-matrix" kind="DATA" legend="fr.matrix.legend" caption="fr.matrix.caption" date={SNAPSHOT.asOf}>
+  <div class="mx" transition:name="fr-matrix">
+    <table class="mx-t">
+      <caption class="sr-only">{ts('fr.labs.cards', locale)}</caption>
+      <thead>
+        <tr>
+          <td></td>
+          <td></td>
+          {cols.map((c) => <th scope="col" class="mx-col">{c}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {
+          LABS.map((lab, r) => (
+            <tr class="mx-row">
+              {r === 0 && (
+                <th scope="rowgroup" rowspan={LABS.length} class="mx-gov">
+                  <span class="mx-gov-bar" aria-hidden="true">
+                    <span class="mx-gov-light" data-mx-light />
+                  </span>
+                  <span class="mx-gov-name">{govName}</span>
+                </th>
+              )}
+              <th scope="row" class="mx-lab">
+                <span class="mx-code" aria-hidden="true">
+                  {labCode(lab.id)}
+                </span>
+                <span class="sr-only">{ts(lab.nameKey, locale)}</span>
+              </th>
+              {lab.cards.map((id) =>
+                id === lab.first ? (
+                  <td class="mx-c mx-c--first">
+                    <span class="sr-only">{ts('lab.first', locale, { id })}</span>
+                  </td>
+                ) : (
+                  <td class="mx-c">
+                    <span class="sr-only">{id}</span>
+                  </td>
+                ),
+              )}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+</Figure>
+
+<style is:global>
+  #fig-matrix .mx {
+    --cell: clamp(17px, 4.6vw, 40px);
+    --spine: 26px;
+    --code: 3.4rem;
+    padding: var(--s-5) var(--s-3);
+  }
+  @media (min-width: 640px) {
+    #fig-matrix .mx {
+      --spine: 36px;
+      --code: 4.5rem;
+      padding: var(--s-6) var(--s-5);
+    }
+  }
+  @media (min-width: 1024px) {
+    #fig-matrix .mx {
+      --cell: clamp(20px, 2.3vw, 40px);
+      --code: 4rem;
+      --spine: 32px;
+    }
+  }
+
+  #fig-matrix .mx-t {
+    width: auto;
+    border-collapse: collapse;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    line-height: 1;
+  }
+  #fig-matrix :is(th, td) {
+    padding: 0;
+    font-weight: inherit;
+  }
+
+  /* column headers: the card number, tiny and quiet (visually hidden on phones, kept for screen readers) */
+  #fig-matrix .mx-col {
+    width: var(--cell);
+    padding-bottom: var(--s-2);
+    font-weight: 400;
+    color: var(--fg-3);
+    text-align: center;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  @media (max-width: 639.98px) {
+    #fig-matrix .mx-col {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  /* the governance core: a 2px spine from the first row to the last, its name set vertically beside it */
+  #fig-matrix .mx-gov {
+    position: relative;
+    width: var(--spine);
+    vertical-align: top;
+  }
+  #fig-matrix .mx-gov-bar {
+    position: absolute;
+    top: calc(var(--cell) / 2);
+    bottom: calc(var(--cell) / 2);
+    right: 0;
+    width: 2px;
+    background: var(--fg);
+    overflow: hidden;
+  }
+  #fig-matrix .mx-gov-light {
+    position: absolute;
+    inset: 0;
+    background: var(--glim);
+    transform: scaleY(0);
+    transform-origin: 50% 0;
+  }
+  #fig-matrix .mx-gov-name {
+    position: absolute;
+    top: calc(var(--cell) / 2);
+    right: 10px;
+    writing-mode: vertical-rl;
+    font-size: 11px;
+    font-weight: var(--w-mono);
+    letter-spacing: 0.08em;
+    color: var(--fg);
+    white-space: nowrap;
+  }
+  #fig-matrix .mx-gov-name:lang(en) {
+    text-transform: uppercase;
+  }
+  #fig-matrix .mx-gov-name:lang(zh) {
+    font-family: var(--ff-body);
+    font-size: 12px;
+    letter-spacing: 0.3em;
+  }
+
+  /* each lab row hangs off the spine by a hairline */
+  #fig-matrix .mx-lab {
+    position: relative;
+    width: var(--code);
+    height: var(--cell);
+    padding-left: 12px;
+    text-align: start;
+    vertical-align: middle;
+  }
+  #fig-matrix .mx-lab::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 8px;
+    height: 1px;
+    background: var(--line-ui);
+  }
+  #fig-matrix .mx-code {
+    font-weight: var(--w-mono);
+    letter-spacing: 0.06em;
+    color: var(--fg-2);
+    transition: color var(--d-s) var(--ease-rise);
+  }
+
+  /* one card: a ring drawn by the cell; ◆ for the first-round card */
+  #fig-matrix .mx-c {
+    --lit: 0;
+    --d: 9px;
+    position: relative;
+    width: var(--cell);
+    height: var(--cell);
+  }
+  #fig-matrix .mx-c::before,
+  #fig-matrix .mx-c::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--d);
+    height: var(--d);
+    margin: calc(var(--d) / -2) 0 0 calc(var(--d) / -2);
+    border-radius: 50%;
+  }
+  #fig-matrix .mx-c::before {
+    border: 1.25px solid var(--fg-2);
+    transition: border-color var(--d-s) var(--ease-rise);
+  }
+  #fig-matrix .mx-c--first {
+    --d: 8px;
+  }
+  #fig-matrix .mx-c--first::before,
+  #fig-matrix .mx-c--first::after {
+    border-radius: 0;
+    transform: rotate(45deg);
+  }
+  #fig-matrix .mx-c--first::before {
+    border-color: var(--fg);
+    background: var(--fg);
+  }
+  /* the light that passes over each record on load (fr-hero.ts tweens --lit 0 → 1 → 0) */
+  #fig-matrix .mx-c::after {
+    --o: calc(var(--d) + 5px);
+    width: var(--o);
+    height: var(--o);
+    margin: calc(var(--o) / -2) 0 0 calc(var(--o) / -2);
+    background: var(--glim);
+    opacity: var(--lit);
+    pointer-events: none;
+  }
+  @media (max-width: 639.98px) {
+    #fig-matrix .mx-c {
+      --d: 7px;
+    }
+    #fig-matrix .mx-c::before {
+      border-width: 1px;
+    }
+    #fig-matrix .mx-c--first {
+      --d: 6px;
+    }
+  }
+
+  @media (hover: hover) {
+    #fig-matrix .mx-row:hover .mx-c:not(.mx-c--first)::before {
+      border-color: var(--fg);
+    }
+    #fig-matrix .mx-row:hover .mx-code {
+      color: var(--fg);
+    }
+  }
+
+  @media (forced-colors: active) {
+    #fig-matrix .mx-c::before,
+    #fig-matrix .mx-gov-bar,
+    #fig-matrix .mx-lab::before {
+      forced-color-adjust: none;
+      border-color: CanvasText;
+      background: CanvasText;
+    }
+    #fig-matrix .mx-c:not(.mx-c--first)::before {
+      background: Canvas;
+    }
+    #fig-matrix .mx-c::after,
+    #fig-matrix .mx-gov-light {
+      display: none;
+    }
+  }
+  @media print {
+    #fig-matrix .mx-c::after,
+    #fig-matrix .mx-gov-light {
+      display: none;
+    }
+  }
+</style>

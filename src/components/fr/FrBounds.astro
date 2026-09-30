@@ -1,8 +1,77 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-bounds"> (§3 order, §9.3).
+// #fr-bounds (§3, §4.4): each lab's own safety limits — per lab, never one blanket line. Each dictionary entry is
+// "Lab: limits"; it is split at its colon into a term and its definition (<dl>), with the lab's mono code beside it.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import type { LabId } from '@data/labs';
+import { localeOf, ts } from '../chrome/i18n';
+import { labCode, splitLabel } from './parts';
+
+const locale = localeOf(Astro);
+const IDS: readonly LabId[] = ['bio', 'chem', 'med', 'eng', 'earth', 'neuro', 'mat'];
+const bounds = IDS.map((id) => ({ id, ...splitLabel(ts(`fr.bounds.${id}`, locale)) }));
 ---
 <Section id="fr-bounds" labelledby="fr-bounds-title">
-  <Display k="fr.bounds.title" as="h2" size="m" id="fr-bounds-title" />
+  <div class="grid bd">
+    <div class="lg-4">
+      <Display k="fr.bounds.title" as="h2" size="m" id="fr-bounds-title" />
+    </div>
+    <dl class="bd-list lg-8 lg-start-5">
+      {
+        bounds.map((b) => (
+          <div class="bd-item" data-rise>
+            <dt class="bd-term">
+              <span class="bd-code t-label" aria-hidden="true">
+                {labCode(b.id)}
+              </span>
+              <span class="bd-lab">{b.label}</span>
+            </dt>
+            <dd class="bd-def">{b.body}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </div>
 </Section>
+
+<style>
+  .bd {
+    row-gap: var(--s-8);
+  }
+  .bd-list {
+    margin: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .bd-item {
+    display: grid;
+    gap: var(--s-2);
+    padding-block: var(--s-4);
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 640px) {
+    .bd-item {
+      grid-template-columns: minmax(0, 13rem) minmax(0, 1fr);
+      column-gap: var(--gap);
+      align-items: baseline;
+    }
+  }
+  .bd-term {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+  }
+  .bd-code {
+    min-width: 3.75rem;
+    color: var(--fg-3);
+  }
+  .bd-lab {
+    font-weight: 500;
+  }
+  .bd-def {
+    margin: 0;
+    color: var(--fg-2);
+  }
+  .bd-def:lang(en)::first-letter {
+    text-transform: uppercase;
+  }
+</style>

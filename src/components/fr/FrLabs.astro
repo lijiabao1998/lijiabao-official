@@ -1,8 +1,234 @@
 ---
-// STUB (F0-shell) — owner S5 replaces the internals. Keep the contract: <Section id="fr-labs" motion="fr-labs"> (§3 order, §9.3).
+// #fr-labs (§3, §4.5, §5.3, §7): the governance tile plus the 15 lab tiles, a status legend counted from data, and
+// the grid ⇄ list toggle.
+//   - No JS: the list layout renders and the toggle is hidden (.js-only). Under 640px: list only, no toggle.
+//   - Any JS tier (static included): the small script below flips aria-pressed + [data-view] (instant switch).
+//   - Lite/full with motion: motion/sections/fr-labs.ts handles the cancelable 'fr:labs-view' event and animates
+//     the switch with Flip (lazy-loaded; Frontier is the only page that fetches it).
+// Tile facts and the status chip come from src/data/labs.ts (brief C1), never from one uniform string.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import Status from '@ui/Status.astro';
+import T from '@ui/T.astro';
+import LabTile from './LabTile.astro';
+import { LABS, TILES, labStatus, type StatusCode } from '@data/labs';
+import { localeOf, numberFormat, ts } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const nf = numberFormat(locale);
+const LEGEND: readonly StatusCode[] = ['merged', 'review', 'none'];
+const legend = LEGEND.map((code) => ({ code, n: LABS.filter((l) => labStatus(l) === code).length })).filter((x) => x.n > 0);
 ---
-<Section id="fr-labs" motion="fr-labs" labelledby="fr-labs-title">
-  <Display k="fr.labs.title" as="h2" size="m" id="fr-labs-title" />
+<Section id="fr-labs" motion="fr-labs" labelledby="fr-labs-title" class="frl" data-labs="">
+  <div class="labs-head">
+    <Display k="fr.labs.title" as="h2" size="m" id="fr-labs-title" class="labs-title" />
+
+    <div class="labs-meta">
+      <ul class="labs-legend" role="list">
+        {
+          legend.map((x) => (
+            <li>
+              <Status code={x.code} />
+              <data class="labs-n" value={x.n}>
+                {nf.format(x.n)}
+              </data>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="labs-note">
+        <T k="fr.labs.cards" />
+        <span class="labs-dot" aria-hidden="true">·</span>
+        <T k="fr.labs.asof" />
+      </p>
+    </div>
+
+    <div class="labs-view js-only" role="group" aria-labelledby="labs-view-label">
+      <span id="labs-view-label" class="labs-view-label t-label">{ts('fr.labs.view', locale)}</span>
+      <button type="button" class="labs-btn" aria-pressed="true" data-labs-view="grid">
+        <svg class="i" aria-hidden="true"><use href="#i-grid"></use></svg>
+        <span>{ts('fr.labs.grid', locale)}</span>
+      </button>
+      <button type="button" class="labs-btn" aria-pressed="false" data-labs-view="list">
+        <svg class="i" aria-hidden="true"><use href="#i-list"></use></svg>
+        <span>{ts('fr.labs.list', locale)}</span>
+      </button>
+    </div>
+  </div>
+
+  <ul class="labs" role="list" data-labs-list data-view="grid">
+    {
+      TILES.map((lab) => (
+        <li class="labs-li">
+          <LabTile lab={lab} />
+        </li>
+      ))
+    }
+  </ul>
 </Section>
+
+<script>
+  // grid ⇄ list in every JS tier. The motion module may take over the switch (Flip): it calls preventDefault() on
+  // the 'fr:labs-view' event and runs detail.apply() itself between its measurements.
+  function bindLabs(): void {
+    for (const root of document.querySelectorAll<HTMLElement>('[data-labs]:not([data-labs-ready])')) {
+      root.setAttribute('data-labs-ready', '');
+      const list = root.querySelector<HTMLElement>('[data-labs-list]');
+      const btns = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-labs-view]'));
+      if (!list || !btns.length) continue;
+      const apply = (view: string): void => {
+        list.dataset.view = view;
+        for (const b of btns) b.setAttribute('aria-pressed', String(b.dataset.labsView === view));
+      };
+      for (const b of btns) {
+        b.addEventListener('click', () => {
+          const view = b.dataset.labsView === 'list' ? 'list' : 'grid';
+          if (view === list.dataset.view) return;
+          const ev = new CustomEvent('fr:labs-view', { cancelable: true, detail: { view, apply: () => apply(view) } });
+          if (root.dispatchEvent(ev)) apply(view);
+        });
+      }
+    }
+  }
+  document.addEventListener('astro:page-load', bindLabs);
+</script>
+
+<style>
+  .labs-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-6);
+    align-items: end;
+    margin-bottom: var(--s-8);
+  }
+  @media (min-width: 1024px) {
+    .labs-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'title title'
+        'meta view';
+    }
+    .labs-head :global(.labs-title) {
+      grid-area: title;
+    }
+    .labs-meta {
+      grid-area: meta;
+    }
+    .labs-view {
+      grid-area: view;
+    }
+  }
+
+  .labs-meta {
+    display: grid;
+    gap: var(--s-3);
+  }
+  .labs-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .labs-legend li {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--s-2);
+  }
+  .labs-n {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    color: var(--fg-2);
+  }
+  .labs-note {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    letter-spacing: 0.04em;
+    color: var(--fg-3);
+  }
+  .labs-dot {
+    margin-inline: 0.5em;
+  }
+
+  /* the toggle: two pressed/unpressed buttons (§5.4: <button aria-pressed>) */
+  .labs-view {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+  }
+  .labs-view-label {
+    margin-right: var(--s-2);
+    color: var(--fg-3);
+  }
+  .labs-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: var(--hit);
+    padding: 0 var(--s-4);
+    border: 1px solid var(--line-ui);
+    border-radius: 999px;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    color: var(--fg-2);
+    transition:
+      color var(--d-s) var(--ease-rise),
+      border-color var(--d-s) var(--ease-rise),
+      background-color var(--d-s) var(--ease-rise);
+  }
+  .labs-btn:hover {
+    color: var(--fg);
+    border-color: var(--fg-2);
+  }
+  /* selected: the border and word go to --fg, the icon carries the amber state mark */
+  .labs-btn[aria-pressed='true'] {
+    border-color: var(--fg);
+    color: var(--fg);
+  }
+  .labs-btn[aria-pressed='true'] .i {
+    color: var(--glim);
+  }
+  @media (max-width: 639.98px) {
+    .labs-view {
+      display: none;
+    }
+  }
+
+  /* ---- layouts ---------------------------------------------------------------
+     base (no JS, phones, [data-view="list"]): one row per repo.
+     grid: only with JS, from 640px, when chosen (the default). */
+  .labs {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .labs-li {
+    min-width: 0;
+  }
+  @media (min-width: 640px) {
+    :global(html[data-js]) .labs[data-view='grid'] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--gap);
+    }
+  }
+  @media (min-width: 1024px) {
+    :global(html[data-js]) .labs[data-view='grid'] {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  @media (forced-colors: active) {
+    .labs-btn[aria-pressed='true'] {
+      border-color: Highlight;
+      border-width: 2px;
+    }
+  }
+</style>

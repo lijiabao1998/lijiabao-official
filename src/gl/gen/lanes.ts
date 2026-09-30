@@ -3,7 +3,8 @@
 //
 // Rows: the 3 GlimmerTown lanes, one spacer, FrontierLab-Governance, then the 15 labs in brief order
 // (= REPOS order in src/data/repos.ts; tests/unit/lanes.test.ts keeps the two in step). Each commit sits on its
-// lane with a light beeswarm: y = (row + 0.5 + (hash(sha) − 0.5) × 0.7) × laneH, so dense days read as density.
+// lane with a light beeswarm: y = (row + 0.5 + (swarm(hash(sha)) − 0.5) × JITTER) × laneH (triangular, centred on
+// the rule), so dense days read as density.
 // Lane labels here are repo names and repo IDs (data, not copy).
 
 import type { RepoName } from '../../data/facts.ts';
@@ -23,8 +24,12 @@ export interface Lane {
 /** Total rows including the spacer. */
 export const ROWS = 20;
 export const SPACER_ROW = 3;
-/** Beeswarm spread as a share of the lane height. */
-export const JITTER = 0.7;
+/**
+ * Beeswarm spread as a share of the lane height (±0.25 lane at most). The offsets are triangular (see `swarm`), so
+ * most records sit close to the rule: a busy lane reads as one fine luminous trail along it, bright at the core
+ * and grainy at the edges, with clear dark between lanes; the tails still keep single records apart.
+ */
+export const JITTER = 0.5;
 
 const ORDER: readonly [RepoId, RepoName, string][] = [
   ['gt', 'GlimmerTown', 'GT'],
@@ -78,9 +83,18 @@ export function seedOf(sha: number, lane = 0, index = 0): [number, number] {
   return [a / 4294967296, b / 4294967296];
 }
 
-/** Lane-local y in lane units: row + 0.5 + (shaHash − 0.5) × JITTER. */
+/**
+ * A uniform seed u ∈ [0, 1) → a triangular one in [0, 1) (inverse CDF of the triangular distribution on [0, 1]
+ * with its mode at 0.5): monotonic, symmetric, 0 → 0, 0.5 → 0.5, → 1 as u → 1. Half of all records land within
+ * ±0.15 of the centre (a uniform seed puts them within ±0.25).
+ */
+export function swarm(u: number): number {
+  return u < 0.5 ? Math.sqrt(u / 2) : 1 - Math.sqrt((1 - u) / 2);
+}
+
+/** Lane-local y in lane units: row + 0.5 + (swarm(shaHash) − 0.5) × JITTER. */
 export function rowY(row: number, shaHash: number): number {
-  return row + 0.5 + (shaHash - 0.5) * JITTER;
+  return row + 0.5 + (swarm(shaHash) - 0.5) * JITTER;
 }
 
 /** y (CSS px from the band top) of a record on `row` with beeswarm seed `shaHash` ∈ [0, 1). */

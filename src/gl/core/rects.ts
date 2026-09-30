@@ -30,7 +30,11 @@ export function readRect(el: Element, out: DOMRect): boolean {
 export function readHoles(els: readonly Element[], anchor: DOMRect, out: Float32Array): number {
   let n = 0;
   for (let i = 0; i < els.length && n < MAX_HOLES; i++) {
-    const b = (els[i] as Element).getBoundingClientRect();
+    const el = els[i] as Element;
+    // a hidden hole covers no text (the hero's inspect readout at rest sits at the band's top-left corner,
+    // visibility: hidden): the records under it stay lit
+    if (el.checkVisibility?.({ visibilityProperty: true, checkVisibilityCSS: true }) === false) continue;
+    const b = el.getBoundingClientRect();
     if (packHole(out, n, b.left, b.top, b.width, b.height, anchor)) n++;
   }
   return n;

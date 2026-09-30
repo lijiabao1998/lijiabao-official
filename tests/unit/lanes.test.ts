@@ -5,7 +5,20 @@ import { facts } from '@data/facts';
 import { REPOS } from '@data/repos';
 import snapshot from '@data/snapshot.json';
 import manifest from '@data/gl-manifest.json';
-import { JITTER, LANES, laneRecords, laneY, pointOf, ROWS, rowY, seedOf, shaHex, shaInt, SPACER_ROW } from '@gl/gen/lanes';
+import {
+  JITTER,
+  LANES,
+  laneRecords,
+  laneY,
+  pointOf,
+  ROWS,
+  rowY,
+  seedOf,
+  shaHex,
+  shaInt,
+  SPACER_ROW,
+  swarm,
+} from '@gl/gen/lanes';
 import { timeX } from '@gl/gen/time-axis';
 import { decode, PickGrid, stepFrom, type Band } from '@gl/scenes/inspect';
 
@@ -21,13 +34,37 @@ describe('lanes', () => {
     expect(new Set(LANES.map((l) => l.short)).size).toBe(LANES.length);
   });
 
-  it('keeps every record inside its own lane (beeswarm ≤ ±0.35 lane)', () => {
+  it('keeps every record near its own lane rule (beeswarm ≤ ±0.25 lane, most within ±0.08)', () => {
+    // a tight beeswarm: busy lanes read as one trail along the rule, with dark between lanes
+    expect(JITTER).toBeGreaterThanOrEqual(0.4);
+    expect(JITTER).toBeLessThanOrEqual(0.5);
     for (const s of [0, 0.5, 0.999999]) {
       const y = rowY(7, s);
       expect(y).toBeGreaterThanOrEqual(7 + 0.5 - JITTER / 2);
       expect(y).toBeLessThanOrEqual(7 + 0.5 + JITTER / 2);
     }
     expect(laneY(0, 0.5, 20)).toBe(10);
+  });
+
+  it('swarm() is a monotonic, symmetric triangular shaping of the seed', () => {
+    expect(swarm(0)).toBe(0);
+    expect(swarm(0.5)).toBe(0.5);
+    expect(swarm(0.999999)).toBeLessThan(1);
+    let prev = -1;
+    for (let u = 0; u < 1; u += 1 / 256) {
+      const v = swarm(u);
+      expect(v).toBeGreaterThan(prev);
+      expect(v + swarm(1 - u)).toBeCloseTo(1, 9);
+      prev = v;
+    }
+    // half of the seeds land within ±0.146 of the centre (a uniform seed: ±0.25)
+    expect(0.5 - swarm(0.25)).toBeCloseTo(0.1464, 4);
+    // on the real records: over half sit within ±0.08 lane of their rule (uniform at 0.44 would give ~36%)
+    const offs = laneRecords(snapshot, counts).lanes.flatMap((l) =>
+      l.shas.map((_, k) => Math.abs(pointOf('time', l, k).y - (l.row + 0.5))),
+    );
+    expect(offs.filter((d) => d <= 0.08).length / offs.length).toBeGreaterThan(0.45);
+    expect(Math.max(...offs)).toBeLessThanOrEqual(JITTER / 2);
   });
 
   it('seeds are deterministic and in [0, 1)', () => {

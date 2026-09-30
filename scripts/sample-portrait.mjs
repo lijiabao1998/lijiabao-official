@@ -10,8 +10,8 @@
 //   public/gl/portrait-b.<hash>.bin   the next 8,192 points (full tier only)
 //   src/data/gl-manifest.json         read-modify-write: keys "portrait" (a) and "portrait-b" (b); other keys kept
 //   src/data/portrait-meta.json       rows, aspect, counts, accent count, poster size
-//   src/assets/generated/portrait-dots.svg   the static poster's source: the first 6,144 points as round dots
-//   src/assets/generated/portrait-dots.{avif,webp}   the poster, rasterised at 880px wide
+//   src/assets/generated/portrait-dots.{avif,webp}   the static poster: the first 6,144 points as soft glimmers,
+//                                                    rendered at 880px wide with the scene's own shader maths
 // Fails (exit 1) when an output exceeds its cap in src/data/budgets.ts.
 //
 // Pipeline (art direction below; the numeric core is src/gl/gen/portrait.ts):
@@ -46,6 +46,7 @@ if (!existsSync(SRC)) {
 const { default: sharp } = await import('sharp');
 const G = await import(pathToFileURL(resolve(ROOT, 'src/gl/gen/portrait.ts')).href);
 const { PT } = G;
+const { SIGMA } = await import(pathToFileURL(resolve(ROOT, 'src/gl/gen/glimmer.ts')).href);
 
 /* ------------------------------------------------------------------ art direction for THIS photo (source px) */
 
@@ -262,48 +263,68 @@ writeFileSync(MANIFEST, `${JSON.stringify(sorted, null, 2)}\n`);
 
 /* ------------------------------------------------------------------ poster (all points, assembled) */
 
-// Mirrors the scene's look at rest (gen/portrait.ts LOOK: alpha and size by lum; the full set uses the full-tier
-// sizes), drawn for a ~560px-wide stage; the soft GL core reads about 0.8 of the sprite. Dots are bucketed by tone
-// into a few paths of zero-length round-capped segments (the same trick as the field poster).
+// The scene's own maths on the CPU (gl/shaders/portrait.vert + point.frag at rest, uAssemble = 1): every point is a
+// gaussian glimmer, σ = SIGMA × mix(size0, size1, lum) CSS px, alpha = peak × mix(alpha0, 1, lum) × the twinkle's
+// mean, windowed to 0 at 2.4σ, composited premultiplied "over" in draw order (the engine's ONE, ONE_MINUS_SRC_ALPHA)
+// and then over --bg (a pixel-for-pixel check against the GL scene at the same size differs by ~1 grey level on
+// average: the twinkle). The GL points keep their CSS size on any stage while the poster scales with it, so it is drawn
+// for a POSTER_STAGE-wide stage, between a phone's ≈340px and a desktop's ≈560–660px: the poster → canvas handoff
+// shows the same soft light at the same brightness within a few percent. No halo (the lite look).
+const POSTER_STAGE = 450;
 const PH = Math.round((POSTER_W * H) / W);
-const BG = '#0B0B0C';
-const FG = '#EDEBE6';
-const GLIM = '#FFB547';
-const LEVELS = 12;
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+const BG = hex('#0B0B0C');
+const FG = hex('#EDEBE6');
+const GLIM = hex('#FFB547');
+/** portrait.vert's twinkle, .9 + .1 sin(…), averages .9 */
+const TWINKLE = 0.9;
 const mix = (a, b, t) => a + (b - a) * t;
 
-/** The first `count` points as an SVG `width` px wide; `scale` = poster px per CSS px of the GL point size. */
-function dotsSvg(count, width, scale, look = count > PT.A ? G.LOOK.full : G.LOOK.lite) {
+/** The first `count` points rendered `width` px wide (RGB, 8-bit); `scale` = poster px per CSS px. */
+function renderDots(count, width, scale, look, peak) {
   const [s0, s1] = look;
   const height = Math.round((width * H) / W);
-  const buckets = Array.from({ length: LEVELS }, () => []);
-  const amber = [];
+  // the canvas: premultiplied rgb and alpha, starting transparent
+  const C = [0, 1, 2].map(() => new Float32Array(width * height));
+  const A = new Float32Array(width * height);
   for (let i = 0; i < Math.min(count, pts.n); i++) {
-    const seg = `M${(pts.x[i] * width).toFixed(1)} ${(pts.y[i] * height).toFixed(1)}h0`;
-    if (pts.edge[i] === PT.ACCENT) amber.push(seg);
-    else buckets[Math.min(LEVELS - 1, Math.floor((pts.lum[i] / 256) * LEVELS))].push(seg);
+    const tone = pts.lum[i] / 255;
+    const accent = pts.edge[i] === PT.ACCENT;
+    const col = accent ? GLIM : FG;
+    const a0 = mix(G.LOOK.alpha0, 1, tone) * TWINKLE * (accent ? 1 : peak);
+    const sig = mix(s0, s1, tone) * SIGMA * scale;
+    const R = 2.4 * sig;
+    const cx = pts.x[i] * width;
+    const cy = pts.y[i] * height;
+    const k = 0.5 / (sig * sig);
+    for (let y = Math.max(0, Math.floor(cy - R)); y <= Math.min(height - 1, Math.ceil(cy + R)); y++) {
+      for (let x = Math.max(0, Math.floor(cx - R)); x <= Math.min(width - 1, Math.ceil(cx + R)); x++) {
+        const dx = x + 0.5 - cx;
+        const dy = y + 0.5 - cy;
+        const r2 = dx * dx + dy * dy;
+        const q = r2 / (R * R);
+        if (q >= 1) continue;
+        const t = Math.min(1, Math.max(0, (q - 0.45) / 0.55));
+        const a = Math.min(1, a0 * Math.exp(-r2 * k) * (1 - t * t * (3 - 2 * t)));
+        const o = y * width + x;
+        // ONE, ONE_MINUS_SRC_ALPHA
+        for (let c = 0; c < 3; c++) C[c][o] = col[c] * a + C[c][o] * (1 - a);
+        A[o] = a + A[o] * (1 - a);
+      }
+    }
   }
-  let paths = '';
-  buckets.forEach((segs, b) => {
-    if (!segs.length) return;
-    const t = (b + 0.5) / LEVELS;
-    const size = (mix(s0, s1, t) * scale * 0.8).toFixed(2);
-    const alpha = mix(G.LOOK.alpha0, 1, t).toFixed(3);
-    paths += `<path stroke="${FG}" stroke-opacity="${alpha}" stroke-width="${size}" d="${segs.join('')}"/>`;
-  });
-  if (amber.length) paths += `<path stroke="${GLIM}" stroke-width="${(s1 * scale * 0.8).toFixed(2)}" d="${amber.join('')}"/>`;
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
-    `<rect width="100%" height="100%" fill="${BG}"/>` +
-    `<g fill="none" stroke-linecap="round">${paths}</g></svg>\n`
-  );
+  const out = Buffer.alloc(width * height * 3);
+  for (let o = 0; o < width * height; o++) {
+    // the premultiplied canvas over the page: rgb + bg · (1 − alpha)
+    for (let c = 0; c < 3; c++) out[o * 3 + c] = Math.round(Math.min(1, C[c][o] + BG[c] * (1 - A[o])) * 255);
+  }
+  return { data: out, width, height };
 }
 
-const svg = dotsSvg(POSTER_POINTS, POSTER_W, POSTER_W / 560, G.LOOK.lite);
+const dots = renderDots(POSTER_POINTS, POSTER_W, POSTER_W / POSTER_STAGE, G.LOOK.lite, G.LOOK.peak.lite);
+const raster = sharp(dots.data, { raw: { width: dots.width, height: dots.height, channels: 3 } });
 
 mkdirSync(GEN_DIR, { recursive: true });
-writeFileSync(resolve(GEN_DIR, 'portrait-dots.svg'), svg);
-const raster = sharp(Buffer.from(svg), { density: 72 }).resize(POSTER_W, PH);
 const avif = await raster.clone().avif({ quality: 44, effort: 9, chromaSubsampling: '4:2:0' }).toBuffer();
 const webp = await raster.clone().webp({ quality: 64, effort: 6 }).toBuffer();
 writeFileSync(resolve(GEN_DIR, 'portrait-dots.avif'), avif);
@@ -325,10 +346,14 @@ writeFileSync(META, `${JSON.stringify(meta, null, 2)}\n`);
 if (PREVIEW) {
   const out = resolve(ROOT, '.cache');
   mkdirSync(out, { recursive: true });
-  await sharp(Buffer.from(svg), { density: 72 }).png().toFile(resolve(out, 'portrait-preview.png'));
-  // what a ~560px stage shows at DPR 1: lite (first 4,096), mobile full (8,192), full (12,288)
+  await raster.clone().png().toFile(resolve(out, 'portrait-preview.png'));
+  // what a ~560px stage shows at DPR 1 (no halo): lite (first 4,096), mobile full (8,192), full (12,288)
   for (const n of [PT.A, PT.B, pts.n]) {
-    await sharp(Buffer.from(dotsSvg(n, 560, 1)), { density: 72 }).png().toFile(resolve(out, `portrait-preview-${n}.png`));
+    const full = n > PT.A;
+    const r = renderDots(n, 560, 1, full ? G.LOOK.full : G.LOOK.lite, full ? G.LOOK.peak.full : G.LOOK.peak.lite);
+    await sharp(r.data, { raw: { width: r.width, height: r.height, channels: 3 } })
+      .png()
+      .toFile(resolve(out, `portrait-preview-${n}.png`));
   }
   // silhouette overlay (diagnostic only; stays in .cache, never committed)
   const ov = Buffer.alloc(W * H * 4);

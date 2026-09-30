@@ -5,12 +5,14 @@
 // lite 4,096 · full 12,288 (8,192 on mobile) · × f.density after the guard halves it. One VAO, one gl.POINTS draw.
 // Uniforms: uAssemble comes from motion/sections/about.ts (scroll scrub; 1 under reduced motion, and 1 when nothing
 // ever sets it, so the portrait is never stuck scattered).
+// Look: gen/portrait.ts LOOK (soft gaussian glimmers; the static poster is rendered with the same maths).
 
 import type { Frame, SceneDef, Tier } from '../types';
 import { POINT_FRAG, program, type Program } from '../core/program';
 import VERT from '../shaders/portrait.vert?raw';
 import manifest from '../../data/gl-manifest.json';
 import { decode, LOOK, PT, tierCount, type Decoded } from '../gen/portrait';
+import { SIGMA } from '../gen/glimmer';
 import { MQ, mq } from '../../lib/dom';
 
 interface Data {
@@ -18,7 +20,20 @@ interface Data {
   count: number;
 }
 
-const U = ['uView', 'uRect', 'uLook', 'uDpr', 'uTime', 'uAssemble', 'uPointer', 'uPulse', 'uFg', 'uGlim', 'uHalo'] as const;
+const U = [
+  'uView',
+  'uRect',
+  'uLook',
+  'uSigma',
+  'uDpr',
+  'uTime',
+  'uAssemble',
+  'uPointer',
+  'uPulse',
+  'uFg',
+  'uGlim',
+  'uHalo',
+] as const;
 type Loc = Record<(typeof U)[number], WebGLUniformLocation | null>;
 
 interface State {
@@ -27,6 +42,7 @@ interface State {
   buf: WebGLBuffer;
   count: number;
   look: readonly [number, number];
+  peak: number;
   u: Loc | null;
 }
 
@@ -80,7 +96,9 @@ const scene: SceneDef<Data> = {
     gl.vertexAttribPointer(1, 2, gl.UNSIGNED_BYTE, true, PT.STRIDE, 4);
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    return { prog, vao, buf, count: d.count, look: tier === 'full' ? LOOK.full : LOOK.lite, u: null };
+    const full = tier === 'full';
+    const look = full ? LOOK.full : LOOK.lite;
+    return { prog, vao, buf, count: d.count, look, peak: full ? LOOK.peak.full : LOOK.peak.lite, u: null };
   },
 
   draw(gl: WebGL2RenderingContext, state: unknown, f: Frame): boolean {
@@ -106,7 +124,8 @@ const scene: SceneDef<Data> = {
     gl.bindVertexArray(s.vao);
     gl.uniform2f(u.uView, vw, vh);
     gl.uniform4f(u.uRect, (vw - w) / 2, (vh - h) / 2, w, h);
-    gl.uniform3f(u.uLook, s.look[0], s.look[1], LOOK.alpha0);
+    gl.uniform4f(u.uLook, s.look[0], s.look[1], LOOK.alpha0, s.peak);
+    gl.uniform1f(u.uSigma, SIGMA);
     gl.uniform1f(u.uDpr, f.dpr);
     gl.uniform1f(u.uTime, f.t);
     gl.uniform1f(u.uAssemble, typeof asm === 'number' ? asm : 1);

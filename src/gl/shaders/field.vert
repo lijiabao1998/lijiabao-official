@@ -19,7 +19,9 @@ uniform float uScan;       // ignition front on the axis (≥ 1 = all lit)
 uniform float uScroll;     // hero scroll-out 0..1
 uniform mediump float uHalo; // 1 in full; also read by point.frag (mediump): precisions must match to link
 uniform float uPicked;     // record index, < 0 = none
-uniform float uSize;       // base point size, CSS px
+// gen/glimmer.ts FIELD_LOOK (the poster draws the same): x size (CSS px, ≈ 4σ of the core), y peak alpha of one
+// record (a lane's latest commit and the inspected record burn at 1), z σ per unit of size, w latest-commit extra size
+uniform vec4 uLook;
 uniform vec3 uPointer;     // anchor-local CSS px (smoothed), z = active 0..1
 uniform vec4 uHoles[8];    // [data-gl-hole] rects (+12px pad), anchor-local
 uniform int uHoleCount;
@@ -27,6 +29,7 @@ uniform vec4 uPulse;       // x, y, t0, strength
 
 out float vA;
 out float vAmber;
+out vec2 vS;               // point.frag: sprite size and core σ, device px
 
 void main() {
   vec2 p = vec2(uBand.x + aX * uBand.z, uBand.y + aY * uLaneH);
@@ -57,8 +60,13 @@ void main() {
     a += lit * uPulse.w * exp(-pq * pq) * exp(-pt * 2.);
   }
 
-  vA = a;
-  vAmber = max(aLatest, picked);
+  // one soft glimmer per record (point.frag); the sprite reaches 2.4σ, or 5.6σ to hold the full tier's halo
+  float hi = max(aLatest, picked);
+  vA = a * mix(uLook.y, 1., hi);
+  vAmber = hi;
+  float sig = (uLook.x + aLatest * uLook.w + picked * 2.5) * uLook.z;
+  float spr = 2. * sig * (2.4 + 3.2 * uHalo);
   gl_Position = vec4((p / uView * 2. - 1.) * vec2(1., -1.), 0., 1.);
-  gl_PointSize = (uSize + aLatest * 1.5 + uHalo * 2. + picked * 3.) * uDpr;
+  gl_PointSize = spr * uDpr;
+  vS = vec2(spr, sig) * uDpr;
 }

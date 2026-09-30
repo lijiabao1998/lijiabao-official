@@ -45,6 +45,8 @@ export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
     if (chain && chainFresh) steps(chain);
   });
 
+  // The split wraps like the plain text while it animates (prim.split: CJK units / masked lines) and is reverted
+  // when the rise ends, so the resting quote is the server HTML again.
   function quote(el: HTMLElement): void {
     const trigger: ScrollTrigger.Vars = { trigger: el, start: 'top 75%', once: true };
     if (isZh(el)) {
@@ -59,6 +61,7 @@ export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
           ease: EASE.rise,
           stagger: stagger(STAGGER.charMin, chars.length),
           scrollTrigger: trigger,
+          onComplete: () => split.revert(),
         },
       );
       return;
@@ -75,6 +78,7 @@ export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
             ease: EASE.rise,
             stagger: stagger(STAGGER.line, self.lines.length),
             scrollTrigger: { ...trigger },
+            onComplete: () => self.revert(),
           },
         ),
     });

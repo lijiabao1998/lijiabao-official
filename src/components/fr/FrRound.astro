@@ -6,6 +6,8 @@
 // switches the block to [data-mode="pin"] (a horizontal track, pinned ≤ 150%): a round glimmer runs through the
 // seven gates, the active stage lights and its detail swaps in; from stage 6 (記錄 / Record) the failures rise at
 // the same weight as the passes. The DOM never moves: pinned or not, it is the same list in reading order.
+// Pinned, the seven details share ONE grid cell (row 2 of the track grid) and cross-fade strictly: only the active
+// one is ever visible; the polite live region below the list announces it (name + detail) as it changes.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
 import RecordShelf from './RecordShelf.astro';
@@ -15,6 +17,8 @@ const locale = localeOf(Astro);
 // Names from the display-flagged list (they are set in the display face); details from fr.stage.N = [name, detail].
 const names = tl('fr.stage.names', locale);
 const stages = names.map((name, i) => ({ name, detail: tl(`fr.stage.${i + 1}`, locale)[1] ?? '' }));
+// joins a stage's name and detail in the live announcement (punctuation only, per locale)
+const sep = locale === 'en' ? ': ' : '：';
 ---
 <Section id="fr-round" motion="fr-round" labelledby="fr-round-title" class="frr">
   <Display k="fr.round.title" as="h2" size="m" id="fr-round-title" />
@@ -43,6 +47,7 @@ const stages = names.map((name, i) => ({ name, detail: tl(`fr.stage.${i + 1}`, l
           ))
         }
       </ol>
+      <p class="sr-only" aria-live="polite" data-rd-live data-sep={sep} data-parity-ignore></p>
     </div>
 
     <RecordShelf />
@@ -182,12 +187,14 @@ const stages = names.map((name, i) => ({ name, detail: tl(`fr.stage.${i + 1}`, l
     border-radius: 50%;
     background: var(--glim);
   }
+  /* row 1: the seven stages; row 2: ONE cell that every detail shares (see .rd-detail below) */
   .rd[data-mode='pin'] .rd-stages {
     position: relative;
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: auto var(--rd-dh);
     column-gap: var(--gap);
-    padding-bottom: calc(var(--rd-dh) + clamp(20px, 3svh, 40px));
+    row-gap: clamp(20px, 3svh, 40px);
     border: 0;
   }
   .rd[data-mode='pin'] .rd-stage {
@@ -214,8 +221,14 @@ const stages = names.map((name, i) => ({ name, detail: tl(`fr.stage.${i + 1}`, l
   .rd[data-mode='pin'] .rd-name:lang(zh) {
     line-height: 1.35;
   }
+  /* every detail is placed in the same cell: the grid area row 2 × all columns of .rd-stages (its containing block:
+     the stages are position:static). Engines that ignore grid placement for a nested abspos box resolve left/bottom
+     against the list's padding box instead — the bottom of row 2, the same spot. The desktop list rule's
+     grid-column: 4 / grid-row: 1 must not leak in here (it put the slot under stage 04). */
   .rd[data-mode='pin'] .rd-detail {
     position: absolute;
+    grid-column: 1 / -1;
+    grid-row: 2;
     left: 0;
     bottom: 0;
     width: min(100%, 36em);
@@ -229,6 +242,8 @@ const stages = names.map((name, i) => ({ name, detail: tl(`fr.stage.${i + 1}`, l
   .rd[data-mode='pin'] .rd-detail:lang(zh) {
     line-height: 1.6;
   }
+  /* strict cross-fade: only the active detail is visible (fr-round.ts sequences out → in; opacity keeps the others
+     in the accessibility tree, the list still reads in full) */
   .rd[data-mode='pin'] .rd-text {
     opacity: 0;
   }

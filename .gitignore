@@ -27,7 +27,7 @@ pnpm-debug.log*
 .wrangler/
 
 # agent worktrees
-.claude/worktrees/
+.claude/
 
 # private source photo: only the sampled glimmer data (src/assets/generated, public/gl) is published
 src/assets/portrait.png

@@ -16,38 +16,40 @@
   column-gap: var(--gap);
 }
 
-/* spans: mobile-first full width; .md-* from 640px; .lg-* from 1024px */
+/* spans: mobile-first full width; .md-* from 640px; .lg-* from 1024px.
+   Spans are written as `auto / span N` so a later .*-start-N (grid-column-start) keeps the span:
+   the one-value shorthand `grid-column: span N` puts the span on the START line and would be lost. */
 .grid > * {
   grid-column: 1 / -1;
   min-width: 0;
 }
 
-.span-1 { grid-column: span 1; }
-.span-2 { grid-column: span 2; }
-.span-3 { grid-column: span 3; }
-.span-4 { grid-column: span 4; }
+.span-1 { grid-column: auto / span 1; }
+.span-2 { grid-column: auto / span 2; }
+.span-3 { grid-column: auto / span 3; }
+.span-4 { grid-column: auto / span 4; }
 
 @media (min-width: 640px) {
-  .md-2 { grid-column: span 2; }
-  .md-3 { grid-column: span 3; }
-  .md-4 { grid-column: span 4; }
-  .md-5 { grid-column: span 5; }
-  .md-6 { grid-column: span 6; }
+  .md-2 { grid-column: auto / span 2; }
+  .md-3 { grid-column: auto / span 3; }
+  .md-4 { grid-column: auto / span 4; }
+  .md-5 { grid-column: auto / span 5; }
+  .md-6 { grid-column: auto / span 6; }
   .md-8 { grid-column: 1 / -1; }
   .md-start-3 { grid-column-start: 3; }
   .md-start-5 { grid-column-start: 5; }
 }
 
 @media (min-width: 1024px) {
-  .lg-2 { grid-column: span 2; }
-  .lg-3 { grid-column: span 3; }
-  .lg-4 { grid-column: span 4; }
-  .lg-5 { grid-column: span 5; }
-  .lg-6 { grid-column: span 6; }
-  .lg-7 { grid-column: span 7; }
-  .lg-8 { grid-column: span 8; }
-  .lg-9 { grid-column: span 9; }
-  .lg-10 { grid-column: span 10; }
+  .lg-2 { grid-column: auto / span 2; }
+  .lg-3 { grid-column: auto / span 3; }
+  .lg-4 { grid-column: auto / span 4; }
+  .lg-5 { grid-column: auto / span 5; }
+  .lg-6 { grid-column: auto / span 6; }
+  .lg-7 { grid-column: auto / span 7; }
+  .lg-8 { grid-column: auto / span 8; }
+  .lg-9 { grid-column: auto / span 9; }
+  .lg-10 { grid-column: auto / span 10; }
   .lg-12 { grid-column: 1 / -1; }
   .lg-start-2 { grid-column-start: 2; }
   .lg-start-3 { grid-column-start: 3; }

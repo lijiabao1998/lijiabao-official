@@ -1,9 +1,176 @@
 ---
-// STUB (F0-shell) — owner S2 replaces the internals. Keep the contract: <Section id="numbers" motion="numbers"> (§3 order, §9.3).
-// Six <Num k odometer source> from facts.ts NUMBERS (copy num.1 … num.6).
+// #numbers (S2 · §3 row 5, §4.2 Numbers, §5.3, site law 4): six stats, each a <Num odometer> (the real
+// <data value> stays in the DOM; the aria-hidden odometer draws over it in animated tiers) with its label and
+// its source, linked to the file it comes from, and its as-of date (facts.ts), plus the section's as-of line.
+// Order and facts: NUMBERS in src/data/facts.ts; copy: num.1 … num.6, each
+// [value, label, source]. The value part of the copy must show the formatted fact (the build fails otherwise),
+// and whatever it adds around the number (the "$" of en num.6) becomes the Num prefix / suffix.
+// Markup: a <dl>; each stat is dt = the number, dd = what it counts, dd = where it comes from (so zh reads
+// 「1,946 個 commit…」 in order). Motion: motion/sections/numbers.ts.
 import Section from '@ui/Section.astro';
 import Display from '@ui/Display.astro';
+import T from '@ui/T.astro';
+import Num from '@ui/Num.astro';
+import { NUMBERS, fact, type FactKey } from '@data/facts';
+import { GITHUB_PROFILE, fileUrl, repoUrl } from '@data/links';
+import { formatFact, runsOf, stripCode } from '@i18n/t';
+import { localeOf, ts, tv } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const ext = ts('a11y.external', locale);
+
+/** The public file behind a fact: its repo file when the path is a file, the repo, or the profile (API). */
+function sourceUrl(k: FactKey): string {
+  const { repo, path } = fact(k).source;
+  if (repo === 'github-api' || repo === 'pages' || repo === 'site') return GITHUB_PROFILE;
+  if (path && /^[\w./-]+\.[A-Za-z]+$/.test(path)) return fileUrl(repo, path);
+  return repoUrl(repo);
+}
+
+const items = NUMBERS.map(({ copy, fact: k }) => {
+  const val = tv(copy, locale);
+  if (!Array.isArray(val) || val.length !== 3 || !val.every((p) => typeof p === 'string')) {
+    throw new Error(`[Numbers] ${copy} must be [value, label, source]`);
+  }
+  const [v0, label, source] = val as string[];
+  const value = formatFact(k, locale);
+  const shown = stripCode(v0 ?? '');
+  const at = shown.indexOf(value);
+  if (at < 0) throw new Error(`[Numbers] ${copy} (${locale}) shows "${shown}", not facts ${k} = ${value}`);
+  return {
+    k,
+    prefix: shown.slice(0, at) || undefined,
+    suffix: shown.slice(at + value.length) || undefined,
+    label: runsOf(label ?? ''),
+    source: runsOf(source ?? ''),
+    href: sourceUrl(k),
+    asOf: fact(k).asOf,
+  };
+});
+const asofWord = ts('common.asof', locale);
 ---
 <Section id="numbers" motion="numbers" label="num.label" labelledby="numbers-title">
-  <Display k="num.title" as="h2" size="m" id="numbers-title" />
+  <div class="nums-head">
+    <Display k="num.title" as="h2" size="m" id="numbers-title" data-rise />
+    <T k="num.asof" as="p" class="nums-asof t-label" data-rise />
+  </div>
+  <dl class="nums">
+    {
+      items.map((it) => (
+        <div class="nums-item" data-num-item>
+          <span class="nums-rule" aria-hidden="true" data-num-rule />
+          <dt class="nums-value">
+            <Num k={it.k} odometer prefix={it.prefix} suffix={it.suffix} numClass="t-num" />
+          </dt>
+          <dd class="nums-label" data-num-label>
+            {it.label.map((r) => (r.code ? <code>{r.text}</code> : r.text))}
+          </dd>
+          <dd class="nums-src t-label" data-num-src>
+            <a class="link" href={it.href}>
+              {it.source.map((r) => (r.code ? <code>{r.text}</code> : r.text))}
+              <span class="sr-only">{ext}</span>
+            </a>
+            <span class="nums-date">
+              <span aria-hidden="true">{' · '}</span>
+              {asofWord}
+              {' '}
+              <time datetime={it.asOf}>{it.asOf}</time>
+            </span>
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
 </Section>
+
+<style>
+  .nums-head {
+    display: grid;
+    gap: var(--s-4);
+    margin-bottom: var(--s-9);
+  }
+  .nums-head :global(.nums-asof) {
+    color: var(--fg-3);
+    text-transform: none;
+  }
+
+  .nums {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: var(--gap);
+    row-gap: var(--s-8);
+    margin: 0;
+  }
+  @media (min-width: 640px) {
+    .nums {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .nums {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      row-gap: var(--s-9);
+    }
+  }
+
+  .nums-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    padding-top: var(--s-5);
+    min-width: 0;
+  }
+  .nums-rule {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: var(--line-ui);
+    transform-origin: 0 50%;
+  }
+  /* the number: Geist Mono 300, tabular; never wider than its column */
+  .nums-value {
+    container-type: inline-size;
+    margin: 0;
+  }
+  .nums-value :global(.t-num) {
+    font-size: min(var(--fs-num), 22cqi);
+  }
+  .nums-label {
+    max-width: 22em;
+    margin: 0;
+    color: var(--fg-2);
+  }
+  .nums-src {
+    margin: 0;
+    color: var(--fg-3);
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+  .nums-src :global(.link) {
+    color: var(--fg-3);
+  }
+  .nums-date {
+    white-space: nowrap;
+  }
+  .nums-src :global(.link:is(:hover, :focus-visible)) {
+    color: var(--fg-2);
+  }
+  .nums-src code,
+  .nums-label code {
+    font-size: 1em;
+    word-break: break-all;
+  }
+
+  @media (forced-colors: active) {
+    .nums-rule {
+      background: CanvasText;
+    }
+  }
+  @media print {
+    .nums :global(:is([data-num-rule], [data-num-label], [data-num-src])) {
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
+</style>

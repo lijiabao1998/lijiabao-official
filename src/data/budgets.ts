@@ -23,7 +23,12 @@ export const budgets = {
     notoDisplay: 90,
   },
   js: {
-    static: 10,
+    /**
+     * Static tier: ClientRouter + prefetch, the lifecycle entry, prefs/events, HUD, tier fieldset.
+     * RFC S6 2026-09-30: 10 → 11. check-dist measured the F0 build at 10.5 KB (gzip -9, per file): ClientRouter
+     * with prefetch is 5.7 KB, not the probe's 5.6, and the runtime entry, HUD and tier switch add 4.8 KB.
+     */
+    static: 11,
     /** lite/full, home and GlimmerTown: ClientRouter 5.6 + motion core + app. */
     liteHomeGt: 82,
     /** lite/full, Frontier (+ Flip, lazy). */
@@ -46,8 +51,8 @@ export const budgets = {
   firstView: {
     zhHomeLite: 305, // 36 + 29 + 25 + 16 + 90 + 82 + 9 + 18
     enHomeLite: 200, // 36 + 29 + 25 + 82 + 9 + 18 (= 199, capped at 200)
-    zhHomeStatic: 215, // 36 + 29 + 25 + 16 + 90 + 10 + 9 (field poster)
-    enHomeStatic: 109, // 36 + 29 + 25 + 10 + 9 — derived, not in the spec table
+    zhHomeStatic: 216, // 36 + 29 + 25 + 16 + 90 + 11 + 9 (field poster); js.static RFC S6
+    enHomeStatic: 110, // 36 + 29 + 25 + 11 + 9 — derived, not in the spec table
   },
   /** Noto Sans TC subset sizes in glyphs (scripts/glyphs.mjs fails above these). */
   glyphs: {

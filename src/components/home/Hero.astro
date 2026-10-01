@@ -56,7 +56,7 @@ const timed = laneRecords(snap, {}).mode === 'time';
   <div class="hero-head">
     <T k="hero.eyebrow" as="p" class="hero-eyebrow t-label" />
     <h1 id="hero-title" class="hero-h1">
-      <T k="hero.name" class="hero-name" />
+      <T k="hero.name" class="hero-name" data-md-after=" — " />
       <span class:list={['hero-line', authored ? 'hero-line--fit' : 'hero-line--free']} style={lineVars}>
         <Display k="hero.line" size="xl" animate hole weigh="scan" class="hero-display" />
         <span class="hero-rule" data-intro-line aria-hidden="true"></span>

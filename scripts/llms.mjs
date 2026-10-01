@@ -79,35 +79,54 @@ for (const { id, path } of PAGES) {
 // ── llms.txt ────────────────────────────────────────────────────────────────────────────────────────────────
 const heroZh = line('hero.line', 'zh-Hant');
 const heroEn = line('hero.line', 'en');
+// The summary blockquote is ONE line describing the site (parsers keep only the first `>` line); the owner's line
+// follows as prose, in both languages.
 const header =
   `# ${tStr('site.name', 'zh-Hant')} ${tStr('site.name', 'en')} — ${new URL(SITE_URL).host}\n\n` +
-  `> ${heroZh}\n> ${heroEn}\n\n` +
-  `${tStr('meta.home.desc', 'zh-Hant')}\n${tStr('meta.home.desc', 'en')}\n\n` +
+  `> ${tStr('meta.home.desc', 'zh-Hant')} ${tStr('meta.home.desc', 'en')}\n\n` +
+  `${heroZh}\n${heroEn}\n\n` +
   `${tStr('llms.snapshot', 'zh-Hant')} ${tStr('llms.snapshot', 'en')}\n` +
   `${tStr('llms.policy', 'zh-Hant')} ${tStr('llms.policy', 'en')}\n`;
 
 const pageList = pages.map((p) => `- [${p.title}](${p.md}): ${p.desc}`).join('\n');
-const repoList = [
+// GitHub pages are HTML, not LLM-friendly text, so every repository link sits under Optional (an agent short of
+// context skips them); the site's own repository is listed apart from the dated count of work repositories.
+const optional = [
+  `- [llms-full.txt](${url('/llms-full.txt')}): ${both('llms.full')}`,
+  `- [sitemap.xml](${url('/sitemap.xml')}): ${both('llms.sitemap')}`,
   `- [${new URL(GITHUB_PROFILE).pathname.slice(1)}](${GITHUB_PROFILE}): ${both('llms.profile')}`,
   ...REPOS.map((r) => `- [${r.repo}](${r.url}): ${tStr(r.nameKey, 'zh-Hant')} · ${tStr(r.nameKey, 'en')}`),
   `- [lijiabao-official](${SITE_REPO}): ${both('llms.site')}`,
 ].join('\n');
 
-const index =
-  `${header}\n` +
-  `## ${both('llms.pages')}\n\n${pageList}\n\n` +
-  `## ${both('llms.source')}\n\n${repoList}\n\n` +
-  `## Optional\n\n` +
-  `- [llms-full.txt](${url('/llms-full.txt')}): ${both('llms.full')}\n` +
-  `- [sitemap.xml](${url('/sitemap.xml')}): ${both('llms.sitemap')}\n`;
+const index = `${header}\n` + `## ${both('llms.pages')}\n\n${pageList}\n\n` + `## Optional\n\n${optional}\n`;
 write(join(DIST, 'llms.txt'), index);
 
 // ── llms-full.txt ───────────────────────────────────────────────────────────────────────────────────────────
 const full = `${header}\n${pages.map((p) => `---\n\n${p.content.replace(/^# /, '## ').replace(/\n(#{2,5}) /g, '\n#$1 ')}`).join('\n')}`;
 write(join(DIST, 'llms-full.txt'), full);
 
-// ── gates: the copy rules, and every lijiabao.dev link resolves ─────────────────────────────────────────────
+// ── headers for the text files (appended to dist/_headers; headers.mjs then adds the CSP to its `/*` block) ───
+// Each page .md points search engines at its HTML page (canonical; every path already carries the llms.txt
+// describedby Link from the `/*` block of public/_headers). The full-text file stays readable by everyone but out
+// of search results, where it would duplicate every page.
+const headersFile = join(DIST, '_headers');
+const md = 'text/markdown; charset=utf-8';
+const txt = 'text/plain; charset=utf-8';
+const rules = [
+  `/llms.txt\n  Content-Type: ${txt}`,
+  `/llms-full.txt\n  Content-Type: ${txt}\n  X-Robots-Tag: noindex`,
+  ...pages.map((p) => `${new URL(p.md).pathname}\n  Content-Type: ${md}\n  Link: <${p.html}>; rel="canonical"`),
+];
+const existing = existsSync(headersFile) ? readFileSync(headersFile, 'utf8').replace(/\n# llms\.mjs[\s\S]*$/, '') : '';
+writeFileSync(headersFile, `${existing.trimEnd()}\n\n# llms.mjs — text for language models\n${rules.join('\n\n')}\n`);
+
+// ── gates: the copy rules, every lijiabao.dev link resolves, robots.txt is the endpoint's ───────────────────
 const host = new URL(SITE_URL).host;
+const robots = existsSync(join(DIST, 'robots.txt')) ? readFileSync(join(DIST, 'robots.txt'), 'utf8') : '';
+if (!/^Content-Signal: /m.test(robots) || !/^Sitemap: /m.test(robots)) {
+  g.fail('dist/robots.txt is not the src/pages/robots.txt.ts output (a stale public/robots.txt would shadow it)');
+}
 for (const { file, text } of written) {
   for (const v of findViolations(text, { vendors: features.vendorNames === true })) {
     g.fail(`${rel(file)}: ${v.id} "${v.match}" — ${v.why}`);

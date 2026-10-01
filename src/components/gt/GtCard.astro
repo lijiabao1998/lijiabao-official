@@ -33,7 +33,7 @@ const quotePath = links.docs.d000Vision.split('/blob/main/')[1] ?? '';
             steps.map((s) => (
               <li class="gc-step" data-card-step data-state="done">
                 <span class="gc-glyph" aria-hidden="true" data-card-glyph />
-                <span class="gc-name t-s" data-card-name>
+                <span class="gc-name t-s" data-card-name data-md-after=" — ">
                   {s.name}
                 </span>
                 {s.detail && <span class="gc-detail">{s.detail}</span>}

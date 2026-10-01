@@ -50,7 +50,7 @@ const path = f.source.repo === 'github-api' || f.source.repo === 'pages' ? undef
 const colon = locale === 'en' ? ': ' : '：';
 ---
 <span class:list={['num', { 'num--odo': odometer }, cls]} data-num={k}>
-  <span class:list={['num-fig', numClass]}>
+  <span class:list={['num-fig', numClass]} data-md-after={source || asof ? ' · ' : undefined}>
     <data class="num-v" value={String(f.value)}>{text}</data>
     {odometer && <Odometer value={text} />}
   </span>

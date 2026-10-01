@@ -34,7 +34,12 @@ const perChar = /[㐀-鿿豈-﫿]/u.test(title) ? Array.from(title) : null;
     {kicker && <span class="nc-kicker t-label">{kicker}</span>}{kicker && ' '}
     <span class="nc-row">
       <span class="nc-title t-l">
-        {perChar ? perChar.map((ch, i) => <span class="nc-ch" style={`--i:${i}`}>{ch}</span>) : title}
+        {perChar ? (
+          <Fragment>
+            <span class="sr-only">{title}</span>
+            <span aria-hidden="true">{perChar.map((ch, i) => <span class="nc-ch" style={`--i:${i}`}>{ch}</span>)}</span>
+          </Fragment>
+        ) : title}
       </span>
       <span class="nc-arrow" data-magnet><Arrow dir="right" /></span>
     </span>

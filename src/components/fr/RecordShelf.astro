@@ -34,8 +34,8 @@ const items = SHELF.map((s) => {
           <span class="shelf-g" aria-hidden="true">
             <Status code={it.code} quiet />
           </span>
-          <span class="shelf-lab t-label">{it.lab}</span>
-          <span class="shelf-what">{it.what}</span>
+          <span class="shelf-lab t-label" data-md-after=" — ">{it.lab}</span>
+          <span class="shelf-what" data-md-after=" — ">{it.what}</span>
           <span class="shelf-words">{it.words}</span>
           <a class="shelf-src link" href={it.src} rel="noopener">
             {ghPath(it.src)}

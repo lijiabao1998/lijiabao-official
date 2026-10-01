@@ -9,6 +9,11 @@ interface Props {
   page: PageId;
 }
 
+// card file → content hash; a glob so a missing manifest just means plain URLs
+const OG_MANIFEST = Object.values(
+  import.meta.glob<Record<string, string>>('../../data/og-manifest.json', { eager: true, import: 'default' }),
+)[0];
+
 const { locale, page } = Astro.props;
 const site = Astro.site ?? new URL('https://lijiabao.dev');
 const abs = (p: string) => new URL(p, site).href;
@@ -17,7 +22,11 @@ const title = ts(`meta.${page}.title`, locale);
 const description = page === 'nf' ? ts('nf.body', locale) : ts(`meta.${page}.desc`, locale);
 const ogPage = page === 'nf' ? 'home' : page;
 const ogAlt = ts(`meta.og.${ogPage}`, locale);
-const ogImage = abs(`/og/${localeTag(locale)}-${ogPage}.png`);
+const ogFile = `/og/${localeTag(locale)}-${ogPage}.png`;
+// Social networks cache card images by URL, so the URL carries the PNG's content hash (written by scripts/og.mjs
+// into src/data/og-manifest.json): a regenerated card is a new URL — X otherwise keeps showing the old image.
+const ogVersion = OG_MANIFEST?.[ogFile];
+const ogImage = abs(ogVersion ? `${ogFile}?v=${ogVersion}` : ogFile);
 
 const path = PAGE_PATH[page];
 const canonical = path ? abs(localePath(locale, path)) : null;

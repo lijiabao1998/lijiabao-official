@@ -169,19 +169,48 @@ async function topRow(locale) {
   return (await wordmark(locale, 86)) + text(W - M, 84, new URL(SITE_URL).host, { size: 17, family: FAMILY.mono, fill: C.fg3, anchor: 'end', ls: 0.6 });
 }
 
-/** The DATA chip (pill, 1px --line-ui, mono) followed by the caption; returns svg. */
-async function captionRow(locale, captionKey, y) {
+/**
+ * X (Twitter) lays the page title over the BOTTOM-LEFT of a large-image card as a pill (≈ x 0–450, y 550–615 on
+ * this 1200 × 630 canvas for our longest title, 「微光小鎮 GlimmerTown — 李家宝」), so nothing may be drawn there:
+ * the caption row hid under it. Keep this box empty on every card.
+ */
+const X_TITLE_SAFE = { right: 490, top: 540 };
+/** Widest caption line before it breaks after its first comma (keeps the row clear of X_TITLE_SAFE). */
+const CAPTION_MAX = 560;
+
+/**
+ * The DATA chip (pill, 1px --line-ui, mono) and the caption, set RIGHT-aligned to the margin so the bottom-left
+ * stays free for X's title pill. A caption wider than CAPTION_MAX breaks after its first comma; `yLast` is the
+ * baseline of the last line and extra lines stack upward. Returns svg.
+ */
+async function captionRow(locale, captionKey, yLast) {
   const chip = tStr('chip.DATA', locale);
   const chipStyle = { size: 13, weight: 500, family: FAMILY.mono, ls: 0.8 };
+  const capStyle = { size: 21, fill: C.fg2, ls: locale === 'en' ? 0 : 0.4 };
   const label = locale === 'en' ? chip.toUpperCase() : chip;
   const cw = (await measure(label, chipStyle)) + 22;
   const ch = 26;
+  const lh = 31;
   const cap = tStr(captionKey, locale);
-  return (
-    `<rect x="${M + 0.5}" y="${r2(y - ch + 7.5)}" width="${r2(cw)}" height="${ch}" rx="${ch / 2}" fill="none" stroke="${C.lineUi}"/>` +
-    text(M + 11, y, label, { ...chipStyle, fill: C.fg2 }) +
-    text(M + cw + 16, y, cap, { size: 21, fill: C.fg2, ls: locale === 'en' ? 0 : 0.4 })
-  );
+  let lines = [cap];
+  if ((await measure(cap, capStyle)) > CAPTION_MAX) {
+    const m = /，|,(?!\d)\s*/.exec(cap); // a clause comma — never the thousands comma in 1,946
+    if (m) lines = [cap.slice(0, m.index + 1), cap.slice(m.index + m[0].length)];
+  }
+  const right = W - M;
+  const y0 = yLast - (lines.length - 1) * lh;
+  const w0 = await measure(lines[0], capStyle);
+  const chipX = right - w0 - 16 - cw;
+  if (chipX < X_TITLE_SAFE.right && yLast + 8 > X_TITLE_SAFE.top) {
+    throw new Error(`[og] ${locale} ${captionKey}: caption reaches into X's title area (x ${Math.round(chipX)})`);
+  }
+  let svg =
+    `<rect x="${r2(chipX + 0.5)}" y="${r2(y0 - ch + 7.5)}" width="${r2(cw)}" height="${ch}" rx="${ch / 2}" fill="none" stroke="${C.lineUi}"/>` +
+    text(chipX + 11, y0, label, { ...chipStyle, fill: C.fg2 });
+  lines.forEach((line, i) => {
+    svg += text(right, y0 + i * lh, line, { ...capStyle, anchor: 'end' });
+  });
+  return svg;
 }
 
 /**
@@ -278,7 +307,8 @@ async function home(locale) {
   const y1 = zh ? 184 : 180;
   const title = lines.map((l, i) => text(M, y1 + i * lh, l, style)).join('');
 
-  const legendParts = tStr('hero.fig.legend', locale).split(' · ');
+  // zh writes 「（預設分支）· ●…」 with no space before the dot, so split on the dot, not on ' · '
+  const legendParts = tStr('hero.fig.legend', locale).split(/\s*·\s*/);
   const amberNote = legendParts[1] ?? '';
 
   return frame(
@@ -286,8 +316,9 @@ async function home(locale) {
       title +
       `<g>${lanes}</g><g fill="${C.fg}" fill-opacity="0.62">${dots}</g><g>${latest}</g>` +
       axis +
-      (await captionRow(locale, 'meta.og.home', 590)) +
-      (amberNote ? await legend(amberNote, W - M, 590, { amber: true }) : ''),
+      // the amber legend keys the plot from above its top-right corner; the caption row sits bottom-right
+      (amberNote ? await legend(amberNote, W - M, band.top - 14, { amber: true }) : '') +
+      (await captionRow(locale, 'meta.og.home', 610)),
   );
 }
 
@@ -324,7 +355,7 @@ async function gt(locale) {
       text(M, zh ? 358 : 348, tStr('gt.tagline', locale), { size: 30, weight: 400, fill: C.fg2, ls: zh ? 0.6 : -0.3 }) +
       text(M, 470, tStr('gt.pass.title', locale), { size: 56, weight: 300, family: FAMILY.mono, fill: C.fg, ls: -1.1 }) +
       `<path d="${d}" fill="${C.fg}" fill-opacity="0.9"/>` +
-      (await captionRow(locale, 'meta.og.gt', 590)) +
+      (await captionRow(locale, 'meta.og.gt', 556)) +
       (await legend(tStr('gt.pass.legend', locale), W - M, 590)),
   );
 }
@@ -367,7 +398,7 @@ async function fr(locale) {
         .map((c, i) => text(M, (zh ? 372 : 364) + i * 40, c, { size: 26, weight: 400, fill: C.fg2, ls: zh ? 0.5 : -0.2 }))
         .join('') +
       g +
-      (await captionRow(locale, 'meta.og.fr', 590)) +
+      (await captionRow(locale, 'meta.og.fr', 556)) +
       (await legend(tStr('fr.matrix.legend', locale), W - M, 590)),
   );
 }
@@ -376,13 +407,19 @@ async function fr(locale) {
 await prepareFonts();
 mkdirSync(OUT, { recursive: true });
 const CARDS = { home, gt, fr };
+// card URL path → content hash; Seo.astro appends it as ?v= so X/Facebook refetch a regenerated card
+const manifest = {};
 for (const { locale, tag } of LOCALES) {
   for (const [page, make] of Object.entries(CARDS)) {
     const svg = await make(locale);
     const file = join(OUT, `${tag}-${page}.png`);
-    const info = await sharp(Buffer.from(svg), { density: 72 })
+    const png = await sharp(Buffer.from(svg), { density: 72 })
       .png({ palette: true, quality: 95, effort: 10, compressionLevel: 9 })
-      .toFile(file);
-    process.stdout.write(`og: ${rel(file)} ${info.width}×${info.height} ${(info.size / 1024).toFixed(1)} KB\n`);
+      .toBuffer({ resolveWithObject: true });
+    writeFileSync(file, png.data);
+    manifest[`/og/${tag}-${page}.png`] = createHash('sha1').update(png.data).digest('hex').slice(0, 8);
+    process.stdout.write(`og: ${rel(file)} ${png.info.width}×${png.info.height} ${(png.info.size / 1024).toFixed(1)} KB\n`);
   }
 }
+writeFileSync(join(ROOT, 'src', 'data', 'og-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+process.stdout.write(`og: ${rel(join(ROOT, 'src', 'data', 'og-manifest.json'))}\n`);

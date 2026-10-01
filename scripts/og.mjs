@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// scripts/og.mjs — the six Open Graph cards (1200 × 630): public/og/{zh,en}-{home,gt,fr}.png (Seo.astro links
+// scripts/og.mjs — the six Open Graph cards (1200 × 630): src/assets/og/{zh,en}-{home,gt,fr}.png (Seo.astro links
 // them; the 404 reuses the home card). Build-prep, run by hand after `npm run build`; the PNGs are committed
 // (build-overrides §2: sharp from SVG, no browser). Not part of `npm run build`: the text is set with the fonts
 // of THIS machine's build (Geist, Geist Mono) plus the system Noto Sans TC, which CI does not have.
@@ -27,7 +27,10 @@ import { DIST, ROOT, imp, rel } from './lib/gate.mjs';
 import { readPage } from './lib/html.mjs';
 import { woff2ToSfnt } from './lib/woff2.mjs';
 
-const OUT = join(ROOT, 'public', 'og');
+// Cards are build assets, not public/ files: Astro emits them as /_astro/<name>.<hash>.png (Seo.astro imports
+// them), so every regenerated card gets a new URL — X caches card images by URL — and nothing can serve a stale
+// copy under a fixed path (the Workers Builds deploy of 2026-10-01 shipped the previous public/og/*.png).
+const OUT = join(ROOT, 'src', 'assets', 'og');
 // fontconfig on Windows cannot open a font file whose path has non-ASCII characters (this repo lives under a
 // CJK folder name), so the decoded fonts go to the OS temp directory.
 const FONT_CACHE = join(tmpdir(), 'lijiabao-og-fonts');
@@ -407,19 +410,13 @@ async function fr(locale) {
 await prepareFonts();
 mkdirSync(OUT, { recursive: true });
 const CARDS = { home, gt, fr };
-// card URL path → content hash; Seo.astro appends it as ?v= so X/Facebook refetch a regenerated card
-const manifest = {};
 for (const { locale, tag } of LOCALES) {
   for (const [page, make] of Object.entries(CARDS)) {
     const svg = await make(locale);
     const file = join(OUT, `${tag}-${page}.png`);
-    const png = await sharp(Buffer.from(svg), { density: 72 })
+    const info = await sharp(Buffer.from(svg), { density: 72 })
       .png({ palette: true, quality: 95, effort: 10, compressionLevel: 9 })
-      .toBuffer({ resolveWithObject: true });
-    writeFileSync(file, png.data);
-    manifest[`/og/${tag}-${page}.png`] = createHash('sha1').update(png.data).digest('hex').slice(0, 8);
-    process.stdout.write(`og: ${rel(file)} ${png.info.width}×${png.info.height} ${(png.info.size / 1024).toFixed(1)} KB\n`);
+      .toFile(file);
+    process.stdout.write(`og: ${rel(file)} ${info.width}×${info.height} ${(info.size / 1024).toFixed(1)} KB\n`);
   }
 }
-writeFileSync(join(ROOT, 'src', 'data', 'og-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
-process.stdout.write(`og: ${rel(join(ROOT, 'src', 'data', 'og-manifest.json'))}\n`);

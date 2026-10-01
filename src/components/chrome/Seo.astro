@@ -1,6 +1,9 @@
 ---
 // <title>, description, canonical, hreflang (zh-Hant / en / x-default → zh), Open Graph + Twitter card.
-// OG images are S6's build output: public/og/{zh,en}-{home,gt,fr}.png (1200×630).
+// OG cards are scripts/og.mjs output in src/assets/og/{zh,en}-{home,gt,fr}.png (1200×630), imported here so Astro
+// emits them as /_astro/<name>.<hash>.png: a regenerated card is a new URL, which X (it caches card images by
+// URL) refetches, and no fixed path can go stale.
+import type { ImageMetadata } from 'astro';
 import type { Locale } from '@i18n/types';
 import { PAGE_PATH, localePath, localeTag, ts, type PageId } from './i18n';
 
@@ -9,10 +12,7 @@ interface Props {
   page: PageId;
 }
 
-// card file → content hash; a glob so a missing manifest just means plain URLs
-const OG_MANIFEST = Object.values(
-  import.meta.glob<Record<string, string>>('../../data/og-manifest.json', { eager: true, import: 'default' }),
-)[0];
+const OG_CARDS = import.meta.glob<ImageMetadata>('../../assets/og/*.png', { eager: true, import: 'default' });
 
 const { locale, page } = Astro.props;
 const site = Astro.site ?? new URL('https://lijiabao.dev');
@@ -22,11 +22,9 @@ const title = ts(`meta.${page}.title`, locale);
 const description = page === 'nf' ? ts('nf.body', locale) : ts(`meta.${page}.desc`, locale);
 const ogPage = page === 'nf' ? 'home' : page;
 const ogAlt = ts(`meta.og.${ogPage}`, locale);
-const ogFile = `/og/${localeTag(locale)}-${ogPage}.png`;
-// Social networks cache card images by URL, so the URL carries the PNG's content hash (written by scripts/og.mjs
-// into src/data/og-manifest.json): a regenerated card is a new URL — X otherwise keeps showing the old image.
-const ogVersion = OG_MANIFEST?.[ogFile];
-const ogImage = abs(ogVersion ? `${ogFile}?v=${ogVersion}` : ogFile);
+const ogCard = OG_CARDS[`../../assets/og/${localeTag(locale)}-${ogPage}.png`];
+if (!ogCard) throw new Error(`[Seo] missing OG card ${localeTag(locale)}-${ogPage}.png — run \`npm run og\``);
+const ogImage = abs(ogCard.src);
 
 const path = PAGE_PATH[page];
 const canonical = path ? abs(localePath(locale, path)) : null;

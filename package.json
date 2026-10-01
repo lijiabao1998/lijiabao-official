@@ -9,7 +9,7 @@
     "dev": "astro dev",
     "prebuild": "node scripts/restore-public.mjs && node scripts/glyphs.mjs && node scripts/pack-commits.mjs && node scripts/sample-portrait.mjs",
     "build": "astro build",
-    "postbuild": "node scripts/locale-404.mjs && node scripts/og-redirects.mjs && node scripts/headers.mjs",
+    "postbuild": "node scripts/locale-404.mjs && node scripts/og-redirects.mjs && node scripts/llms.mjs && node scripts/headers.mjs",
     "build:prod": "npm run check:types && npm run build && npm run check",
     "check": "npm run check:src && npm run check:dist",
     "check:types": "astro check",

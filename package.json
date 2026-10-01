@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "prebuild": "node scripts/glyphs.mjs && node scripts/pack-commits.mjs && node scripts/sample-portrait.mjs",
+    "prebuild": "node scripts/restore-public.mjs && node scripts/glyphs.mjs && node scripts/pack-commits.mjs && node scripts/sample-portrait.mjs",
     "build": "astro build",
     "postbuild": "node scripts/locale-404.mjs && node scripts/og-redirects.mjs && node scripts/headers.mjs",
     "build:prod": "npm run check:types && npm run build && npm run check",

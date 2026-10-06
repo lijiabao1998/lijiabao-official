@@ -1,0 +1,234 @@
+---
+// One post of /articles/ or /views/ (owner decision 2026-10-07), in one locale. src/pages/[en/]<section>/[slug].astro
+// are thin wrappers around this view.
+//
+//   article[data-copy-scope=post]            post-derived text: check-dist applies the POSTS rule set inside it
+//     header   label chip · h1 · meta row (發布 <time> · 更新 <time>) · the description as lede · baseline
+//     .prose   the rendered Markdown (styles/prose.css)
+//     sources  articles only: 來源 / Sources
+//     footer   the other-language version (when it exists) · back to the section index
+//
+// Head (ContentPage → Base/Seo/JsonLd): canonical; hreflang only when both locales exist; og:type article with
+// article:published_time / modified_time / tag; the post's card, else its section card; JSON-LD TechArticle with the
+// site as author AND publisher (articles) or BlogPosting with the Person as author (views).
+// Motion: none of its own. The header is in the first view, so the [data-rise] reveal leaves it at rest; only the
+// sources and the footer rise in, gently. Post titles use the body stack (--ff-body): their glyphs are not in the
+// Noto display subset, and a heading never mixes two CJK faces (§2.2).
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Section from '@ui/Section.astro';
+import T from '@ui/T.astro';
+import Arrow from '@ui/Arrow.astro';
+import PostLabel from '../components/posts/PostLabel.astro';
+import { localeOf, localePath, ts, type ContentPage } from '../components/chrome/i18n';
+import { postCard } from '../components/chrome/og';
+import { allPosts, type Post } from '@lib/content';
+import { alternateOf, feedPath, isoDay, postPath, sectionPath } from '@lib/posts';
+import { postLd, siteOrg } from '@lib/postld';
+import '../styles/prose.css';
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const locale = localeOf(Astro);
+if (post.locale !== locale) throw new Error(`[post] ${post.section}/${post.slug}: ${post.locale} post on a ${locale} route`);
+const { section, slug } = post;
+const site = Astro.site ?? new URL('https://lijiabao.dev');
+const alt = alternateOf(post, await allPosts());
+const { Content } = await render(post.entry);
+
+const path = postPath(section, slug);
+const og = postCard(section, locale, slug);
+const label = ts(`posts.${section}.label`, locale);
+const page: ContentPage = {
+  kind: 'post',
+  section,
+  title: ts(`posts.${section}.docTitle`, locale, { title: post.title }),
+  description: post.description,
+  paths: alt ? { [locale]: path, [alt.locale]: path } : { [locale]: path },
+  fallback: sectionPath(section),
+  noindex: false,
+  ogImage: og,
+  ogAlt: ts('posts.og.alt', locale, { label, title: post.title }),
+  author: section === 'articles' ? String(siteOrg(site).name) : ts('site.name', locale),
+  published: post.date,
+  ...(post.updated ? { modified: post.updated } : {}),
+  tags: post.tags,
+  feed: feedPath(section),
+  jsonld: [postLd({ site, post, image: new URL(og.src, site).href, sources: post.sources })],
+};
+
+const external = ts('a11y.external', locale);
+const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
+---
+<Base page={page}>
+  <Section id="post" flush labelledby="post--title">
+    <article class:list={['post grid', `post--${section}`]} data-copy-scope="post">
+      <header class="post-head lg-10">
+        <PostLabel section={section} />
+        <h1 id="post--title" class="post-title">{post.title}</h1>
+        <p class="post-meta t-mono">
+          <span data-md-after={post.updated ? ' · ' : undefined}>{ts('posts.published', locale)}{' '}<time datetime={isoDay(post.date)}>{isoDay(post.date)}</time></span>
+          {
+            post.updated && (
+              <Fragment>
+                <span class="post-sep" aria-hidden="true">·</span>
+                <span>{ts('posts.updated', locale)}{' '}<time datetime={isoDay(post.updated)}>{isoDay(post.updated)}</time></span>
+              </Fragment>
+            )
+          }
+        </p>
+        <p class="post-lede t-lede">{post.description}</p>
+      </header>
+
+      <div class="post-body lg-8 lg-start-3">
+        <div class="prose" data-post-body>
+          <Content />
+        </div>
+
+        {
+          post.sources.length > 0 && (
+            <section class="post-sources" aria-labelledby="post--sources" data-rise>
+              <h2 id="post--sources" class="post-sources-title t-label">{ts('posts.sources', locale)}</h2>
+              <ol class="post-sources-list">
+                {post.sources.map((s) => (
+                  <li>
+                    <a class="link" href={s.url} rel="noopener">
+                      {s.title}
+                      <span class="sr-only">{external}</span>
+                    </a>{' '}
+                    <span class="post-host t-mono">{hostOf(s.url)}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )
+        }
+
+        <footer class="post-foot" data-rise>
+          <a class="link post-back" href={localePath(locale, sectionPath(section))}>
+            <Arrow dir="left" />{' '}{ts(`posts.${section}.back`, locale)}
+          </a>
+          {
+            alt && (
+              <a class="link post-other" href={localePath(alt.locale, path)} hreflang={alt.locale}>
+                <T k="posts.other" />{' '}<Arrow dir="right" />
+              </a>
+            )
+          }
+        </footer>
+      </div>
+    </article>
+  </Section>
+</Base>
+
+<style>
+  /* the page starts under the fixed header; the reading column is flush left from lg col 3 (§2.3) */
+  .post {
+    row-gap: var(--s-8);
+    padding-top: calc(var(--header-h) + clamp(var(--s-7), 7vw, var(--s-10)));
+    padding-bottom: var(--sec-pad);
+  }
+
+  .post-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-5);
+    padding-bottom: var(--s-7);
+    border-bottom: 1px solid var(--line-ui);
+  }
+  .post-title {
+    --w-rest: 560;
+    max-width: 22em;
+    margin-top: var(--s-2);
+    font-family: var(--ff-body);
+    font-size: min(var(--fs-m), 4.5rem);
+    font-weight: var(--w-rest);
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+    text-wrap: balance;
+    color: var(--fg);
+  }
+  .post-title:lang(zh) {
+    --w-rest: 600;
+    max-width: 16em;
+    line-height: 1.24;
+    letter-spacing: 0.01em;
+  }
+  .post-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1) var(--s-3);
+    color: var(--fg-2);
+  }
+  .post-sep {
+    color: var(--fg-3);
+  }
+  .post-lede {
+    max-width: 30em;
+    margin-top: var(--s-3);
+    color: var(--fg-2);
+  }
+
+  .post-sources {
+    margin-top: clamp(var(--s-7), 8vw, var(--s-9));
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line);
+    max-width: var(--measure);
+  }
+  .post-sources-title {
+    color: var(--fg-3);
+  }
+  .post-sources-list {
+    margin-top: var(--s-4);
+    padding-inline-start: 1.6em;
+    font-size: var(--fs-small);
+  }
+  .post-sources-list li + li {
+    margin-top: var(--s-2);
+  }
+  .post-sources-list li::marker {
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    color: var(--fg-3);
+  }
+  .post-host {
+    color: var(--fg-3);
+    white-space: nowrap;
+  }
+
+  .post-foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--s-3) var(--s-7);
+    margin-top: clamp(var(--s-7), 8vw, var(--s-9));
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line);
+    max-width: var(--measure);
+  }
+  .post-foot a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    min-height: var(--hit);
+    color: var(--fg);
+  }
+  .post-back :global(.arrow--left) {
+    transition: transform var(--d-s) var(--ease-rise);
+  }
+  .post-back:is(:hover, :focus-visible) :global(.arrow--left) {
+    transform: translateX(-0.18em);
+  }
+
+  @media (forced-colors: active) {
+    .post-head,
+    .post-sources,
+    .post-foot {
+      border-color: CanvasText;
+    }
+  }
+</style>

@@ -2,22 +2,25 @@
 // JSON-LD (§3 Head): home = Person (+ WebSite); case pages = the Person plus one SoftwareSourceCode per repo
 // with its codeRepository. No jobTitle (owner decision). The 404 carries none.
 // alternateName keeps the other written forms of the name and the handle (build-overrides §1).
+// Content pages bring their own nodes (src/lib/postld.ts); the Person node is added only when one of them refers
+// to it ({"@id": "<site>/#person"}: /views/), so an /articles/ page never carries the Person at all.
 import { GITHUB_PROFILE, GITHUB_USER } from '@data/links';
 import { REPOS } from '@data/repos';
 import type { Locale } from '@i18n/types';
-import { PAGE_PATH, localePath, ts, type PageId } from './i18n';
+import { personId as personIdOf } from '@lib/postld';
+import { PAGE_PATH, isContent, localePath, ts, type Page } from './i18n';
 
 interface Props {
   locale: Locale;
-  page: PageId;
+  page: Page;
   /** extra nodes appended to the @graph */
   extra?: Record<string, unknown>[];
 }
 
 const { locale, page, extra = [] } = Astro.props;
 const site = (Astro.site ?? new URL('https://lijiabao.dev')).href.replace(/\/$/, '');
-const personId = `${site}/#person`;
-const path = PAGE_PATH[page];
+const personId = personIdOf(site);
+const path = isContent(page) ? null : PAGE_PATH[page];
 
 const person = {
   '@type': 'Person',
@@ -30,7 +33,10 @@ const person = {
 };
 
 const graph: Record<string, unknown>[] = [];
-if (page === 'home') {
+if (isContent(page)) {
+  if (JSON.stringify(page.jsonld).includes(`"${personId}"`)) graph.push(person);
+  graph.push(...page.jsonld);
+} else if (page === 'home') {
   graph.push(person, {
     '@type': 'WebSite',
     '@id': `${site}/#website`,

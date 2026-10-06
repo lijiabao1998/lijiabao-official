@@ -86,6 +86,31 @@ export function findViolations(text, allow = {}) {
 }
 
 /**
+ * The POSTS rule set (owner decision 2026-10-07): what the /articles/ and /views/ posts (titles, descriptions,
+ * bodies) are checked against. Only the owner-privacy rules — every FORBIDDEN entry whose id starts with `never.` or
+ * `spec.`, flags, and the name variants — and NOT the job-title, seal, vendor or ai-caption rules: a tech article
+ * legitimately says "developer", "timestamp" or "ChatGPT". The site's own copy (dictionary, chrome) keeps the full set.
+ */
+export const POST_RULES = FORBIDDEN.filter((r) => r.id.startsWith('never.') || r.id.startsWith('spec.'));
+
+/**
+ * Every POSTS-rule hit in `text` (same shape as findViolations).
+ * @param {string} text
+ * @returns {{ id: string, why: string, match: string, index: number }[]}
+ */
+export function findPostViolations(text) {
+  const hits = [];
+  const scan = (id, re, why) => {
+    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+    for (const m of text.matchAll(g)) hits.push({ id, why, match: m[0], index: m.index ?? 0 });
+  };
+  for (const r of POST_RULES) scan(r.id, r.re, r.why);
+  scan('flag', FLAG_RE, 'no flags anywhere (overrides §1)');
+  scan('name', NAME_VARIANT_RE, 'the name is 李家宝 everywhere (overrides §1)');
+  return hits;
+}
+
+/**
  * Digit runs left in `s` after removing `{placeholders}` and registered literals (spec §4.0 numeric policy).
  * `literals` must be sorted longest first. Full-width digits count.
  * @param {string} s

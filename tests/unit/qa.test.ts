@@ -137,6 +137,8 @@ describe('woff2 decoder (og.mjs)', () => {
 });
 
 describe('sitemap.xml', () => {
+  // astro:content is an empty stub here (vitest.config.mjs), so this is the fixed pages alone; what the content
+  // sections add (non-empty indexes, posts, alternates only for pairs) is tested in posts.test.ts
   it('lists the six pages with zh-Hant / en / x-default alternates and no 404', async () => {
     const res = await GET({ site: new URL('https://lijiabao.dev') } as unknown as Parameters<typeof GET>[0]);
     const xml = await res.text();

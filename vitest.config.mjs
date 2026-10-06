@@ -14,6 +14,8 @@ export default defineConfig({
       '@motion': dir('./src/motion'),
       '@ui': dir('./src/components/ui'),
       '@lib': dir('./src/lib'),
+      // the content layer exists only inside Astro: an empty stand-in (tests/stubs/astro-content.ts)
+      'astro:content': dir('./tests/stubs/astro-content.ts'),
     },
   },
   test: {

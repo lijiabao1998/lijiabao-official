@@ -1,0 +1,72 @@
+---
+// The section label (owner decision 2026-10-07): at the top of every post and on every list item, so nobody — reader,
+// search engine or language model — mistakes one section for the other.
+//   articles  「lijiabao.dev 編輯整理」 / "Edited by lijiabao.dev" — a hollow ring: compiled by the site, no light of his
+//   views     「李家宝 觀點」 / "Views · Li Jiabao" — the amber point of his wordmark (李家宝●): his own words
+// A pill like the figure chips (§2.4: 1px --line-ui, mono), but a plain label: no button, no tooltip.
+import type { PostSection } from '@lib/posts';
+import { localeOf, ts } from '../chrome/i18n';
+
+interface Props {
+  section: PostSection;
+  as?: 'p' | 'span';
+  /** separator written after the label in the page's Markdown (scripts/lib/markdown.mjs data-md-after) */
+  mdAfter?: string;
+  class?: string;
+}
+
+const { section, as: Tag = 'p', mdAfter, class: cls } = Astro.props;
+const locale = localeOf(Astro);
+---
+<Tag class:list={['plabel', `plabel--${section}`, cls]} data-post-label={section} data-md-after={mdAfter}>
+  <span class="plabel-mark" aria-hidden="true"></span><span class="plabel-text">{ts(`posts.${section}.label`, locale)}</span>
+</Tag>
+
+<style>
+  .plabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    margin: 0;
+    padding: 3px 12px 3px 10px;
+    border: 1px solid var(--line-ui);
+    border-radius: 999px;
+    font-family: var(--ff-mono);
+    font-size: var(--fs-mono);
+    font-weight: var(--w-mono);
+    letter-spacing: 0.04em;
+    line-height: 1.3;
+    white-space: nowrap;
+    color: var(--fg-2);
+  }
+  .plabel--views {
+    border-color: var(--fg-2);
+    color: var(--fg);
+  }
+  .plabel-mark {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .plabel--articles .plabel-mark {
+    box-shadow: inset 0 0 0 1px currentColor;
+  }
+  .plabel--views .plabel-mark {
+    background: var(--glim);
+  }
+  @media (forced-colors: active) {
+    .plabel {
+      border-color: CanvasText;
+    }
+    .plabel--views .plabel-mark {
+      background: CanvasText;
+    }
+  }
+  @media print {
+    .plabel--views .plabel-mark {
+      background: #000;
+    }
+  }
+</style>

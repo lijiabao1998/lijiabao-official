@@ -59,3 +59,29 @@ describe('mainToMarkdown', () => {
     expect(md('<h1><span data-md-after=" — ">李家宝</span><span>讓每個人，<br>都有一座實驗室。</span></h1>', 'zh-Hant')).toBe('## 李家宝 — 讓每個人，都有一座實驗室。\n');
   });
 });
+
+describe('mainToMarkdown: posts', () => {
+  it('writes a code block verbatim as a fenced block with its language (highlighter spans and all)', () => {
+    const out = md(
+      '<p>Run:</p><pre class="astro-code" data-language="js" tabindex="0"><code><span class="line"><span style="color:#f00">const</span><span> a = 1;</span></span>\n' +
+        '<span class="line"><span>  if (a &lt; 2) return;</span></span></code></pre><p>Done.</p>',
+    );
+    expect(out).toBe('Run:\n\n```js\nconst a = 1;\n  if (a < 2) return;\n```\n\nDone.\n');
+    expect(md('<pre><code class="language-sh">npm test\n</code></pre>')).toBe('```sh\nnpm test\n```\n');
+    expect(md('<pre><code>a ``` b</code></pre>')).toBe('~~~~\na ``` b\n~~~~\n');
+  });
+
+  it('keeps a post\'s rules and images, and skips images everywhere else', () => {
+    const body = '<div data-post-body><p>One</p><hr><p><img src="/_astro/a.png" alt="A chart"></p></div>';
+    expect(md(body)).toBe('One\n\n---\n\n![A chart](https://lijiabao.dev/_astro/a.png)\n');
+    expect(md('<p>One</p><hr><p><img src="/a.png" alt="poster">Two</p>')).toBe('One\n\nTwo\n');
+  });
+
+  it('writes a data-md-plain list (a post index) as plain blocks under each heading', () => {
+    const out = md(
+      '<ol role="list" data-md-plain><li><article><p><span data-md-after=" · ">Edited by lijiabao.dev</span><time>2026-10-05</time></p>' +
+        '<h2><a href="/en/articles/pair/">Pair</a></h2><p>Desc.</p></article></li></ol>',
+    );
+    expect(out).toBe('### [Pair](https://lijiabao.dev/en/articles/pair/)\n\nEdited by lijiabao.dev · 2026-10-05\n\nDesc.\n');
+  });
+});

@@ -1,4 +1,5 @@
 // src/i18n/dict.ts — the one dictionary (spec §4.0): merges the namespaces, throws on duplicate keys.
+// ns/posts.ts (2026-10-07): the /articles/ and /views/ chrome.
 import type { Entry } from './types.ts';
 import common from './ns/common.ts';
 import home from './ns/home.ts';
@@ -6,10 +7,11 @@ import gt from './ns/gt.ts';
 import fr from './ns/fr.ts';
 import labs from './ns/labs.ts';
 import nf from './ns/nf.ts';
+import posts from './ns/posts.ts';
 
-const namespaces = { common, home, gt, fr, labs, nf };
+const namespaces = { common, home, gt, fr, labs, nf, posts };
 
-type Merged = typeof common & typeof home & typeof gt & typeof fr & typeof labs & typeof nf;
+type Merged = typeof common & typeof home & typeof gt & typeof fr & typeof labs & typeof nf & typeof posts;
 
 function merge(parts: Record<string, Record<string, Entry>>): Merged {
   const out: Record<string, Entry> = {};

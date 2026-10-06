@@ -9,6 +9,13 @@ export const budgets = {
     /** HTML per page including inline CSS, JSON-LD and tables. */
     home: 36,
     case: 32,
+    /**
+     * Content sections (2026-10-07). The chrome of a post page measures 14.7–16.3 KB (fixture build: the 404 is
+     * 14.2), so a post keeps ≈ 32 KB for its own body (a long tutorial with code), and an index ≈ 25 KB for its list
+     * (≈ 0.4 KB per item).
+     */
+    post: 48,
+    section: 40,
   },
   /** The inline head boot script. */
   headInline: 1,

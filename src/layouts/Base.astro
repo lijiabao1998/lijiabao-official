@@ -5,6 +5,7 @@
 //
 // Fonts (§2.2): Geist (latin preloaded) and Geist Mono everywhere; the two Noto Sans TC glyph subsets only on
 // zh pages — the hero subset (the LCP h1 + wordmark) preloaded on the zh home only.
+// `page` is a fixed PageId or, for /articles/ and /views/, a ContentPage that carries its own head (chrome/i18n.ts).
 import { Font } from 'astro:assets';
 import { ClientRouter } from 'astro:transitions';
 import '../styles/tokens.css';
@@ -22,10 +23,11 @@ import JsonLd from '../components/chrome/JsonLd.astro';
 import Seo from '../components/chrome/Seo.astro';
 import SkipLink from '../components/chrome/SkipLink.astro';
 import Sprite from '../components/chrome/Sprite.astro';
-import { localeOf, type PageId } from '../components/chrome/i18n';
+import { layoutOf, localeOf, type Page } from '../components/chrome/i18n';
 
 interface Props {
-  page: PageId;
+  /** a fixed page id, or a content page with its own head (src/views/Post*.astro) */
+  page: Page;
   /** extra JSON-LD nodes for this page (merged into the @graph) */
   jsonld?: Record<string, unknown>[];
 }
@@ -53,10 +55,10 @@ const zh = locale === 'zh-Hant';
     <Sprite />
     <Header page={page} />
     <GlCanvas />
-    <main id="main" data-layout={page} tabindex="-1">
+    <main id="main" data-layout={layoutOf(page)} tabindex="-1">
       <slot />
     </main>
-    <Footer />
+    <Footer page={page} />
     <script>
       // The always-loaded runtime entry (static-tier safe, no GSAP): wires the astro:* lifecycle and
       // dynamically imports motion/boot.ts (GSAP, Lenis, engine) only when the tier is not static.

@@ -12,10 +12,13 @@
 //   every fact has a source and an as-of date; the six odometers print their own fact.
 // Source tree (src/, comments removed): forbidden terms, flags and vendor names never hard-coded; runtime
 // TypeScript carries no CJK copy (DOM contract §9.3: strings come from data-i18n-* attributes).
+// Posts (src/content/{articles,views}/<locale>/<slug>.md, drafts included): the POSTS rule set (owner privacy only —
+// a tech article may say "developer" or "ChatGPT") over the whole file, a valid locale folder and slug, and no
+// `author` field (articles are credited to the site, views to the owner, by the build — never by a post).
 // Usage: node scripts/check-copy.mjs
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { ROOT, excerpt, gate, imp, rel, walk } from './lib/gate.mjs';
 import {
   CJK_RE,
@@ -24,6 +27,7 @@ import {
   UNSOLVED_KEYS,
   UNSOLVED_RE,
   factPlaceholders,
+  findPostViolations,
   findViolations,
   strayDigits,
   stripComments,
@@ -102,7 +106,7 @@ for (const { copy, fact } of NUMBERS) {
 
 // ── source tree: nothing forbidden hard-coded, no CJK copy in runtime TypeScript ──────────────────────────
 const SRC = join(ROOT, 'src');
-const SKIP = [/[\\/]src[\\/]i18n[\\/]ns[\\/]/, /[\\/]src[\\/]data[\\/](snapshot|glyphs|gl-manifest|portrait-meta)\.json$/, /\.(png|jpe?g|webp|avif|gif|bin|woff2?)$/i];
+const SKIP = [/[\\/]src[\\/]i18n[\\/]ns[\\/]/, /[\\/]src[\\/]content[\\/](?:articles|views)[\\/]/,/[\\/]src[\\/]data[\\/](snapshot|glyphs|gl-manifest|portrait-meta)\.json$/, /\.(png|jpe?g|webp|avif|gif|bin|woff2?)$/i];
 const RUNTIME_TS = /[\\/]src[\\/](?!i18n[\\/]|data[\\/]).*\.ts$/;
 let files = 0;
 for (const file of walk(SRC)) {
@@ -120,4 +124,31 @@ for (const file of walk(SRC)) {
   }
 }
 
-g.done(`${keys.length} keys / ${values} strings, ${files} source files, ${LITS.length} registered literals`);
+// ── posts: /articles/ and /views/ (owner decision 2026-10-07) ─────────────────────────────────────────────
+const P = await imp('src/lib/posts.ts');
+let postFiles = 0;
+for (const section of P.SECTIONS) {
+  const base = join(ROOT, 'src', 'content', section);
+  for (const file of walk(base)) {
+    if (!/\.md$/i.test(file)) continue;
+    postFiles++;
+    const where = rel(file);
+    try {
+      P.postIdFromPath(relative(base, file).split(sep).join('/'), section);
+    } catch (err) {
+      g.fail(err instanceof Error ? err.message : String(err));
+    }
+    const text = readFileSync(file, 'utf8');
+    for (const v of findPostViolations(text)) {
+      g.fail(`${where}: ${v.id} "${v.match}" in "${excerpt(text, v.index, v.match.length)}" — ${v.why} (POSTS rules)`);
+    }
+    const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '';
+    if (!front) g.fail(`${where}: no frontmatter`);
+    const author = /^(authors?|creator|byline)\s*:/im.exec(front);
+    if (author) {
+      g.fail(`${where}: \`${author[1]}\` in the frontmatter — ${section === 'articles' ? 'articles are credited to the site (lijiabao.dev), never to a person' : 'views are credited to the owner by the build'}; remove it`);
+    }
+  }
+}
+
+g.done(`${keys.length} keys / ${values} strings, ${files} source files, ${postFiles} post(s), ${LITS.length} registered literals`);

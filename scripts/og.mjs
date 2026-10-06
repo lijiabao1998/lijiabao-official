@@ -12,6 +12,12 @@
 // Every word comes from the dictionary (src/i18n) and every number from facts.ts / the snapshot. No seal, no
 // paper, no glow: flat --bg, hairlines, points; amber only for the wordmark dot and the latest commits.
 //
+// Content sections (owner decision 2026-10-07): src/assets/og/{zh,en}-{articles,views}.png (the section label chip,
+// the section title and its intro) and one card per published post (read from dist: drafts never get one),
+// src/assets/og/posts/<section>-<zh|en>-<slug>.png (the label chip, the title, the date). /articles/ cards carry the
+// site's name and a hollow ring, never the owner's wordmark; /views/ cards carry his wordmark and its amber point.
+// Cards of posts that no longer build are removed. Seo falls back to the section card while a post has none.
+//
 // Fonts: sharp's FreeType cannot read WOFF2, so the Geist / Geist Mono latin files that the Fonts API put in
 // dist/_astro/fonts are decoded to TrueType (scripts/lib/woff2.mjs) into a temp folder and registered with
 // fontconfig; librsvg then sets the SVG text with them. CJK falls through to the system Noto Sans TC. The script
@@ -19,12 +25,13 @@
 // Usage: npm run build && node scripts/og.mjs
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { DIST, ROOT, imp, rel } from './lib/gate.mjs';
 import { readPage } from './lib/html.mjs';
+import { postCardName, readBuiltPosts } from './lib/posts.mjs';
 import { woff2ToSfnt } from './lib/woff2.mjs';
 
 // Cards are build assets, not public/ files: Astro emits them as /_astro/<name>.<hash>.png (Seo.astro imports
@@ -406,17 +413,148 @@ async function fr(locale) {
   );
 }
 
+// ── content sections: /articles/ and /views/ ─────────────────────────────────────────────────────────────
+const POSTS_OUT = join(OUT, 'posts');
+const CJK_UNIT = '\\u2E80-\\u9FFF\\uF900-\\uFAFF\\uFE30-\\uFE4F\\uFF00-\\uFFEF\\u3000-\\u303F';
+const UNIT_RE = new RegExp(`[${CJK_UNIT}]|[^\\s${CJK_UNIT}]+\\s*|\\s+`, 'gu');
+/** a line never starts with these (kinsoku): the unit stays on the line before */
+const NO_START = /^[，。、：；！？」』）〉》,.;:!?)\]]/u;
+
+/**
+ * Greedy wrap into lines no wider than `maxWidth`: CJK breaks between characters, Latin between words.
+ * Returns null when it needs more than `maxLines`.
+ */
+async function wrap(str, style, maxWidth, maxLines) {
+  const units = str.match(UNIT_RE) ?? [];
+  const lines = [];
+  let line = '';
+  for (const u of units) {
+    const next = line + u;
+    if (!line || NO_START.test(u) || (await measure(next.trimEnd(), style)) <= maxWidth) {
+      line = next;
+      continue;
+    }
+    lines.push(line.trimEnd());
+    line = u.trimStart();
+  }
+  if (line.trim()) lines.push(line.trimEnd());
+  return lines.length <= maxLines ? lines : null;
+}
+
+const titleStyleOf = (zh, size) => (zh ? { size, weight: 600, ls: 0 } : { size, weight: 560, ls: r2(-size * 0.03) });
+
+/** A post title in at most 3 lines, stepping the size down; at the floor the third line ends in an ellipsis. */
+async function fitTitle(str, zh, maxWidth) {
+  for (const size of [64, 58, 52, 46]) {
+    const style = titleStyleOf(zh, size);
+    const lines = await wrap(str, style, maxWidth, 3);
+    if (lines) return { style, lines };
+  }
+  const style = titleStyleOf(zh, 46);
+  const lines = ((await wrap(str, style, maxWidth, 99)) ?? [str]).slice(0, 3);
+  let last = lines[2] ?? '';
+  while (last && (await measure(`${last}…`, style)) > maxWidth) last = [...last].slice(0, -1).join('').trimEnd();
+  lines[2] = `${last}…`;
+  return { style, lines };
+}
+
+/** The section label chip (pill, 1px; articles: a hollow ring, views: the amber point). Returns svg. */
+async function sectionChip(locale, section, x, yBaseline) {
+  const label = tStr(`posts.${section}.label`, locale);
+  const style = { size: 17, weight: 500, family: FAMILY.mono, ls: 0.6 };
+  const views = section === 'views';
+  const w = (await measure(label, style)) + 54;
+  const h = 38;
+  const top = yBaseline - 25;
+  const cy = top + h / 2;
+  return (
+    `<rect x="${r2(x + 0.5)}" y="${r2(top + 0.5)}" width="${r2(w)}" height="${h}" rx="${h / 2}" fill="none" stroke="${views ? C.fg2 : C.lineUi}"/>` +
+    (views
+      ? `<circle cx="${r2(x + 21)}" cy="${r2(cy)}" r="4.5" fill="${C.glim}"/>`
+      : `<circle cx="${r2(x + 21)}" cy="${r2(cy)}" r="4" fill="none" stroke="${C.fg2}" stroke-width="1.3"/>`) +
+    text(x + 36, yBaseline, label, { ...style, fill: views ? C.fg : C.fg2 })
+  );
+}
+
+/** Top row of a content card: views → the owner's wordmark and the domain; articles → the site's name only. */
+async function contentTop(locale, section) {
+  if (section === 'views') return topRow(locale);
+  return text(M, 86, new URL(SITE_URL).host, { size: 30, weight: 560, ls: -0.3 });
+}
+
+/** Bottom-right line (mono, --fg-3): the page's path, after the date on a post. The bottom-left stays empty (X). */
+function contentFoot(locale, path, date) {
+  const where = `${new URL(SITE_URL).host}${locale === 'en' ? '/en' : ''}${path}`;
+  return text(W - M, 590, date ? `${date}  ·  ${where}` : where, { size: 16, family: FAMILY.mono, fill: C.fg3, anchor: 'end', ls: 0.4 });
+}
+
+const keepClear = (what, bottom) => {
+  if (bottom > X_TITLE_SAFE.top) throw new Error(`[og] ${what}: text reaches into X's title area (y ${Math.round(bottom)})`);
+};
+
+async function sectionCardSvg(locale, section) {
+  const zh = locale === 'zh-Hant';
+  const titleStyle = zh ? { size: 96, weight: 600 } : { size: 84, weight: 560, ls: -3.6 };
+  const introStyle = { size: 27, weight: 400, fill: C.fg2, ls: zh ? 0.5 : -0.2 };
+  const intro = (await wrap(tStr(`posts.${section}.intro`, locale), introStyle, 940, 3)) ?? [tStr(`meta.${section}.desc`, locale)];
+  const y0 = zh ? 372 : 362;
+  const lh = zh ? 42 : 38;
+  keepClear(`${locale} ${section} card`, y0 + (intro.length - 1) * lh + 10);
+  return frame(
+    (await contentTop(locale, section)) +
+      (await sectionChip(locale, section, M, 176)) +
+      text(M, zh ? 302 : 294, tStr(`posts.${section}.title`, locale), titleStyle) +
+      intro.map((l, i) => text(M, y0 + i * lh, l, introStyle)).join('') +
+      contentFoot(locale, `/${section}/`),
+  );
+}
+
+async function postCardSvg(post) {
+  const zh = post.locale === 'zh-Hant';
+  const { style, lines } = await fitTitle(post.title, zh, W - 2 * M);
+  const lh = Math.round(style.size * (zh ? 1.24 : 1.08));
+  const y0 = Math.round(250 + style.size * 0.8);
+  keepClear(`${post.section}/${post.slug} (${post.locale})`, y0 + (lines.length - 1) * lh + style.size * 0.28);
+  return frame(
+    (await contentTop(post.locale, post.section)) +
+      (await sectionChip(post.locale, post.section, M, 182)) +
+      lines.map((l, i) => text(M, y0 + i * lh, l, style)).join('') +
+      contentFoot(post.locale, `/${post.section}/${post.slug}/`, post.date.toISOString().slice(0, 10)),
+  );
+}
+
 // ── render ────────────────────────────────────────────────────────────────────────────────────────────────
+const toPng = (svg, file) =>
+  sharp(Buffer.from(svg), { density: 72 }).png({ palette: true, quality: 95, effort: 10, compressionLevel: 9 }).toFile(file);
+const report = (file, info) => process.stdout.write(`og: ${rel(file)} ${info.width}×${info.height} ${(info.size / 1024).toFixed(1)} KB\n`);
+
 await prepareFonts();
 mkdirSync(OUT, { recursive: true });
 const CARDS = { home, gt, fr };
 for (const { locale, tag } of LOCALES) {
   for (const [page, make] of Object.entries(CARDS)) {
-    const svg = await make(locale);
     const file = join(OUT, `${tag}-${page}.png`);
-    const info = await sharp(Buffer.from(svg), { density: 72 })
-      .png({ palette: true, quality: 95, effort: 10, compressionLevel: 9 })
-      .toFile(file);
-    process.stdout.write(`og: ${rel(file)} ${info.width}×${info.height} ${(info.size / 1024).toFixed(1)} KB\n`);
+    report(file, await toPng(await make(locale), file));
+  }
+  for (const section of ['articles', 'views']) {
+    const file = join(OUT, `${tag}-${section}.png`);
+    report(file, await toPng(await sectionCardSvg(locale, section), file));
   }
 }
+
+// one card per published post (as built); a card whose post no longer builds is removed
+const posts = readBuiltPosts(DIST);
+const want = new Set(posts.map(postCardName));
+mkdirSync(POSTS_OUT, { recursive: true });
+for (const post of posts) {
+  const file = join(POSTS_OUT, postCardName(post));
+  report(file, await toPng(await postCardSvg(post), file));
+}
+for (const f of readdirSync(POSTS_OUT)) {
+  if (/\.png$/.test(f) && !want.has(f)) {
+    rmSync(join(POSTS_OUT, f));
+    process.stdout.write(`og: removed ${rel(join(POSTS_OUT, f))} (its post no longer builds)\n`);
+  }
+}
+if (!readdirSync(POSTS_OUT).length) rmSync(POSTS_OUT, { recursive: true, force: true });
+process.stdout.write(`og: ${posts.length} post card(s)\n`);

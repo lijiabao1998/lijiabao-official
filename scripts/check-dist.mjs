@@ -19,6 +19,13 @@
 //   other written forms of the name, by design).
 // Headers: dist/_headers carries the CSP of scripts/lib/csp.mjs with a hash for every inline script in dist.
 // Workers limits: ≤ 20,000 files, ≤ 25 MiB each.
+// Content sections (/articles/, /views/; owner decision 2026-10-07): the four section indexes always build; one is
+//   noindex, out of the sitemap and out of the header nav exactly when it has no published post in its locale; every
+//   post carries its section's label, og:type article and the right JSON-LD credit (articles: the site as an
+//   Organization, never the Person; views: the Person); hreflang pairs are mutual and exist only when both locales
+//   do; the four RSS feeds parse and list exactly the published posts. Post text (inside data-copy-scope="post", and
+//   a post page's head) is held to the POSTS rule set; everything else on those pages to the full one. Warnings, not
+//   failures: a post without its own OG card (og.mjs runs on the owner's machine) and a description over 160 chars.
 // Usage: node scripts/check-dist.mjs [--verbose]
 
 import { createHash } from 'node:crypto';
@@ -27,7 +34,8 @@ import { basename, join, posix, relative, sep } from 'node:path';
 import { DIST, ROOT, excerpt, gate, gz, imp, kb, size, walk } from './lib/gate.mjs';
 import { readPage } from './lib/html.mjs';
 import { collectHashes, policy, readCsp } from './lib/csp.mjs';
-import { CJK_RE, HEBREW_RE, findViolations } from './lib/rules.mjs';
+import { contentRoute, ldNodes, postCardName, readBuiltPosts } from './lib/posts.mjs';
+import { CJK_RE, HEBREW_RE, findPostViolations, findViolations } from './lib/rules.mjs';
 
 const g = gate('check-dist');
 const VERBOSE = process.argv.includes('--verbose');
@@ -42,6 +50,8 @@ const { budgets } = await imp('src/data/budgets.ts');
 const { facts } = await imp('src/data/facts.ts');
 const { features } = await imp('src/data/features.ts');
 const { SITE_URL } = await imp('src/data/links.ts');
+const { tStr } = await imp('src/i18n/t.ts');
+const P = await imp('src/lib/posts.ts');
 
 const SITE = new URL(SITE_URL);
 const K = 1024;
@@ -59,14 +69,20 @@ const PAGES = [
   { file: 'en/glimmertown/index.html', url: '/en/glimmertown/', locale: 'en', kind: 'gt' },
   { file: 'en/frontier/index.html', url: '/en/frontier/', locale: 'en', kind: 'fr' },
   { file: 'en/404.html', url: '/en/404.html', locale: 'en', kind: 'nf' },
+  // the content section indexes always build (links to them never 404), empty or not
+  { file: 'articles/index.html', url: '/articles/', locale: 'zh-Hant', kind: 'section', section: 'articles' },
+  { file: 'views/index.html', url: '/views/', locale: 'zh-Hant', kind: 'section', section: 'views' },
+  { file: 'en/articles/index.html', url: '/en/articles/', locale: 'en', kind: 'section', section: 'articles' },
+  { file: 'en/views/index.html', url: '/en/views/', locale: 'en', kind: 'section', section: 'views' },
 ];
 for (const p of PAGES) if (!fileSet.has(p.file)) g.fail(`missing page dist/${p.file}`);
 for (const f of ['_headers', 'robots.txt', 'sitemap.xml', 'favicon.svg']) if (!fileSet.has(f)) g.fail(`missing dist/${f}`);
-// any other HTML file is checked too (locale from its path)
+// any other HTML file is checked too (locale from its path); a post is kind 'post'
 for (const f of fileSet) {
   if (f.endsWith('.html') && !PAGES.some((p) => p.file === f)) {
     const en = f.startsWith('en/');
-    PAGES.push({ file: f, url: `/${f.replace(/index\.html$/, '')}`, locale: en ? 'en' : 'zh-Hant', kind: 'other' });
+    const r = contentRoute(f);
+    PAGES.push({ file: f, url: `/${f.replace(/index\.html$/, '')}`, locale: en ? 'en' : 'zh-Hant', kind: r?.kind === 'post' ? 'post' : 'other', ...(r ? { section: r.section, slug: r.slug } : {}) });
   }
 }
 const pages = PAGES.filter((p) => fileSet.has(p.file)).map((p) => {
@@ -151,9 +167,12 @@ for (const page of pages) {
     if (HEBREW_RE.test(text) && (lang !== 'he' || dir !== 'rtl')) g.fail(`${file}: Hebrew outside lang="he" dir="rtl" (${where})`);
   };
   const copy = [];
+  // what a post says (its article, the list items of an index, a post page's head): the POSTS rule set
+  const postCopy = [];
+  const bucket = (scope, inHead) => (scope === 'post' || (page.kind === 'post' && inHead) ? postCopy : copy);
   for (const t of doc.texts) {
     langProblems(t.text, t.lang, t.dir, `<${t.el?.name ?? '?'}> text`);
-    copy.push(t.text);
+    bucket(t.scope, t.inHead).push(t.text);
   }
   for (const el of doc.elements) {
     const texts = [];
@@ -162,7 +181,7 @@ for (const page of pages) {
     if (el.name === 'meta' && META_TEXT.test(el.attrs.get('name') ?? el.attrs.get('property') ?? '')) texts.push(['content', el.attrs.get('content') ?? '']);
     for (const [a, v] of texts) {
       langProblems(v, el.lang, el.dir, `<${el.name} ${a}>`);
-      copy.push(v);
+      bucket(el.scope, el.inHead).push(v);
     }
   }
 
@@ -170,6 +189,11 @@ for (const page of pages) {
   const all = copy.join('\n');
   for (const v of findViolations(all, { vendors: features.vendorNames === true })) {
     g.fail(`${file}: ${v.id} "${v.match}" in "${excerpt(all, v.index, v.match.length)}" — ${v.why}`);
+  }
+  const said = postCopy.join('\n');
+  if (said && page.kind !== 'post' && page.kind !== 'section') g.fail(`${file}: data-copy-scope="post" outside /articles/ and /views/`);
+  for (const v of findPostViolations(said)) {
+    g.fail(`${file}: ${v.id} "${v.match}" in "${excerpt(said, v.index, v.match.length)}" — ${v.why} (POSTS rules)`);
   }
 
   // structure
@@ -423,7 +447,7 @@ let glBytes = null;
 for (const page of pages) {
   const { file, kind } = page;
   const htmlGz = gz(Buffer.from(page.html));
-  cap('HTML', htmlGz, kind === 'home' ? budgets.html.home : budgets.html.case, file);
+  cap('HTML', htmlGz, kind === 'home' ? budgets.html.home : kind === 'post' ? budgets.html.post : kind === 'section' ? budgets.html.section : budgets.html.case, file);
 
   const boot = page.doc.scripts.find((s) => s.el.inHead && !s.attrs.has('src') && !s.attrs.has('type'));
   if (!boot) g.fail(`${file}: no inline head boot script (§7)`);
@@ -539,20 +563,146 @@ if (fileSet.has('_headers')) {
   if (!/Referrer-Policy/.test(text) || !/X-Content-Type-Options/.test(text)) g.fail('dist/_headers: security headers missing');
 }
 
+// ── content sections: /articles/ and /views/ (owner decision 2026-10-07) ─────────────────────────────────
+let builtPosts = [];
+try {
+  builtPosts = readBuiltPosts(DIST);
+} catch (err) {
+  g.fail(err instanceof Error ? err.message : String(err));
+}
+const pageOf = new Map(pages.map((p) => [p.file, p]));
+const PERSON = `${SITE.origin}/#person`;
+const ORG = `${SITE.origin}/#site`;
+const metaOf = (doc, attr, name) => doc.elements.find((e) => e.name === 'meta' && e.attrs.get(attr) === name)?.attrs.get('content');
+const isNoindex = (doc) => /noindex/i.test(metaOf(doc, 'name', 'robots') ?? '');
+const canonicalOf = (doc) => doc.elements.find((e) => e.name === 'link' && e.attrs.get('rel') === 'canonical')?.attrs.get('href') ?? null;
+const hreflangsOf = (doc) =>
+  new Map(doc.elements.filter((e) => e.name === 'link' && e.attrs.get('rel') === 'alternate' && e.attrs.has('hreflang')).map((e) => [e.attrs.get('hreflang'), e.attrs.get('href')]));
+const ldText = (doc) => doc.scripts.filter((s) => (s.attrs.get('type') ?? '') === 'application/ld+json').map((s) => s.content).join('\n');
+const labelsOf = (doc) => doc.texts.filter((t) => (t.el?.attrs.get('class') ?? '').split(/\s+/).includes('plabel-text')).map((t) => t.text.trim());
+const abs = (locale, path) => new URL(P.localized(locale, path), SITE).href;
+const other = (locale) => (locale === 'en' ? 'zh-Hant' : 'en');
+let contentPages = 0;
+
+for (const page of pages) {
+  const { doc, file, kind, locale, section } = page;
+  // header nav: 文章 / 觀點 only for a section with ≥ 1 published post in this locale
+  const nav = doc.elements.filter((e) => e.name === 'a' && e.attrs.has('data-nav-section')).map((e) => e.attrs.get('data-nav-section'));
+  const navWant = P.sectionsWithPosts(builtPosts, locale);
+  if (nav.join() !== navWant.join()) g.fail(`${file}: header links to [${nav.join(', ')}], expected [${navWant.join(', ')}] (sections with posts in ${locale})`);
+
+  // hreflang pairs are mutual
+  for (const [lang, href] of hreflangsOf(doc)) {
+    if (lang === 'x-default') continue;
+    const r = resolveUrl(href, page.url);
+    const target = r.file ? pageOf.get(r.file) : null;
+    if (!target) continue; // unresolved hrefs are reported by the link check
+    const back = [...hreflangsOf(target.doc).values()];
+    const self = canonicalOf(doc);
+    if (self && !back.includes(self)) g.fail(`${file}: hreflang ${lang} → ${href}, which does not point back to ${self}`);
+  }
+
+  if (kind !== 'section' && kind !== 'post') continue;
+  contentPages++;
+  const ld = ldText(doc);
+  const nodes = ldNodes(doc);
+  const labels = labelsOf(doc);
+  const label = tStr(`posts.${section}.label`, locale);
+  if (!labels.length || labels.some((l) => l !== label)) g.fail(`${file}: the section label must read "${label}" (found ${JSON.stringify(labels)})`);
+  const author = metaOf(doc, 'name', 'author');
+  if (section === 'articles') {
+    if (ld.includes(PERSON) || nodes.some((n) => n['@type'] === 'Person')) g.fail(`${file}: an /articles/ page names the Person in its JSON-LD (articles are the site's, never his)`);
+    if (author !== SITE.host) g.fail(`${file}: <meta name="author" content="${author}">, expected ${SITE.host}`);
+  } else if (!nodes.some((n) => n['@type'] === 'Person' && n['@id'] === PERSON)) g.fail(`${file}: a /views/ page without the Person node`);
+  const hl = hreflangsOf(doc);
+
+  if (kind === 'section') {
+    const has = P.hasPosts(builtPosts, section, locale);
+    if (isNoindex(doc) !== !has) g.fail(`${file}: ${has ? 'has posts but is noindex' : 'is empty but not noindex'}`);
+    if (!doc.elements.some((e) => e.name === 'link' && e.attrs.get('type') === 'application/rss+xml')) g.fail(`${file}: no RSS alternate link`);
+    const paired = has && P.hasPosts(builtPosts, section, other(locale));
+    if (paired !== hl.size > 0) g.fail(`${file}: hreflang ${hl.size ? 'present' : 'missing'}, but the other locale ${P.hasPosts(builtPosts, section, other(locale)) ? 'has' : 'has no'} posts`);
+    const coll = nodes.find((n) => n['@type'] === 'CollectionPage');
+    if (!coll) g.fail(`${file}: no CollectionPage JSON-LD`);
+    if (section === 'articles' && coll?.publisher?.['@id'] !== ORG) g.fail(`${file}: the CollectionPage publisher must be ${ORG}`);
+    if (section === 'views' && !nodes.some((n) => n['@type'] === 'Blog' && n.author?.['@id'] === PERSON)) g.fail(`${file}: no Blog with the Person as author`);
+    continue;
+  }
+
+  // a post
+  const post = builtPosts.find((p) => p.file === file);
+  if (!post) {
+    g.fail(`${file}: a post page without its post facts`);
+    continue;
+  }
+  if (isNoindex(doc)) g.fail(`${file}: a published post is noindex`);
+  if (metaOf(doc, 'property', 'og:type') !== 'article') g.fail(`${file}: og:type must be article`);
+  if (metaOf(doc, 'property', 'article:published_time') !== P.isoDay(post.date)) g.fail(`${file}: article:published_time ≠ ${P.isoDay(post.date)}`);
+  const node = nodes.find((n) => n['@type'] === (section === 'articles' ? 'TechArticle' : 'BlogPosting'));
+  if (!node) g.fail(`${file}: no ${section === 'articles' ? 'TechArticle' : 'BlogPosting'} JSON-LD`);
+  else if (section === 'articles') {
+    for (const role of ['author', 'publisher']) {
+      const o = node[role];
+      if (o?.['@type'] !== 'Organization' || o?.['@id'] !== ORG || o?.name !== SITE.host) g.fail(`${file}: the ${role} must be the site (${ORG}), got ${JSON.stringify(o)}`);
+    }
+  } else if (node.author?.['@id'] !== PERSON) g.fail(`${file}: the BlogPosting author must be ${PERSON}`);
+  const alt = P.alternateOf(post, builtPosts);
+  const path = P.postPath(section, post.slug);
+  if (alt) {
+    if (hl.get('zh-Hant') !== abs('zh-Hant', path) || hl.get('en') !== abs('en', path) || hl.get('x-default') !== abs('zh-Hant', path)) {
+      g.fail(`${file}: hreflang must pair ${abs('zh-Hant', path)} and ${abs('en', path)} (x-default → zh-Hant)`);
+    }
+  } else if (hl.size) g.fail(`${file}: hreflang on a post that exists in ${locale} only`);
+  const sw = doc.elements.find((e) => e.name === 'a' && e.attrs.has('data-lang-switch'))?.attrs.get('href');
+  const swWant = P.localized(other(locale), alt ? path : P.sectionPath(section));
+  if (sw !== swWant) g.fail(`${file}: the language switch goes to ${sw}, expected ${swWant}`);
+  if (!existsSync(join(ROOT, 'src', 'assets', 'og', 'posts', postCardName(post)))) {
+    g.warn(`${file}: no OG card src/assets/og/posts/${postCardName(post)} yet (the section card stands in) — run \`npm run og\` after a build`);
+  }
+  const desc = metaOf(doc, 'name', 'description') ?? '';
+  if ([...desc].length > 160) g.warn(`${file}: description is ${[...desc].length} characters (≤ 160 recommended)`);
+}
+
+// RSS 2.0 feeds: one per section and locale, listing exactly the published posts
+for (const section of P.SECTIONS) {
+  for (const locale of P.POST_LOCALES) {
+    const f = `${P.localized(locale, P.feedPath(section)).slice(1)}`;
+    if (!fileSet.has(f)) {
+      g.fail(`missing dist/${f}`);
+      continue;
+    }
+    const xml = readFileSync(join(DIST, f), 'utf8');
+    if (!/<rss version="2\.0"/.test(xml) || !/<channel>[\s\S]*<\/channel>/.test(xml)) g.fail(`${f}: not an RSS 2.0 channel`);
+    const links = [...xml.matchAll(/<item>[\s\S]*?<link>([^<]+)<\/link>/g)].map((m) => m[1]);
+    const want = P.postsOf(builtPosts, section, locale).map((p) => abs(locale, P.postPath(section, p.slug)));
+    if (links.join('\n') !== want.join('\n')) g.fail(`${f}: items ${JSON.stringify(links)} ≠ the published posts (newest first) ${JSON.stringify(want)}`);
+    for (const u of links) if (!resolveUrl(u, '/').file) g.fail(`${f}: ${u} does not resolve`);
+  }
+}
+
 // ── sitemap.xml and robots.txt ─────────────────────────────────────────────────────────────────────────────
 if (fileSet.has('sitemap.xml')) {
   const xml = readFileSync(join(DIST, 'sitemap.xml'), 'utf8');
   if (!/^<\?xml[^>]*\?>\s*<urlset\b[^>]*xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9"/.test(xml)) g.fail('sitemap.xml: not a sitemap urlset');
   const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
   const alts = [...xml.matchAll(/<xhtml:link\b[^>]*\bhref="([^"]+)"/g)].map((m) => m[1]);
-  const want = pages.filter((p) => p.kind !== 'nf' && p.kind !== 'other').map((p) => new URL(p.url, SITE).href);
+  // every indexable page: fixed pages, non-empty section indexes, every published post (never a noindex page)
+  const want = pages.filter((p) => p.kind !== 'nf' && p.kind !== 'other' && !isNoindex(p.doc)).map((p) => new URL(p.url, SITE).href);
   for (const w of want) if (!locs.includes(w)) g.fail(`sitemap.xml: missing ${w}`);
   for (const u of [...locs, ...alts]) {
     const r = resolveUrl(u, '/');
     if (!r.internal || !r.file) g.fail(`sitemap.xml: ${u} does not resolve to a page in dist`);
     else if (/404/.test(r.file)) g.fail(`sitemap.xml: lists the 404 page (${u})`);
+    else if (pageOf.get(r.file) && isNoindex(pageOf.get(r.file).doc)) g.fail(`sitemap.xml: lists the noindex page ${u}`);
   }
+  if (/rss\.xml/.test(xml)) g.fail('sitemap.xml: lists a feed');
   if (!/hreflang="x-default"/.test(xml)) g.fail('sitemap.xml: no x-default alternate');
+  // a post's <lastmod> is updated ?? date
+  const lastmods = new Map([...xml.matchAll(/<loc>([^<]+)<\/loc>\s*<lastmod>([^<]+)<\/lastmod>/g)].map((m) => [m[1], m[2]]));
+  for (const p of builtPosts) {
+    const u = abs(p.locale, P.postPath(p.section, p.slug));
+    if (lastmods.get(u) !== P.isoDay(P.lastChange(p))) g.fail(`sitemap.xml: ${u} lastmod ${lastmods.get(u)} ≠ ${P.isoDay(P.lastChange(p))}`);
+  }
 }
 if (fileSet.has('robots.txt')) {
   const robots = readFileSync(join(DIST, 'robots.txt'), 'utf8');
@@ -565,4 +715,4 @@ if (fileSet.has('robots.txt')) {
 if (files.length > 20000) g.fail(`${files.length} files in dist (Workers Free allows 20,000)`);
 for (const f of files) if (size(f) > 25 * K * K) g.fail(`${distRel(f)} exceeds 25 MiB`);
 
-g.done(`${pages.length} pages, ${files.length} files`);
+g.done(`${pages.length} pages (${contentPages} in /articles/ and /views/), ${files.length} files`);

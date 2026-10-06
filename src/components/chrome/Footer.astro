@@ -1,10 +1,18 @@
 ---
 // footer#colophon (§3 row 9): the tier fieldset, 僅代表個人觀點, the privacy line, colophon and fonts,
 // the snapshot date, © and back to top. The name closes the page sitting on a baseline.
+// /articles/ pages leave 「僅代表個人觀點」 out: those articles are the site's, not his views (owner decision
+// 2026-10-07), and his disclaimer under them would say the opposite.
 import TierFieldset from './TierFieldset.astro';
-import { localeOf, ts } from './i18n';
+import { isContent, localeOf, ts, type Page } from './i18n';
 
+interface Props {
+  page?: Page;
+}
+
+const { page } = Astro.props;
 const locale = localeOf(Astro);
+const siteAuthored = page !== undefined && isContent(page) && page.section === 'articles';
 // The colophon is a " · " list: each item keeps its trailing separator on its own line (a line never starts
 // with "·"). Same text, same order; only the wrap points change.
 const colophon = ts('footer.colophon', locale).split(' · ');
@@ -15,7 +23,7 @@ const colophon = ts('footer.colophon', locale).split(' · ');
       <TierFieldset />
     </div>
     <div class="ftr-notes md-8 lg-4 lg-start-9">
-      <p class="ftr-say">{ts('footer.disclaimer', locale)}</p>
+      {!siteAuthored && <p class="ftr-say">{ts('footer.disclaimer', locale)}</p>}
       <p class="ftr-say c-fg-2">{ts('footer.privacy', locale)}</p>
       <p class="ftr-meta t-mono">{ts('footer.snapshot', locale)}</p>
       <p class="ftr-small t-mono c-fg-3">

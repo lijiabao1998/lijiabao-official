@@ -12,6 +12,10 @@
 // an <article>, lines that come before its heading in the DOM (a lab tile's status) are written after the heading.
 // Components can add `data-md-after="…"` to put a separator after an element (label — value) without changing
 // what the page shows.
+//
+// Posts (/articles/, /views/): <pre> becomes a fenced code block, verbatim (its language from data-language or a
+// language-* class); inside the rendered Markdown of a post ([data-post-body]) <hr> becomes `---` and an <img> with
+// its alt text becomes `![alt](url)`. Elsewhere images stay skipped, so the site pages read exactly as before.
 
 import { decode, parseAttrs, tokenize } from './html.mjs';
 
@@ -34,6 +38,7 @@ const hasClass = (attrs, c) => new RegExp(`(?:^|\\s)${c}(?:\\s|$)`).test(attrs.g
 
 function skippable(name, attrs, ctx) {
   if (ctx.chip) return false; // a chip keeps its button label and its tooltip definition
+  if (name === 'img' && ctx.postBody && attrs.get('aria-hidden') !== 'true') return false; // a post's own images
   if (SKIP_TAGS.has(name)) return true;
   if (attrs.get('aria-hidden') === 'true') return true;
   if (attrs.has('hidden') || attrs.has('data-parity-ignore') || attrs.has('popover')) return true;
@@ -102,6 +107,8 @@ export function mainToMarkdown(html, site) {
   let chip = null;
   /** an element just closed and nothing has been written since: the next element is its visual neighbour */
   let seam = false;
+  /** code block being collected: { lang, text } (verbatim, no tags) */
+  let pre = null;
 
   const write = (t) => {
     if (chip) chip[chip.part] += t;
@@ -121,7 +128,8 @@ export function mainToMarkdown(html, site) {
         }
       }
     }
-    return { chip: !!chip, externalLink };
+    const postBody = stack.some((e) => e.attrs?.has('data-post-body'));
+    return { chip: !!chip, externalLink, postBody };
   };
 
   /** the innermost <article> on the stack (lines before its heading wait in art.pre) */
@@ -170,7 +178,9 @@ export function mainToMarkdown(html, site) {
     // a quote inside a list item is quoted after the bullet; a list inside a quote is quoted in front of it
     const quoteInside = quoteAt >= 0 && li && quoteAt > liAt;
     if (quoteInside) line = `> ${line}`;
-    if (li && !heading) {
+    // a list marked data-md-plain (the post indexes: each item is an article with its own heading) is written as
+    // plain blocks, no bullets
+    if (li && !heading && !lists[lists.length - 1]?.attrs?.has('data-md-plain')) {
       const depth = Math.max(0, lists.length - 1);
       const list = lists[lists.length - 1];
       const indent = '   '.repeat(depth);
@@ -201,14 +211,41 @@ export function mainToMarkdown(html, site) {
     }
   };
 
+  const LANG_CLASS = /(?:^|\s)language-([\w+#.-]+)/;
   for (const tok of tokenize(html)) {
     if (tok.type === 'raw') continue;
+    // inside a code block only text counts (and <br>); the block ends at its own </pre>
+    if (pre) {
+      if (tok.type === 'text') pre.text += decode(tok.text);
+      else if (tok.type === 'open' && tok.name.toLowerCase() === 'br') pre.text += '\n';
+      else if (tok.type === 'open' && !pre.lang) {
+        const a = tok.attrs instanceof Map ? tok.attrs : parseAttrs(tok.attrs ?? '');
+        pre.lang = LANG_CLASS.exec(a.get('class') ?? '')?.[1] ?? '';
+      } else if (tok.type === 'close' && tok.name.toLowerCase() === 'pre') {
+        const idx = stack.map((e) => e.name).lastIndexOf('pre');
+        if (idx >= 0) stack.splice(idx);
+        const code = pre.text.replace(/^\n/, '').replace(/\s+$/, '');
+        const fence = code.includes('```') ? '~~~~' : '```';
+        emit(`${fence}${pre.lang}\n${code}\n${fence}`, false);
+        pre = null;
+        seam = false;
+      }
+      continue;
+    }
     if (tok.type === 'open') {
       const name = tok.name.toLowerCase();
       const attrs = tok.attrs instanceof Map ? tok.attrs : parseAttrs(tok.attrs ?? '');
       if (name === 'main') inMain = true;
       if (!inMain) continue;
       const isVoid = VOID.has(name) || tok.selfClosing;
+      if (name === 'pre' && skipDepth === 0 && cellBuf === null && !chip && !skippable(name, attrs, ctxFlags())) {
+        flush();
+        const lang = attrs.get('data-language') ?? LANG_CLASS.exec(attrs.get('class') ?? '')?.[1] ?? '';
+        pre = { lang: lang === 'plaintext' || lang === 'text' ? '' : lang, text: '' };
+        stack.push({ name, skip: false, attrs });
+        seam = false;
+        continue;
+      }
       if (skipDepth > 0 || skippable(name, attrs, ctxFlags())) {
         if (!isVoid) {
           stack.push({ name, skip: true });
@@ -218,6 +255,19 @@ export function mainToMarkdown(html, site) {
       }
       if (name === 'br') {
         write(cellBuf !== null || chip ? ' ' : BR);
+        seam = false;
+        continue;
+      }
+      if (name === 'img') {
+        // only a post's own images get here (skippable() drops every other image)
+        const src = attrs.get('src') ?? '';
+        if (src) write(`![${labelEscape((attrs.get('alt') ?? '').trim())}](${new URL(src, site).href})`);
+        seam = false;
+        continue;
+      }
+      if (name === 'hr' && ctxFlags().postBody) {
+        flush();
+        emit('---', false);
         seam = false;
         continue;
       }

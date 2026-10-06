@@ -2,21 +2,26 @@
 // header#top (§3): NOT persisted — it carries locale strings and aria-current, so ClientRouter swaps it
 // (transition:animate="none" keeps it out of the root cross-fade). Order = Tab order (§5.4):
 // wordmark → nav → HUD → language → (mobile) menu button.
+// 文章 / 觀點 (Articles / Views) join the nav only for a section with ≥ 1 published post in this locale. With them
+// the inline nav no longer fits below 1024px, so there (.hdr--more) the menu button takes over from 640px too.
 import Hud from './Hud.astro';
 import LangSwitch from './LangSwitch.astro';
 import Menu from './Menu.astro';
-import { localeOf, localePath, ts, type PageId } from './i18n';
+import { isContent, localeOf, localePath, ts, type Page } from './i18n';
+import { navSections } from '@lib/content';
 
 interface Props {
-  page: PageId;
+  page: Page;
 }
 
 const { page } = Astro.props;
 const locale = localeOf(Astro);
 const home = localePath(locale, '/');
 const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
+const content = await navSections(locale);
+const here = isContent(page) && page.kind === 'section' ? page.section : null;
 ---
-<header id="top" class="hdr" transition:animate="none" data-header>
+<header id="top" class:list={['hdr', { 'hdr--more': content.length > 0 }]} transition:animate="none" data-header>
   <div class="hdr-bar wrap">
     <a class="wordmark" href={home} aria-current={page === 'home' ? 'page' : undefined} data-menu-inert>
       <span class="wordmark-name">{ts('site.name', locale)}</span><span class="wordmark-dot" aria-hidden="true"
@@ -30,6 +35,20 @@ const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
             <li>
               <a class="link hdr-link" href={`${home}#${id}`}>
                 {ts(`nav.${id}`, locale)}
+              </a>
+            </li>
+          ))
+        }
+        {
+          content.map((c, i) => (
+            <li class:list={['hdr-sec', { 'is-first': i === 0 }]}>
+              <a
+                class="link hdr-link"
+                href={localePath(locale, c.path)}
+                aria-current={here === c.section ? 'page' : undefined}
+                data-nav-section={c.section}
+              >
+                {ts(`nav.${c.section}`, locale)}
               </a>
             </li>
           ))
@@ -186,8 +205,21 @@ const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
       color var(--d-s) var(--ease-rise),
       background-size var(--d-s) var(--ease-rise);
   }
-  .hdr-link:is(:hover, :focus-visible) {
+  .hdr-link:is(:hover, :focus-visible),
+  .hdr-link[aria-current='page'] {
     color: var(--fg);
+  }
+  /* the content sections sit after a hairline: they are pages, the links before them are home anchors */
+  .hdr-sec.is-first {
+    display: flex;
+    align-items: center;
+    gap: var(--s-5);
+  }
+  .hdr-sec.is-first::before {
+    content: '';
+    width: 1px;
+    height: 1em;
+    background: var(--line-ui);
   }
 
   .hdr-end {
@@ -209,6 +241,11 @@ const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
   }
   @media (min-width: 640px) and (pointer: fine) {
     .hdr-end :global(.hud--menu) {
+      display: none;
+    }
+  }
+  @media (min-width: 640px) and (max-width: 1023.98px) and (pointer: fine) {
+    .hdr--more .hdr-nav {
       display: none;
     }
   }

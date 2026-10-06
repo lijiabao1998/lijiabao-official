@@ -1,0 +1,11 @@
+---
+import View from '../../../views/Post.astro';
+import { postStaticPaths, type Post } from '@lib/content';
+
+export const getStaticPaths = () => postStaticPaths('articles', 'en');
+
+interface Props {
+  post: Post;
+}
+---
+<View post={Astro.props.post} />

@@ -4,9 +4,53 @@
 import { intlLocale, localeOf as localeOfAstro, t, tList, tStr, type Vars } from '@i18n/t';
 import type { Key } from '@i18n/dict';
 import type { Locale, Val } from '@i18n/types';
+import type { ImageMetadata } from 'astro';
+import type { PostSection } from '@lib/posts';
 
 export type { Vars };
 export type PageId = 'home' | 'gt' | 'fr' | 'nf';
+
+/**
+ * A content page (/articles/, /views/ and their posts, src/views/Post*.astro): unlike a fixed PageId it carries its
+ * own head. Base, Seo, JsonLd, Header, Menu and LangSwitch accept either (`Page`).
+ */
+export interface ContentPage {
+  kind: 'section' | 'post';
+  section: PostSection;
+  /** <title>, og:title */
+  title: string;
+  description: string;
+  /** unprefixed path per locale this page exists in (both → hreflang pair; one → none) */
+  paths: Partial<Record<Locale, string>>;
+  /** where the language switch goes when the page does not exist in the other locale (its section index) */
+  fallback: string;
+  /** empty section: <meta name="robots" content="noindex">, no Markdown alternate */
+  noindex: boolean;
+  /** og:image (a post card, else the section card) and its alt */
+  ogImage: ImageMetadata;
+  ogAlt: string;
+  /** <meta name="author">: the site for articles, the owner for views */
+  author: string;
+  /** posts: og:type article + article:* times and tags */
+  published?: Date;
+  modified?: Date;
+  tags?: readonly string[];
+  /** the section's RSS feed (unprefixed) */
+  feed: string;
+  /** JSON-LD nodes of this page (JsonLd adds the Person node when an @id refers to it) */
+  jsonld: Record<string, unknown>[];
+}
+
+export type Page = PageId | ContentPage;
+
+export function isContent(page: Page): page is ContentPage {
+  return typeof page === 'object';
+}
+
+/** data-layout of <main>: the PageId, or `post` / `posts` for content pages. */
+export function layoutOf(page: Page): string {
+  return isContent(page) ? (page.kind === 'post' ? 'post' : 'posts') : page;
+}
 
 /** Page locale from the Astro global (currentLocale, else the URL prefix). */
 export function localeOf(astro: { currentLocale?: string | undefined; url: URL }): Locale {

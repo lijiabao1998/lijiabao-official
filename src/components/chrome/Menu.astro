@@ -3,22 +3,29 @@
 // Open: a full-screen --bg-2 overlay with the nav at --fs-m (plus 微光小鎮 / 前沿實驗室), the HUD and the
 // language switch; everything else is `inert`. Esc closes it and focus returns to the button.
 // Emits document CustomEvent 'lj:menu' {open} so the motion core can pause Lenis.
+// 文章 / 觀點 follow the two case links, only for a section with ≥ 1 published post in this locale (as the header).
 import Hud from './Hud.astro';
 import LangSwitch from './LangSwitch.astro';
-import { localeOf, localePath, ts, type PageId } from './i18n';
+import { isContent, localeOf, localePath, ts, type Page } from './i18n';
+import { navSections } from '@lib/content';
 
 interface Props {
-  page: PageId;
+  page: Page;
 }
 
 const { page } = Astro.props;
 const locale = localeOf(Astro);
 const home = localePath(locale, '/');
 const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
-const cases = [
-  { page: 'gt', href: localePath(locale, '/glimmertown/'), key: 'nav.gt' },
-  { page: 'fr', href: localePath(locale, '/frontier/'), key: 'nav.fr' },
-] as const;
+const here = isContent(page) && page.kind === 'section' ? page.section : null;
+const content = await navSections(locale);
+// with content links the inline nav gives way to this menu below 1024px too (Header .hdr--more)
+const wide = content.length > 0;
+const cases: { current: boolean; href: string; key: string }[] = [
+  { current: page === 'gt', href: localePath(locale, '/glimmertown/'), key: 'nav.gt' },
+  { current: page === 'fr', href: localePath(locale, '/frontier/'), key: 'nav.fr' },
+  ...content.map((c) => ({ current: here === c.section, href: localePath(locale, c.path), key: `nav.${c.section}` })),
+];
 ---
 <button
   type="button"
@@ -27,6 +34,7 @@ const cases = [
   aria-controls="menu"
   aria-label={ts('a11y.menu.open', locale)}
   data-menu-btn
+  data-menu-mq={wide ? '(max-width: 1023.98px), (pointer: coarse)' : undefined}
   data-i18n-open={ts('a11y.menu.open', locale)}
   data-i18n-close={ts('a11y.menu.close', locale)}
 >
@@ -49,7 +57,7 @@ const cases = [
       {
         cases.map((c, i) => (
           <li style={`--i:${sections.length + i}`} class:list={['menu-case', { 'is-first': i === 0 }]}>
-            <a class="menu-link menu-link--case" href={c.href} aria-current={page === c.page ? 'page' : undefined}>
+            <a class="menu-link menu-link--case" href={c.href} aria-current={c.current ? 'page' : undefined}>
               {ts(c.key, locale)}
             </a>
           </li>
@@ -119,7 +127,7 @@ const cases = [
       },
       { signal },
     );
-    const mq = window.matchMedia(MOBILE);
+    const mq = window.matchMedia(btn.dataset.menuMq ?? MOBILE);
     mq.addEventListener('change', () => !mq.matches && close(false), { signal });
     document.addEventListener('astro:before-swap', () => close(false), { signal, once: true });
   }
@@ -151,6 +159,11 @@ const cases = [
 
   @media (max-width: 639.98px), (pointer: coarse) {
     .menu-btn {
+      display: inline-flex;
+    }
+  }
+  @media (min-width: 640px) and (max-width: 1023.98px) and (pointer: fine) {
+    .menu-btn[data-menu-mq] {
       display: inline-flex;
     }
   }

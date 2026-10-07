@@ -5,10 +5,12 @@
 //   /views/ post      BlogPosting — author = the Person node of JsonLd.astro ({"@id": "<site>/#person"})
 //   /views/ index     CollectionPage whose mainEntity is the Blog (author = the Person) with its posts
 //
-// Every node carries inLanguage and its canonical url. Dates are calendar days (YYYY-MM-DD).
+// Every node carries inLanguage and its canonical url. Dates are calendar days in Asia/Taipei, written as the start of
+// that day with its offset (`2026-10-07T00:00:00+08:00`, posts.ts isoDayStart): Google reads a date without a time zone
+// in its own.
 
 import type { Locale } from '../i18n/types.ts';
-import { isoDay, lastChange, localized, postPath, sectionPath, type PostMeta, type PostSection } from './posts.ts';
+import { isoDayStart, lastChange, localized, postPath, sectionPath, type PostMeta, type PostSection } from './posts.ts';
 
 export type Node = Record<string, unknown>;
 
@@ -46,8 +48,8 @@ export function postLd({ site, post, image, sources = [] }: PostLdInput): Node {
     inLanguage: post.locale,
     url,
     mainEntityOfPage: { '@type': 'WebPage', '@id': url },
-    datePublished: isoDay(post.date),
-    dateModified: isoDay(lastChange(post)),
+    datePublished: isoDayStart(post.date),
+    dateModified: isoDayStart(lastChange(post)),
     image,
     ...(post.tags.length ? { keywords: [...post.tags] } : {}),
   };
@@ -116,7 +118,7 @@ export function sectionLd({ site, section, locale, name, description, posts }: S
       '@id': `${abs(site, locale, postPath(section, p.slug))}#post`,
       headline: p.title,
       url: abs(site, locale, postPath(section, p.slug)),
-      datePublished: isoDay(p.date),
+      datePublished: isoDayStart(p.date),
     })),
   };
   page.mainEntity = { '@id': `${url}#blog` };

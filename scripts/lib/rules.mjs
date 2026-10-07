@@ -20,6 +20,8 @@ export const FORBIDDEN = [
     why: 'overrides §1: the Stanford-GSB "Change lives…" triad',
   },
   { id: 'never.lide', re: /立德立言|無問西東|无问西东/u, why: 'overrides §1: 立德立言／無問西東' },
+  // X is not approved (overrides §1): the owner's handle, in any form, anywhere — site copy AND posts
+  { id: 'never.x-handle', re: /@?LeonLRedfield/iu, why: 'overrides §1: the X handle is not approved' },
   // spec §4.0 "Not used anywhere"
   { id: 'spec.wisdom', re: /智慧[，,、\s]*屬於每一個人|智慧[，,、\s]*属于每一个人/u, why: 'spec §4.0: 智慧，屬於每一個人' },
   { id: 'spec.they-say', re: /他們說[，,]?\s*他是|他们说[，,]?\s*他是/u, why: 'spec §4.0: 「他們說，他是」' },
@@ -38,8 +40,8 @@ export const FORBIDDEN = [
   },
   // the portrait carries no AI caption (owner-decisions 4)
   { id: 'ai-caption', re: /\bAI[-\s]?generated\b|\bgenerated\s+by\s+AI\b|AI\s*生成|人工智慧生成|人工智能生成/iu, why: 'owner: no "AI-generated" caption' },
-  // X is not approved (overrides §1): no handle, no profile URL
-  { id: 'x-link', re: /LeonLRedfield|(?:^|[^\w.])(?:x|twitter)\.com\//iu, why: 'overrides §1: the X link is not approved' },
+  // X is not approved (overrides §1): no X / Twitter URL (the handle is never.x-handle). Posts too (POST_RULES).
+  { id: 'x-link', re: /(?:^|[^\w.])(?:x|twitter)\.com\//iu, why: 'overrides §1: X links are not approved (the owner has not approved X on the site)' },
   // no politics (brief; spec §4.5 "no country content")
   {
     id: 'politics',
@@ -88,10 +90,23 @@ export function findViolations(text, allow = {}) {
 /**
  * The POSTS rule set (owner decision 2026-10-07): what the /articles/ and /views/ posts (titles, descriptions,
  * bodies) are checked against. Only the owner-privacy rules — every FORBIDDEN entry whose id starts with `never.` or
- * `spec.`, flags, and the name variants — and NOT the job-title, seal, vendor or ai-caption rules: a tech article
- * legitimately says "developer", "timestamp" or "ChatGPT". The site's own copy (dictionary, chrome) keeps the full set.
+ * `spec.` (the owner's X handle included), X / Twitter URLs (`x-link`: X is not approved), flags, and the name
+ * variants — and NOT the job-title, seal, vendor or ai-caption rules: a tech article legitimately says "developer",
+ * "timestamp" or "ChatGPT". `never.gsb` is replaced by `never.gsb-triad`, which matches only the borrowed triad
+ * presented together, so a post may mention Stanford or "change the world". The site's own copy (dictionary,
+ * chrome) keeps the full set.
  */
-export const POST_RULES = FORBIDDEN.filter((r) => r.id.startsWith('never.') || r.id.startsWith('spec.'));
+export const POST_RULES = [
+  ...FORBIDDEN.filter((r) => (r.id.startsWith('never.') || r.id.startsWith('spec.')) && r.id !== 'never.gsb'),
+  // a post may cite a Stanford paper or say "change the world": only the borrowed triad, presented together, is his
+  {
+    id: 'never.gsb-triad',
+    re: /\bchange\s+lives\b[\s\S]{0,40}?\bchange\s+organi[sz]ations\b[\s\S]{0,40}?\bchange\s+the\s+world\b|改變(?:生命|人生)[\s\S]{0,20}?改變組織[\s\S]{0,20}?改變世界|改变(?:生命|人生)[\s\S]{0,20}?改变组织[\s\S]{0,20}?改变世界/iu,
+    why: 'overrides §1: the Stanford-GSB "Change lives… Change organizations… Change the world" triad',
+  },
+  // the owner has not approved X on the site: no X / Twitter URL in a post either
+  ...FORBIDDEN.filter((r) => r.id === 'x-link'),
+];
 
 /**
  * Every POSTS-rule hit in `text` (same shape as findViolations).

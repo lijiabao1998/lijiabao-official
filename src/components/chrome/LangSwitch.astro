@@ -2,8 +2,10 @@
 // Language switch (§3, §5.5). Links to the same page in the other locale; section ids are identical across
 // locales, so the script rewrites the hash to the section at least 50% in view on pointerenter, focus and
 // click. Visible label (EN / 中文) + an sr-only sentence, both in the target language (label-in-name).
-// Content pages: the same post in the other locale when it exists, else that locale's section index; their ids are
-// not shared across locales, so the hash is never rewritten there (data-lang-plain).
+// Content pages: the same post in the other locale when it exists, else page.fallback — that locale's section index,
+// or its home when that index is empty too — with an sr-only sentence that says so (lang.switch.post.* /
+// lang.switch.section.*, WCAG 2.4.4); their ids are not shared across locales, so the hash is never rewritten there
+// (data-lang-plain).
 import { PAGE_PATH, isContent, localeOf, localePath, otherLocale, ts, type Page } from './i18n';
 
 interface Props {
@@ -14,11 +16,13 @@ interface Props {
 const { page, class: cls } = Astro.props;
 const locale = localeOf(Astro);
 const to = otherLocale(locale);
-const href = isContent(page) ? localePath(to, page.paths[to] ?? page.fallback) : localePath(to, PAGE_PATH[page] ?? '/');
+const own = isContent(page) ? page.paths[to] : undefined;
+const href = isContent(page) ? localePath(to, own ?? page.fallback.path) : localePath(to, PAGE_PATH[page] ?? '/');
+const aria = isContent(page) && !own ? page.fallback.aria : 'lang.switch.aria';
 ---
 <a class:list={['lang', cls]} href={href} hreflang={to} lang={to} data-lang-switch data-lang-plain={isContent(page) ? '' : undefined}>
   <span class="lang-label">{ts('lang.switch', locale)}</span>{' '}
-  <span class="sr-only">{ts('lang.switch.aria', locale)}</span>
+  <span class="sr-only">{ts(aria, locale)}</span>
 </a>
 
 <script>

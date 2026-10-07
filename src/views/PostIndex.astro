@@ -42,7 +42,8 @@ const page: ContentPage = {
   title,
   description,
   paths: paired ? { [locale]: path, [other]: path } : { [locale]: path },
-  fallback: path,
+  // the other locale's index, unless it is empty too: then that locale's home (never an empty noindex page)
+  fallback: hasPosts(all, section, other) ? { path, aria: 'lang.switch.aria' } : { path: '/', aria: `lang.switch.section.${section}.home` },
   noindex: empty,
   ogImage: sectionCard(section, locale),
   ogAlt: ts(`meta.og.${section}`, locale),

@@ -416,16 +416,28 @@ async function fr(locale) {
 // ── content sections: /articles/ and /views/ ─────────────────────────────────────────────────────────────
 const POSTS_OUT = join(OUT, 'posts');
 const CJK_UNIT = '\\u2E80-\\u9FFF\\uF900-\\uFAFF\\uFE30-\\uFE4F\\uFF00-\\uFFEF\\u3000-\\u303F';
-const UNIT_RE = new RegExp(`[${CJK_UNIT}]|[^\\s${CJK_UNIT}]+\\s*|\\s+`, 'gu');
+// Latin words break only at ordinary spaces; a no-break space (U+00A0) holds a unit together ("Li Jiabao")
+const UNIT_RE = new RegExp(`[${CJK_UNIT}]|[^ \\t\\n${CJK_UNIT}]+[ \\t\\n]*|[ \\t\\n]+`, 'gu');
 /** a line never starts with these (kinsoku): the unit stays on the line before */
-const NO_START = /^[，。、：；！？」』）〉》,.;:!?)\]]/u;
+const NO_START = /^[，。、：；！？」』）〉》】〕,.;:!?)\]]/u;
+/** a line never ends with these (kinsoku): an opening bracket moves to the next line with what follows it */
+const NO_END = /[（「『〈《【〔(\[]$/u;
+/** a line that opens with a full-width opening bracket hangs it into the margin (its blank half, text-spacing-trim) */
+const HANG = /^[（「『〈《【〔]/u;
+
+/** The owner's name never breaks across lines: its spaces become no-break spaces (site.name, both locales). */
+const NAMES = [tStr('site.name', 'en'), tStr('site.name', 'zh-Hant')].filter((n) => /\s/.test(n));
+const keepNames = (str) => NAMES.reduce((acc, n) => acc.split(n).join(n.replace(/\s+/g, ' ')), str);
+
+/** x of a line set at margin x: a leading full-width bracket hangs by half an em. */
+const lineX = (line, x, size) => (HANG.test(line) ? x - size * 0.5 : x);
 
 /**
  * Greedy wrap into lines no wider than `maxWidth`: CJK breaks between characters, Latin between words.
  * Returns null when it needs more than `maxLines`.
  */
 async function wrap(str, style, maxWidth, maxLines) {
-  const units = str.match(UNIT_RE) ?? [];
+  const units = keepNames(str).match(UNIT_RE) ?? [];
   const lines = [];
   let line = '';
   for (const u of units) {
@@ -434,8 +446,15 @@ async function wrap(str, style, maxWidth, maxLines) {
       line = next;
       continue;
     }
-    lines.push(line.trimEnd());
-    line = u.trimStart();
+    // an opening bracket never ends a line: it moves down with the unit after it
+    let head = line.trimEnd();
+    let carry = '';
+    while (head.length > 1 && NO_END.test(head)) {
+      carry = head.slice(-1) + carry;
+      head = head.slice(0, -1).trimEnd();
+    }
+    lines.push(head);
+    line = carry + u.trimStart();
   }
   if (line.trim()) lines.push(line.trimEnd());
   return lines.length <= maxLines ? lines : null;
@@ -504,7 +523,7 @@ async function sectionCardSvg(locale, section) {
     (await contentTop(locale, section)) +
       (await sectionChip(locale, section, M, 176)) +
       text(M, zh ? 302 : 294, tStr(`posts.${section}.title`, locale), titleStyle) +
-      intro.map((l, i) => text(M, y0 + i * lh, l, introStyle)).join('') +
+      intro.map((l, i) => text(lineX(l, M, introStyle.size), y0 + i * lh, l, introStyle)).join('') +
       contentFoot(locale, `/${section}/`),
   );
 }
@@ -518,7 +537,7 @@ async function postCardSvg(post) {
   return frame(
     (await contentTop(post.locale, post.section)) +
       (await sectionChip(post.locale, post.section, M, 182)) +
-      lines.map((l, i) => text(M, y0 + i * lh, l, style)).join('') +
+      lines.map((l, i) => text(lineX(l, M, style.size), y0 + i * lh, l, style)).join('') +
       contentFoot(post.locale, `/${post.section}/${post.slug}/`, post.date.toISOString().slice(0, 10)),
   );
 }

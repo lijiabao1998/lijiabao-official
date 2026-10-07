@@ -10,10 +10,20 @@
 import { defineCollection } from 'astro:content';
 import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
-import { postIdFromPath, type PostSection } from './lib/posts.ts';
+import { CALENDAR_DAY_MSG, calendarDay, postIdFromPath, type PostSection } from './lib/posts.ts';
 
-/** A calendar day: YAML `2026-10-07` (already a Date) or the quoted string form. */
-const day = z.union([z.date(), z.iso.date().transform((s) => new Date(`${s}T00:00:00Z`))]);
+/**
+ * A calendar day in Asia/Taipei: YAML `2026-10-07` (already a Date at UTC midnight) or the quoted string form. A
+ * timestamp (`2026-10-07T07:00:00+08:00`) fails the build with CALENDAR_DAY_MSG instead of moving to another day.
+ */
+const day = z.union([z.date(), z.string()]).transform((v, ctx) => {
+  const d = calendarDay(v);
+  if (!d) {
+    ctx.addIssue({ code: 'custom', message: `${v instanceof Date ? v.toISOString() : String(v)} ${CALENDAR_DAY_MSG}` });
+    return z.NEVER;
+  }
+  return d;
+});
 
 const common = {
   title: z.string().trim().min(1),

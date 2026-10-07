@@ -29,6 +29,19 @@ describe('mainToMarkdown', () => {
     expect(md('<p><span data-md-after=" — ">Card</span><span>what changes</span></p>')).toBe('Card — what changes\n');
   });
 
+  it('keeps the space after a data-md-after separator that an aria-hidden separator follows (post meta row)', () => {
+    const row = (by: string, pub: string, upd: string): string =>
+      '<p class="post-meta t-mono">' +
+      `<span class="post-byline" data-md-after=" · ">${by}</span>\n<span class="post-sep" aria-hidden="true">·</span>\n` +
+      `<span data-md-after=" · ">${pub} <time datetime="2026-10-05">2026-10-05</time></span>` +
+      '<span class="post-sep" aria-hidden="true">·</span>' +
+      `<span>${upd} <time datetime="2026-10-07">2026-10-07</time></span></p>`;
+    expect(md(row('lijiabao.dev 編輯整理', '發布', '更新'), 'zh-Hant')).toBe('lijiabao.dev 編輯整理 · 發布 2026-10-05 · 更新 2026-10-07\n');
+    expect(md(row('Edited by lijiabao.dev', 'Published', 'Updated'))).toBe('Edited by lijiabao.dev · Published 2026-10-05 · Updated 2026-10-07\n');
+    // a skipped separator with no data-md-after before it still separates (unchanged)
+    expect(md('<p><span>a</span><span aria-hidden="true">·</span><span>b</span></p>')).toBe('a b\n');
+  });
+
   it('honours rowspan and gives a header-less table an empty header', () => {
     const out = md(
       '<table><thead><tr><th></th><th></th><th scope="col">001</th></tr></thead><tbody>' +

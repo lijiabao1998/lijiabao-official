@@ -2,21 +2,26 @@
 // llms.txt include (empty vs non-empty), language pairs, and who each page is credited to. Pure data in, text out.
 import { describe, expect, it } from 'vitest';
 import {
+  CALENDAR_DAY_MSG,
   alternateOf,
+  calendarDay,
   contentRoutes,
   hasPosts,
   isSlug,
+  isoDayStart,
   listedPages,
   localesOf,
   postIdFromPath,
   postsOf,
+  rfc822Day,
   sectionsWithPosts,
   splitPostId,
   type PostMeta,
 } from '@lib/posts';
 import { sitemapGroups, sitemapXml } from '@lib/sitemap';
 import { personId, postLd, sectionLd, siteOrg } from '@lib/postld';
-import { rssXml } from '@lib/feed';
+import { feedCreator, rssXml } from '@lib/feed';
+import { postLocaleOf, postTables, tableRegion } from '@lib/post-tables';
 import { FORBIDDEN, POST_RULES, findPostViolations, findViolations } from '../../scripts/lib/rules.mjs';
 import { contentRoute } from '../../scripts/lib/posts.mjs';
 
@@ -71,15 +76,39 @@ describe('slugs', () => {
 });
 
 describe('POSTS copy rules', () => {
-  it('are exactly the owner-privacy rules: never.* and spec.* plus flags and name variants', () => {
-    const want = (FORBIDDEN as { id: string }[]).filter((r) => /^(never|spec)\./.test(r.id)).map((r) => r.id);
+  it('are exactly the owner-privacy rules: never.* (the triad-only GSB rule) and spec.*, X URLs, flags and name variants', () => {
+    const want = [
+      ...(FORBIDDEN as { id: string }[]).filter((r) => /^(never|spec)\./.test(r.id) && r.id !== 'never.gsb').map((r) => r.id),
+      'never.gsb-triad',
+      'x-link',
+    ];
     expect((POST_RULES as { id: string }[]).map((r) => r.id)).toEqual(want);
-    expect(want.length).toBeGreaterThanOrEqual(8);
+    expect(want).toContain('never.x-handle');
+    expect(want.length).toBeGreaterThanOrEqual(10);
     expect(ids(findPostViolations('202606050549 This is the thing from started.'))).toContain('never.started');
     expect(ids(findPostViolations('跨域的預測與風險編排'))).toContain('never.cross-domain');
     expect(ids(findPostViolations('智慧，屬於每一個人'))).toContain('spec.wisdom');
     expect(ids(findPostViolations('Taiwan 🇹🇼'))).toEqual(['flag']);
     expect(ids(findPostViolations('李家寳'))).toEqual(['name']);
+  });
+
+  it("stop the owner's X handle and any X / Twitter link in a post (X is not approved)", () => {
+    expect(ids(findPostViolations('關注 @LeonLRedfield 看更多'))).toContain('never.x-handle');
+    expect(ids(findPostViolations('@leonlredfield'))).toContain('never.x-handle');
+    expect(ids(findPostViolations('see https://x.com/LeonLRedfield'))).toEqual(expect.arrayContaining(['never.x-handle', 'x-link']));
+    expect(ids(findPostViolations('see https://twitter.com/someone'))).toEqual(['x-link']);
+    expect(ids(findPostViolations('see https://x.com/someone'))).toEqual(['x-link']);
+    // the site copy keeps both
+    expect(ids(findViolations('@LeonLRedfield'))).toContain('never.x-handle');
+  });
+
+  it('let a post cite Stanford or say "change the world"; only the borrowed triad together is stopped', () => {
+    expect(findPostViolations('Stanford HAI published the AI Index; GSB courses; tools that change the world of testing.')).toEqual([]);
+    expect(ids(findPostViolations('Change lives. Change organizations. Change the world.'))).toEqual(['never.gsb-triad']);
+    expect(ids(findPostViolations('change lives, change organisations and change the world'))).toEqual(['never.gsb-triad']);
+    expect(ids(findPostViolations('改變生命、改變組織、改變世界'))).toEqual(['never.gsb-triad']);
+    // the site copy keeps the broad rule
+    expect(ids(findViolations('Stanford'))).toContain('never.gsb');
   });
 
   it('let a tech article say what the site copy may not (job titles, seals, vendors, AI captions)', () => {
@@ -188,7 +217,8 @@ describe('credit (JSON-LD, feeds)', () => {
     expect(ld['@type']).toBe('TechArticle');
     expect(ld.author).toEqual(org);
     expect(ld.publisher).toEqual(org);
-    expect(ld.dateModified).toBe('2026-10-07');
+    expect(ld.datePublished).toBe('2026-10-05T00:00:00+08:00');
+    expect(ld.dateModified).toBe('2026-10-07T00:00:00+08:00');
     expect(JSON.stringify(ld)).not.toContain('#person');
     expect(JSON.stringify(sectionLd({ site: SITE, section: 'articles', locale: 'en', name: 'n', description: 'd', posts: [pairEn] }))).not.toContain('#person');
   });
@@ -203,16 +233,78 @@ describe('credit (JSON-LD, feeds)', () => {
   });
 
   it('feeds list the section\'s posts of one locale, newest first, credited; an empty feed is a valid channel', () => {
-    const empty = rssXml({ site: SITE, section: 'views', locale: 'en', title: 't', description: 'd', creator: 'Li Jiabao', posts: ALL });
+    const empty = rssXml({ site: SITE, section: 'views', locale: 'en', title: 't', description: 'd', owner: 'Li Jiabao', posts: ALL });
     expect(empty).toContain('<rss version="2.0"');
     expect(empty).not.toContain('<item>');
-    const xml = rssXml({ site: SITE, section: 'articles', locale: 'zh-Hant', title: 't', description: 'd', creator: 'lijiabao.dev', posts: ALL });
+    // the owner's name is passed in, but an articles feed credits the site whatever the caller passes
+    const xml = rssXml({ site: SITE, section: 'articles', locale: 'zh-Hant', title: 't', description: 'd', owner: '李家宝', posts: ALL });
     expect([...xml.matchAll(/<link>([^<]+)<\/link>/g)].map((m) => m[1])).toEqual([
       'https://lijiabao.dev/articles/',
       'https://lijiabao.dev/articles/zh-only/',
       'https://lijiabao.dev/articles/pair/',
     ]);
-    expect(xml).toContain('<dc:creator>lijiabao.dev</dc:creator>');
-    expect(xml).toContain('<lastBuildDate>Wed, 07 Oct 2026 00:00:00 GMT</lastBuildDate>');
+    const creators = [...xml.matchAll(/<dc:creator>([^<]*)<\/dc:creator>/g)].map((m) => m[1]);
+    expect(creators).toEqual(['lijiabao.dev', 'lijiabao.dev']);
+    expect(xml).not.toContain('李家宝');
+    // dates: the start of the calendar day in Asia/Taipei, never a future GMT midnight
+    expect(xml).toContain('<lastBuildDate>Wed, 07 Oct 2026 00:00:00 +0800</lastBuildDate>');
+    expect(xml).toContain('<pubDate>Tue, 06 Oct 2026 00:00:00 +0800</pubDate>');
+    expect(xml).not.toContain('GMT');
+    const views = rssXml({ site: SITE, section: 'views', locale: 'zh-Hant', title: 't', description: 'd', owner: '李家宝', posts: ALL });
+    expect([...views.matchAll(/<dc:creator>([^<]*)<\/dc:creator>/g)].map((m) => m[1])).toEqual(['李家宝']);
+    expect(feedCreator(SITE, 'articles', 'Li Jiabao')).toBe('lijiabao.dev');
+    expect(feedCreator(SITE, 'views', 'Li Jiabao')).toBe('Li Jiabao');
+  });
+});
+
+describe('dates: calendar days in Asia/Taipei', () => {
+  it('accepts YYYY-MM-DD only (a YAML day or the quoted string), never a timestamp', () => {
+    expect(calendarDay(new Date('2026-10-07T00:00:00Z'))?.toISOString()).toBe('2026-10-07T00:00:00.000Z');
+    expect(calendarDay('2026-10-07')?.toISOString()).toBe('2026-10-07T00:00:00.000Z');
+    // YAML date: 2026-10-07T07:00:00+08:00 is 2026-10-06T23:00Z: refused, not moved to the 6th
+    expect(calendarDay(new Date('2026-10-07T07:00:00+08:00'))).toBeNull();
+    expect(calendarDay(new Date('2026-10-07T00:00:01Z'))).toBeNull();
+    for (const s of ['2026-10-07T07:00:00+08:00', '2026-10-7', '2026/10/07', '2026-02-30', '', 'today']) expect(calendarDay(s), s).toBeNull();
+    expect(calendarDay(20261007)).toBeNull();
+    expect(CALENDAR_DAY_MSG).toMatch(/YYYY-MM-DD/);
+  });
+
+  it('writes the start of the day with the +08:00 offset wherever a time is required', () => {
+    expect(isoDayStart(d('2026-10-07'))).toBe('2026-10-07T00:00:00+08:00');
+    expect(rfc822Day(d('2026-10-07'))).toBe('Wed, 07 Oct 2026 00:00:00 +0800');
+    expect(rfc822Day(d('2026-01-01'))).toBe('Thu, 01 Jan 2026 00:00:00 +0800');
+  });
+});
+
+describe('post tables', () => {
+  it('wraps every table of a post in a named, focusable scroll region, numbered per document', () => {
+    expect(tableRegion('en', 2)).toEqual({
+      type: 'element',
+      tagName: 'div',
+      properties: { className: ['table-wrap'], role: 'region', ariaLabel: 'Table 2', tabIndex: 0 },
+      children: [],
+    });
+    expect(tableRegion('zh-Hant', 1).properties.ariaLabel).toBe('表格 1');
+    const wrapped: { node: unknown; parent: { properties: Record<string, unknown> } }[] = [];
+    const ctx = (path: string) => ({
+      fileURL: new URL(`file://${path}`),
+      data: {} as Record<string, unknown>,
+      wrapNode: (node: unknown, parent: { properties: Record<string, unknown> }) => wrapped.push({ node, parent }),
+    });
+    const post = ctx('/C:/site/src/content/articles/en/how-to.md');
+    postTables.element.visit('t1', post);
+    postTables.element.visit('t2', post);
+    postTables.element.visit('t3', ctx('/C:/site/src/content/_templates/articles/README.md'));
+    expect(wrapped.map((w) => [w.node, w.parent.properties.ariaLabel])).toEqual([
+      ['t1', 'Table 1'],
+      ['t2', 'Table 2'],
+    ]);
+  });
+
+  it('reads the locale of a post from its path and leaves other Markdown alone', () => {
+    expect(postLocaleOf('C:\\site\\src\\content\\articles\\zh-Hant\\how-to.md')).toBe('zh-Hant');
+    expect(postLocaleOf('/site/src/content/views/en/a-view.md')).toBe('en');
+    expect(postLocaleOf('/site/src/content/_templates/articles/README.md')).toBeNull();
+    expect(postLocaleOf('/site/README.md')).toBeNull();
   });
 });

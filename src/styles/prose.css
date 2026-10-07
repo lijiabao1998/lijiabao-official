@@ -14,7 +14,9 @@
 .prose > * + * {
   margin-top: 1.15em;
 }
-.prose:lang(zh) > * + * {
+/* :where() keeps this at (0,1,0), the weight of the rule above, so the heading, "after a heading" and hr spacing
+   below — all (0,1,1) — wins in zh exactly as in en */
+.prose:where(:lang(zh)) > * + * {
   margin-top: 1em;
 }
 
@@ -78,6 +80,10 @@
 /* ---- lists ------------------------------------------------------------------ */
 .prose :is(ul, ol) {
   padding-inline-start: 1.5em;
+}
+/* room for a two-digit mono marker ("10. ", 0.86em) inside the reading column */
+.prose ol {
+  padding-inline-start: 2.25em;
 }
 .prose li + li,
 .prose li > :is(ul, ol) {
@@ -143,16 +149,17 @@
   font-style: normal !important;
 }
 
-/* ---- tables: hairlines, mono header, scroll sideways inside the measure ----- */
+/* ---- tables: hairlines, mono header ------------------------------------------
+   A table stays a table (display: table keeps its semantics for assistive tech); src/lib/rehype-tables.ts wraps each
+   one in a named, focusable scroll region (div.table-wrap role=region tabindex=0) that scrolls sideways inside the
+   measure only when the table cannot shrink to fit. */
+.prose .table-wrap:focus-visible {
+  outline: 2px solid var(--glim);
+  outline-offset: 2px;
+}
 .prose table {
-  display: block;
-  width: max-content;
-  max-width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
   border-top: 1px solid var(--line-ui);
   font-size: var(--fs-small);
-  scrollbar-width: thin;
 }
 .prose :is(th, td) {
   padding: 0.65em 1.4em 0.65em 0;
@@ -170,6 +177,11 @@
   letter-spacing: 0.04em;
   color: var(--fg-2);
   white-space: nowrap;
+}
+@media (max-width: 639.98px) {
+  .prose th {
+    white-space: normal;
+  }
 }
 .prose td {
   font-variant-numeric: tabular-nums lining-nums;
@@ -198,7 +210,18 @@
     background: none !important;
     border-color: #999;
   }
-  .prose pre {
+  /* long code lines and wide tables wrap onto the page instead of being clipped at its edge (§2.1 "tables print");
+     the white-space that matters is the one on <code>, which holds the text */
+  .prose pre,
+  .prose pre code {
     white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .prose pre,
+  .prose .table-wrap {
+    overflow: visible;
+  }
+  .prose th {
+    white-space: normal;
   }
 }

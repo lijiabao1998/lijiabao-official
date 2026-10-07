@@ -50,8 +50,9 @@ const locale = localeOf(Astro);
     height: 7px;
     border-radius: 50%;
   }
+  /* a border, not a box-shadow: forced-colors mode and print.css both drop shadows, and the ring is the difference */
   .plabel--articles .plabel-mark {
-    box-shadow: inset 0 0 0 1px currentColor;
+    border: 1px solid currentColor;
   }
   .plabel--views .plabel-mark {
     background: var(--glim);
@@ -63,10 +64,16 @@ const locale = localeOf(Astro);
     .plabel--views .plabel-mark {
       background: CanvasText;
     }
+    .plabel--articles .plabel-mark {
+      border-color: CanvasText;
+    }
   }
   @media print {
     .plabel--views .plabel-mark {
       background: #000;
+    }
+    .plabel--articles .plabel-mark {
+      border-color: #000;
     }
   }
 </style>

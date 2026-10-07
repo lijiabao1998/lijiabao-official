@@ -15,7 +15,9 @@
 //
 // The two content sections (owner decision 2026-10-07) are never mixed: llms.txt lists 「李家宝本人的觀點 · Li Jiabao's
 // own views」 (/views/) and 「lijiabao.dev 編輯整理（非本人觀點） · Edited by lijiabao.dev (not his personal views)」
-// (/articles/) under two separate headings, each with its note, and every post's .md names its label. A section with
+// (/articles/) under two separate headings, each with its note, and every post's .md names its credit in its URL line
+// (views: the label 「李家宝 觀點」; articles: llms.articles.credit 「由 lijiabao.dev 編輯整理，不是李家宝本人的觀點」, so an
+// agent that fetches only that file still learns the article is not his view). A section with
 // no published post in a locale is left out (its index is noindex). Posts are read from dist (scripts/lib/posts.mjs),
 // so drafts — never built — cannot appear.
 
@@ -121,7 +123,8 @@ for (const section of ['views', 'articles']) {
   for (const item of P.listedPages(posts, section)) {
     const { locale, prefix, lang } = LOCALES.find((l) => l.locale === item.locale);
     const other = LOCALES.find((l) => l.locale !== locale);
-    const label = tStr(`posts.${section}.label`, locale);
+    // the credit in the URL line: an article .md says outright that it is not his view
+    const label = section === 'articles' ? tStr('llms.articles.credit', locale) : tStr(`posts.${section}.label`, locale);
 
     if (item.kind === 'post') {
       const p = item.post;
@@ -226,7 +229,10 @@ if (postsPart) checked.push({ file: join(DIST, 'llms-full.txt'), text: postsPart
 // Each page .md points search engines at its HTML page (canonical; every path already carries the llms.txt
 // describedby Link from the `/*` block of public/_headers). The full-text file stays readable by everyone but out
 // of search results, where it would duplicate every page. Posts use one placeholder rule per section and locale
-// (`:slug`), so the number of rules stays fixed however many posts there are (Cloudflare allows 100).
+// (`:slug`), so the number of rules stays fixed however many posts there are. Workers static assets support this:
+// "the matched value can be used in the header values with `:placeholder_name`"
+// (https://developers.cloudflare.com/workers/static-assets/headers/, checked 2026-10-07; the same page sets the
+// limits enforced below: 100 rules, 2,000 characters per line).
 const headersFile = join(DIST, '_headers');
 const md = 'text/markdown; charset=utf-8';
 const txt = 'text/plain; charset=utf-8';
@@ -246,7 +252,18 @@ const rules = [
   ...contentRules,
 ];
 const existing = existsSync(headersFile) ? readFileSync(headersFile, 'utf8').replace(/\n# llms\.mjs[\s\S]*$/, '') : '';
-writeFileSync(headersFile, `${existing.trimEnd()}\n\n# llms.mjs — text for language models\n${rules.join('\n\n')}\n`);
+const headersText = `${existing.trimEnd()}\n\n# llms.mjs — text for language models\n${rules.join('\n\n')}\n`;
+// Cloudflare ignores rules past the 100th and lines over 2,000 characters: fail before writing such a file
+const MAX_HEADER_RULES = 100;
+const MAX_HEADER_LINE = 2000;
+const ruleCount = headersText.split('\n').filter((l) => l.startsWith('/')).length;
+if (ruleCount > MAX_HEADER_RULES) {
+  g.fail(`dist/_headers would hold ${ruleCount} rules; Cloudflare Workers static assets allow ${MAX_HEADER_RULES} — merge rules (placeholders, splats) before adding more`);
+}
+for (const l of headersText.split('\n')) {
+  if (l.length > MAX_HEADER_LINE) g.fail(`dist/_headers: a line of ${l.length} characters (Cloudflare allows ${MAX_HEADER_LINE}): "${l.slice(0, 60)}…"`);
+}
+writeFileSync(headersFile, headersText);
 
 // ── gates: the copy rules, every lijiabao.dev link resolves, robots.txt is the endpoint's ───────────────────
 const host = new URL(SITE_URL).host;

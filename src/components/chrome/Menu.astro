@@ -162,8 +162,9 @@ const cases: { current: boolean; href: string; key: string }[] = [
       display: inline-flex;
     }
   }
+  /* only with JS (the menu opens through its module script); without JS the header keeps its inline nav */
   @media (min-width: 640px) and (max-width: 1023.98px) and (pointer: fine) {
-    .menu-btn[data-menu-mq] {
+    :global(html[data-js]) .menu-btn[data-menu-mq] {
       display: inline-flex;
     }
   }

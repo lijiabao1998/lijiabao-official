@@ -1,6 +1,6 @@
 # /views/ — 觀點（李家宝 觀點）
 
-**只放李家宝本人的觀點**：他自己寫、或他親自定稿的文字。頁面頂端與列表上一律標「李家宝 觀點」（英文 "Views · Li Jiabao"），結構化資料是 BlogPosting，author 是網站上同一個 Person（`https://lijiabao.dev/#person`）。llms.txt 把它列在「李家宝本人的觀點」之下，和編輯整理的文章分開。
+**只放李家宝本人的觀點**：他自己寫的文字。頁面頂端與列表上一律標「李家宝 觀點」（英文 "Views · Li Jiabao"），標題下的署名列是「李家宝 · 發布 …」，結構化資料是 BlogPosting，author 是網站上同一個 Person（`https://lijiabao.dev/#person`）。llms.txt 把它列在「李家宝本人的觀點」之下，和編輯整理的文章分開。
 
 - 任何人（包括協助維護網站的工具）都**不得代他撰寫或改寫觀點**。不是他本人的文字，一律放 `/articles/`。
 - 不要加 `author` 欄位：署名由網站自動處理。
@@ -18,8 +18,12 @@ src/content/views/en/<slug>.md        →  https://lijiabao.dev/en/views/<slug>/
 
 ## 欄位（frontmatter）
 
-複製 `template.md`。欄位只有 `title`、`description`（建議 ≤ 160 字元）、`date`（`YYYY-MM-DD`）、`updated`（選填，不早於 `date`）、`tags`（選填）、`draft`（`true` = 不建置、不出現在任何地方）。沒有 `sources`；多一個欄位建置就失敗。
+複製 `template.md`。欄位只有 `title`、`description`（建議約 80 個中文字 / 160 English characters 以內；中文字算 2，超過 160 會警告）、`date`（`YYYY-MM-DD`，台北時間的日曆日；時間戳記會讓建置失敗）、`updated`（選填，同上，不早於 `date`）、`tags`（選填）、`draft`（`true` = 不建置、不出現在任何地方）。沒有 `sources`；多一個欄位建置就失敗。
 
 ## 內文
 
-從 `##` 開始；英文版裡的中文字用 `<span lang="zh-Hant">…</span>` 包起來。發布後 `npm run build` → `npm run og` 產生分享卡，再提交。
+- 從 `##` 開始。圖片一定要寫替代文字（空白會讓建置失敗）。
+- 英文版**可以**含中文字（例如「微光小鎮」），建置不會失敗；較長的中文建議用 `<span lang="zh-Hant">…</span>` 包起來。
+- **X 連結需要業主同意**：業主還沒有同意網站出現 X（Twitter）。不能有 x.com / twitter.com 連結或他的 X 帳號；建置會失敗。
+
+發布後 `npm run build` → `npm run og` 產生分享卡，再提交。

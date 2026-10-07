@@ -87,7 +87,7 @@ export function* tokenize(html) {
 }
 
 /**
- * A page model: every element (with effective lang/dir and ancestor names), every non-blank text run
+ * A page model: every element (with effective lang/dir, ancestor names and its parent element), every non-blank text run
  * (decoded, with effective lang/dir and whether it sits in <head>), and the raw script / style bodies.
  * `scope` is the nearest data-copy-scope value ('' when none): `post` marks what a post says (check-dist applies
  * the POSTS rule set there).
@@ -112,6 +112,7 @@ export function readPage(html) {
         dir: tok.attrs.has('dir') ? tok.attrs.get('dir') : dir,
         scope: tok.attrs.has('data-copy-scope') ? tok.attrs.get('data-copy-scope') : (parent?.scope ?? ''),
         ancestors: stack.map((s) => s.name),
+        parent: parent ?? null,
         inHead: stack.some((s) => s.name === 'head'),
         index: tok.index,
       };

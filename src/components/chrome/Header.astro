@@ -3,7 +3,8 @@
 // (transition:animate="none" keeps it out of the root cross-fade). Order = Tab order (§5.4):
 // wordmark → nav → HUD → language → (mobile) menu button.
 // 文章 / 觀點 (Articles / Views) join the nav only for a section with ≥ 1 published post in this locale. With them
-// the inline nav no longer fits below 1024px, so there (.hdr--more) the menu button takes over from 640px too.
+// the inline nav no longer fits below 1024px, so there (.hdr--more) the menu button takes over from 640px too — with
+// JS only: the menu opens through its module script, so without JS the inline nav (and its links) stays.
 import Hud from './Hud.astro';
 import LangSwitch from './LangSwitch.astro';
 import Menu from './Menu.astro';
@@ -244,9 +245,20 @@ const here = isContent(page) && page.kind === 'section' ? page.section : null;
       display: none;
     }
   }
+  /* only with JS: the menu that takes over opens through its module script; without JS the inline nav stays */
   @media (min-width: 640px) and (max-width: 1023.98px) and (pointer: fine) {
-    .hdr--more .hdr-nav {
+    :global(html[data-js]) .hdr--more .hdr-nav {
       display: none;
+    }
+    /* without JS every link stays in the bar: a tighter gap, and where even that is too wide (both sections, narrow
+       window) the nav scrolls sideways instead of running under the language switch */
+    :global(html:not([data-js])) .hdr--more .hdr-nav {
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    :global(html:not([data-js])) .hdr--more .hdr-nav ul {
+      gap: var(--s-4);
     }
   }
 

@@ -96,6 +96,47 @@ export function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * The site's time zone: post dates are calendar days in Asia/Taipei (the owner's), a fixed UTC+8 with no daylight
+ * saving. Used wherever a format needs a time of day: JSON-LD, article:* meta, RSS.
+ */
+export const SITE_TZ = '+08:00';
+
+/** What a frontmatter `date` / `updated` must be, as the build tells the author. */
+export const CALENDAR_DAY_MSG = 'must be a calendar day YYYY-MM-DD (Asia/Taipei), not a timestamp — e.g. `date: 2026-10-07`';
+
+/**
+ * A frontmatter day as a Date at UTC midnight, or null when it is not a calendar day. YAML turns an unquoted
+ * `2026-10-07` into that Date already; a quoted string must be exactly YYYY-MM-DD and a real day. A YAML timestamp
+ * (`2026-10-07T07:00:00+08:00`, any time but UTC midnight) is refused: it would silently move to another day.
+ */
+export function calendarDay(v: unknown): Date | null {
+  if (typeof v === 'string') {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+    const d = new Date(`${v}T00:00:00Z`);
+    return Number.isNaN(d.getTime()) || isoDay(d) !== v ? null : d;
+  }
+  if (!(v instanceof Date) || Number.isNaN(v.getTime())) return null;
+  return v.getUTCHours() === 0 && v.getUTCMinutes() === 0 && v.getUTCSeconds() === 0 && v.getUTCMilliseconds() === 0 ? v : null;
+}
+
+/** The start of a calendar day in the site's time zone, ISO 8601: `2026-10-07T00:00:00+08:00` (JSON-LD, article:*). */
+export function isoDayStart(d: Date): string {
+  return `${isoDay(d)}T00:00:00${SITE_TZ}`;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * The start of a calendar day in the site's time zone, RFC 822 (RSS pubDate / lastBuildDate):
+ * `Wed, 07 Oct 2026 00:00:00 +0800` — never later than the moment the post can go live that day.
+ */
+export function rfc822Day(d: Date): string {
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `${WEEKDAYS[d.getUTCDay()]}, ${dd} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()} 00:00:00 ${SITE_TZ.replace(':', '')}`;
+}
+
 /** The last change of a post: `updated`, else `date`. */
 export function lastChange(p: Pick<PostMeta, 'date' | 'updated'>): Date {
   return p.updated ?? p.date;

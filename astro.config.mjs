@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { defineConfig, fontProviders } from 'astro/config';
+import { postTables } from './src/lib/post-tables.ts';
 
 /**
  * CJK glyph subsets (§2.2).
@@ -74,6 +75,28 @@ function glsl() {
   };
 }
 
+/**
+ * Posts (/articles/, /views/): each table in a named, focusable scroll region (src/lib/post-tables.ts). Astro 7's
+ * default Markdown processor is Sätteri; its options are meant to be extended by integrations, so the hast plugin is
+ * added to the processor Astro already resolved (no extra dependency, every default kept).
+ */
+function postMarkdown() {
+  return {
+    name: 'lj:post-markdown',
+    hooks: {
+      /** @param {{ config: { markdown: { processor?: { name: string, options?: { hastPlugins?: unknown[] } } } } }} p */
+      'astro:config:setup': ({ config }) => {
+        const processor = config.markdown.processor;
+        const plugins = processor?.options?.hastPlugins;
+        if (processor?.name !== 'satteri' || !Array.isArray(plugins)) {
+          throw new Error(`[post-markdown] expected Astro's Sätteri processor, got ${processor?.name ?? 'none'}`);
+        }
+        if (!plugins.includes(postTables)) plugins.push(postTables);
+      },
+    },
+  };
+}
+
 // https://docs.astro.build/en/reference/configuration-reference/
 export default defineConfig({
   site: 'https://lijiabao.dev',
@@ -87,6 +110,7 @@ export default defineConfig({
   },
   prefetch: { prefetchAll: true, defaultStrategy: 'hover' },
   devToolbar: { enabled: false },
+  integrations: [postMarkdown()],
   i18n: {
     defaultLocale: 'zh-Hant',
     locales: ['zh-Hant', 'en'],

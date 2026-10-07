@@ -24,8 +24,13 @@
 //   post carries its section's label, og:type article and the right JSON-LD credit (articles: the site as an
 //   Organization, never the Person; views: the Person); hreflang pairs are mutual and exist only when both locales
 //   do; the four RSS feeds parse and list exactly the published posts. Post text (inside data-copy-scope="post", and
-//   a post page's head) is held to the POSTS rule set; everything else on those pages to the full one. Warnings, not
-//   failures: a post without its own OG card (og.mjs runs on the owner's machine) and a description over 160 chars.
+//   a post page's head) is held to the POSTS rule set; everything else on those pages to the full one, and an English
+//   post may carry CJK in it. Each post: the byline, dates as the start of the day in +08:00, images with alt text,
+//   tables inside a named focusable scroll region. The language switch never lands on an empty noindex page and its
+//   sr-only sentence says where it goes. The sitemap <url> of every page equals its head (canonical, hreflang set
+//   with x-default) and a section index's lastmod is its newest change; feeds credit the site (articles) or the owner
+//   (views) in every dc:creator. Warnings, not failures: a post without its own OG card (og.mjs runs on the owner's
+//   machine) and a description wider than 160 (CJK counts 2).
 // Usage: node scripts/check-dist.mjs [--verbose]
 
 import { createHash } from 'node:crypto';
@@ -159,19 +164,22 @@ for (const page of pages) {
       g.fail(`${file}: hreflang="${el.attrs.get('hreflang')}"`);
     }
   }
-  const langProblems = (text, lang, dir, where) => {
-    if (en && CJK_RE.test(text) && !lang.startsWith('zh')) {
+  // what a post says (its article, the list items of an index, a post page's head): the POSTS rule set, and an
+  // English post may carry CJK (a product name such as 微光小鎮) without a lang="zh-Hant" wrapper (documented in
+  // src/content/_templates/*/README.md)
+  const isPostText = (scope, inHead) => scope === 'post' || (page.kind === 'post' && inHead);
+  const langProblems = (text, lang, dir, where, post = false) => {
+    if (en && !post && CJK_RE.test(text) && !lang.startsWith('zh')) {
       const m = CJK_RE.exec(text);
       g.fail(`${file}: CJK outside a lang="zh-Hant" element (${where}): "${excerpt(text, m.index, 1, 24)}"`);
     }
     if (HEBREW_RE.test(text) && (lang !== 'he' || dir !== 'rtl')) g.fail(`${file}: Hebrew outside lang="he" dir="rtl" (${where})`);
   };
   const copy = [];
-  // what a post says (its article, the list items of an index, a post page's head): the POSTS rule set
   const postCopy = [];
-  const bucket = (scope, inHead) => (scope === 'post' || (page.kind === 'post' && inHead) ? postCopy : copy);
+  const bucket = (scope, inHead) => (isPostText(scope, inHead) ? postCopy : copy);
   for (const t of doc.texts) {
-    langProblems(t.text, t.lang, t.dir, `<${t.el?.name ?? '?'}> text`);
+    langProblems(t.text, t.lang, t.dir, `<${t.el?.name ?? '?'}> text`, isPostText(t.scope, t.inHead));
     bucket(t.scope, t.inHead).push(t.text);
   }
   for (const el of doc.elements) {
@@ -180,7 +188,7 @@ for (const page of pages) {
     for (const [a, v] of el.attrs) if (a.startsWith('data-i18n-')) texts.push([a, v]);
     if (el.name === 'meta' && META_TEXT.test(el.attrs.get('name') ?? el.attrs.get('property') ?? '')) texts.push(['content', el.attrs.get('content') ?? '']);
     for (const [a, v] of texts) {
-      langProblems(v, el.lang, el.dir, `<${el.name} ${a}>`);
+      langProblems(v, el.lang, el.dir, `<${el.name} ${a}>`, isPostText(el.scope, el.inHead));
       bucket(el.scope, el.inHead).push(v);
     }
   }
@@ -582,6 +590,12 @@ const ldText = (doc) => doc.scripts.filter((s) => (s.attrs.get('type') ?? '') ==
 const labelsOf = (doc) => doc.texts.filter((t) => (t.el?.attrs.get('class') ?? '').split(/\s+/).includes('plabel-text')).map((t) => t.text.trim());
 const abs = (locale, path) => new URL(P.localized(locale, path), SITE).href;
 const other = (locale) => (locale === 'en' ? 'zh-Hant' : 'en');
+const classesOf = (el) => (el?.attrs.get('class') ?? '').split(/\s+/);
+const textsIn = (doc, el) => doc.texts.filter((t) => { for (let e = t.el; e; e = e.parent) if (e === el) return true; return false; });
+const within = (el, test) => { for (let e = el?.parent; e; e = e.parent) if (test(e)) return true; return false; };
+/** display width of a description: East Asian wide / full-width characters count 2 (Google cuts snippets by pixels) */
+const WIDE_RE = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿︰-﹏＀-｠￠-￦]/u;
+const displayWidth = (s) => [...s].reduce((n, c) => n + (WIDE_RE.test(c) ? 2 : 1), 0);
 let contentPages = 0;
 
 for (const page of pages) {
@@ -616,8 +630,27 @@ for (const page of pages) {
   } else if (!nodes.some((n) => n['@type'] === 'Person' && n['@id'] === PERSON)) g.fail(`${file}: a /views/ page without the Person node`);
   const hl = hreflangsOf(doc);
 
+  // the language switch: the same page in the other locale, else that locale's section index, else its home —
+  // never an empty noindex page — and its sr-only sentence says which (WCAG 2.4.4)
+  const switches = doc.elements.filter((e) => e.name === 'a' && e.attrs.has('data-lang-switch'));
+  if (!switches.length) g.fail(`${file}: no language switch`);
+  const targetHas = P.hasPosts(builtPosts, section, other(locale));
+  const swCheck = (want, key) => {
+    for (const swEl of switches) {
+      const sw = swEl.attrs.get('href');
+      const swFile = resolveUrl(sw, page.url).file;
+      const swPage = swFile ? pageOf.get(swFile) : null;
+      if (!swPage) g.fail(`${file}: the language switch → ${sw} does not resolve to a page`);
+      else if (isNoindex(swPage.doc)) g.fail(`${file}: the language switch goes to the noindex page ${sw} (an empty section)`);
+      if (sw !== want) g.fail(`${file}: the language switch goes to ${sw}, expected ${want}`);
+      const sr = textsIn(doc, swEl).filter((t) => classesOf(t.el).includes('sr-only')).map((t) => t.text.trim()).join(' ');
+      if (sr !== tStr(key, locale)) g.fail(`${file}: the language switch says "${sr}", expected "${tStr(key, locale)}" (${key})`);
+    }
+  };
+
   if (kind === 'section') {
     const has = P.hasPosts(builtPosts, section, locale);
+    swCheck(P.localized(other(locale), targetHas ? P.sectionPath(section) : '/'), targetHas ? 'lang.switch.aria' : `lang.switch.section.${section}.home`);
     if (isNoindex(doc) !== !has) g.fail(`${file}: ${has ? 'has posts but is noindex' : 'is empty but not noindex'}`);
     if (!doc.elements.some((e) => e.name === 'link' && e.attrs.get('type') === 'application/rss+xml')) g.fail(`${file}: no RSS alternate link`);
     const paired = has && P.hasPosts(builtPosts, section, other(locale));
@@ -637,7 +670,25 @@ for (const page of pages) {
   }
   if (isNoindex(doc)) g.fail(`${file}: a published post is noindex`);
   if (metaOf(doc, 'property', 'og:type') !== 'article') g.fail(`${file}: og:type must be article`);
-  if (metaOf(doc, 'property', 'article:published_time') !== P.isoDay(post.date)) g.fail(`${file}: article:published_time ≠ ${P.isoDay(post.date)}`);
+  // dates: calendar days in Asia/Taipei; a datetime is the start of that day with its offset (src/lib/posts.ts)
+  if (metaOf(doc, 'property', 'article:published_time') !== P.isoDayStart(post.date)) g.fail(`${file}: article:published_time ≠ ${P.isoDayStart(post.date)}`);
+  const mod = metaOf(doc, 'property', 'article:modified_time');
+  if (mod !== undefined && mod !== P.isoDayStart(post.updated)) g.fail(`${file}: article:modified_time ${mod} is not the start of a day in ${P.SITE_TZ}`);
+  // the byline: first item of the meta row (articles: the site; views: the owner)
+  const byline = doc.texts.filter((t) => classesOf(t.el).includes('post-byline')).map((t) => t.text.trim());
+  const bylineWant = tStr(`posts.${section}.byline`, locale);
+  if (byline.join('|') !== bylineWant) g.fail(`${file}: the byline must read "${bylineWant}" (found ${JSON.stringify(byline)})`);
+  // a post's own images carry real alt text (an empty alt would mark a content image as decorative)
+  const inBody = (e) => within(e, (a) => a.attrs.has('data-post-body'));
+  for (const img of doc.elements.filter((e) => e.name === 'img' && inBody(e))) {
+    if (!(img.attrs.get('alt') ?? '').trim()) g.fail(`${file}: an image in the post body has no alt text (${img.attrs.get('src') ?? '?'}) — write ![what it shows](…)`);
+  }
+  // every table keeps display: table inside a named, focusable scroll region (src/lib/rehype-tables.ts)
+  for (const table of doc.elements.filter((e) => e.name === 'table' && inBody(e))) {
+    const w = table.parent;
+    const ok = w?.name === 'div' && classesOf(w).includes('table-wrap') && w.attrs.get('role') === 'region' && (w.attrs.get('aria-label') ?? '').trim() && w.attrs.get('tabindex') === '0';
+    if (!ok) g.fail(`${file}: a post table outside its scroll region (div.table-wrap role=region aria-label tabindex=0)`);
+  }
   const node = nodes.find((n) => n['@type'] === (section === 'articles' ? 'TechArticle' : 'BlogPosting'));
   if (!node) g.fail(`${file}: no ${section === 'articles' ? 'TechArticle' : 'BlogPosting'} JSON-LD`);
   else if (section === 'articles') {
@@ -653,14 +704,15 @@ for (const page of pages) {
       g.fail(`${file}: hreflang must pair ${abs('zh-Hant', path)} and ${abs('en', path)} (x-default → zh-Hant)`);
     }
   } else if (hl.size) g.fail(`${file}: hreflang on a post that exists in ${locale} only`);
-  const sw = doc.elements.find((e) => e.name === 'a' && e.attrs.has('data-lang-switch'))?.attrs.get('href');
-  const swWant = P.localized(other(locale), alt ? path : P.sectionPath(section));
-  if (sw !== swWant) g.fail(`${file}: the language switch goes to ${sw}, expected ${swWant}`);
+  if (alt) swCheck(P.localized(other(locale), path), 'lang.switch.aria');
+  else if (targetHas) swCheck(P.localized(other(locale), P.sectionPath(section)), `lang.switch.post.${section}`);
+  else swCheck(P.localized(other(locale), '/'), `lang.switch.post.${section}.home`);
   if (!existsSync(join(ROOT, 'src', 'assets', 'og', 'posts', postCardName(post)))) {
     g.warn(`${file}: no OG card src/assets/og/posts/${postCardName(post)} yet (the section card stands in) — run \`npm run og\` after a build`);
   }
   const desc = metaOf(doc, 'name', 'description') ?? '';
-  if ([...desc].length > 160) g.warn(`${file}: description is ${[...desc].length} characters (≤ 160 recommended)`);
+  const width = displayWidth(desc);
+  if (width > 160) g.warn(`${file}: description is ${width} wide (CJK counts 2; ≤ 160 recommended ≈ 80 Chinese or 160 English characters)`);
 }
 
 // RSS 2.0 feeds: one per section and locale, listing exactly the published posts
@@ -677,6 +729,15 @@ for (const section of P.SECTIONS) {
     const want = P.postsOf(builtPosts, section, locale).map((p) => abs(locale, P.postPath(section, p.slug)));
     if (links.join('\n') !== want.join('\n')) g.fail(`${f}: items ${JSON.stringify(links)} ≠ the published posts (newest first) ${JSON.stringify(want)}`);
     for (const u of links) if (!resolveUrl(u, '/').file) g.fail(`${f}: ${u} does not resolve`);
+    // the credit: /articles/ items are the site's, /views/ items the owner's — never swapped, never missing
+    const credit = section === 'articles' ? SITE.host : tStr('site.name', locale);
+    const creators = [...xml.matchAll(/<dc:creator>([^<]*)<\/dc:creator>/g)].map((m) => m[1]);
+    if (creators.length !== links.length || creators.some((c) => c !== credit)) {
+      g.fail(`${f}: dc:creator ${JSON.stringify(creators)} — every item must credit "${credit}"`);
+    }
+    for (const m of xml.matchAll(/<(pubDate|lastBuildDate)>([^<]*)<\//g)) {
+      if (!/ 00:00:00 \+0800$/.test(m[2])) g.fail(`${f}: <${m[1]}>${m[2]} is not the start of a day in ${P.SITE_TZ}`);
+    }
   }
 }
 
@@ -702,6 +763,26 @@ if (fileSet.has('sitemap.xml')) {
   for (const p of builtPosts) {
     const u = abs(p.locale, P.postPath(p.section, p.slug));
     if (lastmods.get(u) !== P.isoDay(P.lastChange(p))) g.fail(`sitemap.xml: ${u} lastmod ${lastmods.get(u)} ≠ ${P.isoDay(P.lastChange(p))}`);
+  }
+  // each <url> agrees with its page's head: <loc> = the canonical, its xhtml:link set = the page's hreflang set
+  // (x-default included; both empty for a one-locale page). The two come from different code (src/lib/posts.ts
+  // contentRoutes vs Post/PostIndex), so a drift in either fails here. A section index's lastmod = its newest change.
+  for (const block of xml.split('<url>').slice(1)) {
+    const loc = /<loc>([^<]+)<\/loc>/.exec(block)?.[1]?.trim() ?? '';
+    const r = resolveUrl(loc, '/');
+    const target = r.file ? pageOf.get(r.file) : null;
+    if (!target) continue; // reported above
+    if (canonicalOf(target.doc) !== loc) g.fail(`sitemap.xml: ${loc} — the page's canonical is ${canonicalOf(target.doc)}`);
+    const sm = new Map([...block.matchAll(/<xhtml:link\b[^>]*\bhreflang="([^"]+)"[^>]*\bhref="([^"]+)"/g)].map((m) => [m[1], m[2]]));
+    const head = hreflangsOf(target.doc);
+    const fmt = (m) => JSON.stringify([...m].sort(([a], [b]) => a.localeCompare(b)));
+    if (fmt(sm) !== fmt(head)) g.fail(`sitemap.xml: ${loc} alternates ${fmt(sm)} ≠ the page's hreflang ${fmt(head)}`);
+    if (target.kind === 'section') {
+      const list = P.postsOf(builtPosts, target.section, target.locale);
+      const want = list.length ? P.isoDay(new Date(Math.max(...list.map((p) => P.lastChange(p).getTime())))) : null;
+      const got = /<lastmod>([^<]+)<\/lastmod>/.exec(block)?.[1];
+      if (got !== want) g.fail(`sitemap.xml: ${loc} lastmod ${got} ≠ ${want} (the newest change of its posts)`);
+    }
   }
 }
 if (fileSet.has('robots.txt')) {

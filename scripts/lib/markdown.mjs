@@ -107,6 +107,12 @@ export function mainToMarkdown(html, site) {
   let chip = null;
   /** an element just closed and nothing has been written since: the next element is its visual neighbour */
   let seam = false;
+  /**
+   * a data-md-after separator was just written and nothing but whitespace and skipped elements since: a skipped
+   * inline neighbour (the aria-hidden "·" a component draws for the same separator) then adds no seam of its own,
+   * which would glue the next part to the separator ("發布 … ·更新 …")
+   */
+  let justAfter = false;
   /** code block being collected: { lang, text } (verbatim, no tags) */
   let pre = null;
 
@@ -253,6 +259,7 @@ export function mainToMarkdown(html, site) {
         }
         continue;
       }
+      justAfter = false;
       if (name === 'br') {
         write(cellBuf !== null || chip ? ' ' : BR);
         seam = false;
@@ -321,7 +328,7 @@ export function mainToMarkdown(html, site) {
       if (stack[idx].skip) {
         for (const p of stack.splice(idx)) if (p.skip) skipDepth--;
         // a skipped inline neighbour (an aria-hidden " · ") still separates what is around it
-        if (skipDepth === 0 && !BLOCK.has(name)) seam = true;
+        if (skipDepth === 0 && !BLOCK.has(name) && !justAfter) seam = true;
         continue;
       }
       const entry = stack[idx];
@@ -378,7 +385,11 @@ export function mainToMarkdown(html, site) {
       if (after) {
         write(after);
         seam = false;
-      } else seam = !BLOCK.has(name);
+        justAfter = true;
+      } else {
+        seam = !BLOCK.has(name);
+        justAfter = false;
+      }
       continue;
     }
     if (tok.type === 'text' && inMain && skipDepth === 0) {
@@ -389,6 +400,7 @@ export function mainToMarkdown(html, site) {
       }
       write(t);
       seam = false;
+      justAfter = false;
     }
   }
   flush();

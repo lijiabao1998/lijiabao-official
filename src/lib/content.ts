@@ -8,7 +8,6 @@ import { SITE_URL } from '../data/links.ts';
 import type { Locale } from '../i18n/types.ts';
 import { ts } from '../components/chrome/i18n.ts';
 import { rssXml } from './feed.ts';
-import { siteOrg } from './postld.ts';
 import { SECTIONS, newestFirst, sectionPath, sectionsWithPosts, splitPostId, type PostMeta, type PostSection } from './posts.ts';
 
 export type ArticleEntry = CollectionEntry<'articles'>;
@@ -79,7 +78,7 @@ export function feedRoute(section: PostSection, locale: Locale): APIRoute {
       locale,
       title: ts(`meta.${section}.title`, locale),
       description: ts(`meta.${section}.desc`, locale),
-      creator: section === 'articles' ? String(siteOrg(base).name) : ts('site.name', locale),
+      owner: ts('site.name', locale),
       posts: await sectionPosts(section),
     });
     return new Response(xml, { headers: { 'Content-Type': 'application/rss+xml; charset=utf-8' } });

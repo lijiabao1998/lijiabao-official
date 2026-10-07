@@ -22,8 +22,12 @@ export interface ContentPage {
   description: string;
   /** unprefixed path per locale this page exists in (both → hreflang pair; one → none) */
   paths: Partial<Record<Locale, string>>;
-  /** where the language switch goes when the page does not exist in the other locale (its section index) */
-  fallback: string;
+  /**
+   * Where the language switch goes when the page does not exist in the other locale, and the dictionary key of its
+   * sr-only sentence (written in the target language): that locale's section index when it has posts, else that
+   * locale's home — never an empty noindex page. `aria` is 'lang.switch.aria' only when the target IS this page.
+   */
+  fallback: { path: string; aria: string };
   /** empty section: <meta name="robots" content="noindex">, no Markdown alternate */
   noindex: boolean;
   /** og:image (a post card, else the section card) and its alt */

@@ -3,7 +3,8 @@
 // are thin wrappers around this view.
 //
 //   article[data-copy-scope=post]            post-derived text: check-dist applies the POSTS rule set inside it
-//     header   label chip · h1 · meta row (發布 <time> · 更新 <time>) · the description as lede · baseline
+//     header   label chip · h1 · meta row = the byline (articles 「lijiabao.dev 編輯整理」, views 「李家宝」) · 發布 <time>
+//              · 更新 <time> · the description as lede · baseline
 //     .prose   the rendered Markdown (styles/prose.css)
 //     sources  articles only: 來源 / Sources
 //     footer   the other-language version (when it exists) · back to the section index
@@ -23,7 +24,7 @@ import PostLabel from '../components/posts/PostLabel.astro';
 import { localeOf, localePath, ts, type ContentPage } from '../components/chrome/i18n';
 import { postCard } from '../components/chrome/og';
 import { allPosts, type Post } from '@lib/content';
-import { alternateOf, feedPath, isoDay, postPath, sectionPath } from '@lib/posts';
+import { alternateOf, feedPath, hasPosts, isoDay, postPath, sectionPath } from '@lib/posts';
 import { postLd, siteOrg } from '@lib/postld';
 import '../styles/prose.css';
 
@@ -36,7 +37,9 @@ const locale = localeOf(Astro);
 if (post.locale !== locale) throw new Error(`[post] ${post.section}/${post.slug}: ${post.locale} post on a ${locale} route`);
 const { section, slug } = post;
 const site = Astro.site ?? new URL('https://lijiabao.dev');
-const alt = alternateOf(post, await allPosts());
+const all = await allPosts();
+const alt = alternateOf(post, all);
+const other = locale === 'en' ? 'zh-Hant' : 'en';
 const { Content } = await render(post.entry);
 
 const path = postPath(section, slug);
@@ -48,7 +51,10 @@ const page: ContentPage = {
   title: ts(`posts.${section}.docTitle`, locale, { title: post.title }),
   description: post.description,
   paths: alt ? { [locale]: path, [alt.locale]: path } : { [locale]: path },
-  fallback: sectionPath(section),
+  // no version in the other locale: its section index, or its home when that index is empty too (LangSwitch)
+  fallback: hasPosts(all, section, other)
+    ? { path: sectionPath(section), aria: `lang.switch.post.${section}` }
+    : { path: '/', aria: `lang.switch.post.${section}.home` },
   noindex: false,
   ogImage: og,
   ogAlt: ts('posts.og.alt', locale, { label, title: post.title }),
@@ -70,6 +76,8 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
         <PostLabel section={section} />
         <h1 id="post--title" class="post-title">{post.title}</h1>
         <p class="post-meta t-mono">
+          <span class="post-byline" data-md-after=" · ">{ts(`posts.${section}.byline`, locale)}</span>
+          <span class="post-sep" aria-hidden="true">·</span>
           <span data-md-after={post.updated ? ' · ' : undefined}>{ts('posts.published', locale)}{' '}<time datetime={isoDay(post.date)}>{isoDay(post.date)}</time></span>
           {
             post.updated && (
@@ -113,7 +121,7 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
           </a>
           {
             alt && (
-              <a class="link post-other" href={localePath(alt.locale, path)} hreflang={alt.locale}>
+              <a class="link post-other" href={localePath(alt.locale, path)} hreflang={alt.locale} lang={alt.locale}>
                 <T k="posts.other" />{' '}<Arrow dir="right" />
               </a>
             )
@@ -182,9 +190,10 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
   .post-sources-title {
     color: var(--fg-3);
   }
+  /* room for a two-digit mono marker ("10. ") inside the reading column */
   .post-sources-list {
     margin-top: var(--s-4);
-    padding-inline-start: 1.6em;
+    padding-inline-start: 2.5em;
     font-size: var(--fs-small);
   }
   .post-sources-list li + li {
@@ -194,6 +203,13 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
     font-family: var(--ff-mono);
     font-size: var(--fs-mono);
     color: var(--fg-3);
+  }
+  /* source titles are often Latin: no weight change on hover (the underline is the cue), so nothing reflows */
+  .post-sources-list .link:is(:hover, :focus-visible) {
+    font-variation-settings: normal;
+  }
+  .post-byline {
+    color: var(--fg);
   }
   .post-host {
     color: var(--fg-3);

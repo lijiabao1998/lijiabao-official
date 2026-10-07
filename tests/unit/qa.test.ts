@@ -26,6 +26,7 @@ describe('copy rules', () => {
     expect(ids('Senior data scientist')).toContain('job-title');
     expect(ids('AI-generated portrait')).toContain('ai-caption');
     expect(ids('https://x.com/LeonLRedfield')).toContain('x-link');
+    expect(ids('@LeonLRedfield')).toContain('never.x-handle');
   });
 
   it('flags seals and stamps, not ordinary words that contain them', () => {

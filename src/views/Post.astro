@@ -77,14 +77,10 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
         <h1 id="post--title" class="post-title">{post.title}</h1>
         <p class="post-meta t-mono">
           <span class="post-byline" data-md-after=" · ">{ts(`posts.${section}.byline`, locale)}</span>
-          <span class="post-sep" aria-hidden="true">·</span>
           <span data-md-after={post.updated ? ' · ' : undefined}>{ts('posts.published', locale)}{' '}<time datetime={isoDay(post.date)}>{isoDay(post.date)}</time></span>
           {
             post.updated && (
-              <Fragment>
-                <span class="post-sep" aria-hidden="true">·</span>
-                <span>{ts('posts.updated', locale)}{' '}<time datetime={isoDay(post.updated)}>{isoDay(post.updated)}</time></span>
-              </Fragment>
+              <span>{ts('posts.updated', locale)}{' '}<time datetime={isoDay(post.updated)}>{isoDay(post.updated)}</time></span>
             )
           }
         </p>
@@ -172,7 +168,14 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
     gap: var(--s-1) var(--s-3);
     color: var(--fg-2);
   }
-  .post-sep {
+  /* each item keeps its separator in front of it, so a wrapped row never ends on a dangling '·' (generated
+     content is not part of the text the .md reader sees; data-md-after supplies its separators) */
+  .post-meta > * {
+    white-space: nowrap;
+  }
+  .post-meta > * + *::before {
+    content: '·';
+    margin-inline-end: var(--s-3);
     color: var(--fg-3);
   }
   .post-lede {

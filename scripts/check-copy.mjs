@@ -144,6 +144,11 @@ for (const section of P.SECTIONS) {
     }
     const front = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)?.[1] ?? '';
     if (!front) g.fail(`${where}: no frontmatter`);
+    // dates are calendar days as written: YAML would turn `2026-10-07T00:00:00Z` into the same Date as a plain
+    // day, so the schema alone cannot see a timestamp at UTC midnight — the raw text can
+    for (const m of front.matchAll(/^(date|updated)\s*:(.*)$/gm)) {
+      if (!/^\s*(['"]?)\d{4}-\d{2}-\d{2}\1\s*(?:#.*)?$/.test(m[2])) g.fail(`${where}: \`${m[1]}:${m[2]}\` ${P.CALENDAR_DAY_MSG}`);
+    }
     const author = /^(authors?|creator|byline)\s*:/im.exec(front);
     if (author) {
       g.fail(`${where}: \`${author[1]}\` in the frontmatter — ${section === 'articles' ? 'articles are credited to the site (lijiabao.dev), never to a person' : 'views are credited to the owner by the build'}; remove it`);

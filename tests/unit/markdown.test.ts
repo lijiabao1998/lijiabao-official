@@ -38,6 +38,14 @@ describe('mainToMarkdown', () => {
       `<span>${upd} <time datetime="2026-10-07">2026-10-07</time></span></p>`;
     expect(md(row('lijiabao.dev 編輯整理', '發布', '更新'), 'zh-Hant')).toBe('lijiabao.dev 編輯整理 · 發布 2026-10-05 · 更新 2026-10-07\n');
     expect(md(row('Edited by lijiabao.dev', 'Published', 'Updated'))).toBe('Edited by lijiabao.dev · Published 2026-10-05 · Updated 2026-10-07\n');
+    // the current row: separators are CSS ::before only, data-md-after carries them into the .md
+    expect(
+      md(
+        '<p class="post-meta t-mono"><span class="post-byline" data-md-after=" · ">李家宝</span>' +
+          '<span>發布 <time datetime="2026-10-05">2026-10-05</time></span></p>',
+        'zh-Hant',
+      ),
+    ).toBe('李家宝 · 發布 2026-10-05\n');
     // a skipped separator with no data-md-after before it still separates (unchanged)
     expect(md('<p><span>a</span><span aria-hidden="true">·</span><span>b</span></p>')).toBe('a b\n');
   });

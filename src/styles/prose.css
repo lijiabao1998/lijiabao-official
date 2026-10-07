@@ -150,7 +150,7 @@
 }
 
 /* ---- tables: hairlines, mono header ------------------------------------------
-   A table stays a table (display: table keeps its semantics for assistive tech); src/lib/rehype-tables.ts wraps each
+   A table stays a table (display: table keeps its semantics for assistive tech); src/lib/post-tables.ts wraps each
    one in a named, focusable scroll region (div.table-wrap role=region tabindex=0) that scrolls sideways inside the
    measure only when the table cannot shrink to fit. */
 .prose .table-wrap:focus-visible {

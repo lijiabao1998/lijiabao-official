@@ -256,6 +256,9 @@ const here = isContent(page) && page.kind === 'section' ? page.section : null;
       min-width: 0;
       overflow-x: auto;
       scrollbar-width: thin;
+      /* room for the 2px + 3px focus ring inside the scroll box, which clips on both axes */
+      padding: 6px;
+      margin: -6px;
     }
     :global(html:not([data-js])) .hdr--more .hdr-nav ul {
       gap: var(--s-4);

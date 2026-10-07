@@ -167,7 +167,14 @@ for (const page of pages) {
   // what a post says (its article, the list items of an index, a post page's head): the POSTS rule set, and an
   // English post may carry CJK (a product name such as 微光小鎮) without a lang="zh-Hant" wrapper (documented in
   // src/content/_templates/*/README.md)
-  const isPostText = (scope, inHead) => scope === 'post' || (page.kind === 'post' && inHead);
+  // post text = the post body, plus the head fields a post fills itself (its title, description, tags, card alt);
+  // everything else in the head (site name, author, chrome) is checked like any other page text
+  const POST_HEAD_META = /^(?:description|og:title|og:description|twitter:title|twitter:description|og:image:alt|twitter:image:alt|article:tag)$/;
+  const isPostText = (scope, inHead, el) =>
+    scope === 'post' ||
+    (page.kind === 'post' &&
+      inHead &&
+      (el?.name === 'title' || (el?.name === 'meta' && POST_HEAD_META.test(el.attrs.get('name') ?? el.attrs.get('property') ?? ''))));
   const langProblems = (text, lang, dir, where, post = false) => {
     if (en && !post && CJK_RE.test(text) && !lang.startsWith('zh')) {
       const m = CJK_RE.exec(text);
@@ -177,10 +184,10 @@ for (const page of pages) {
   };
   const copy = [];
   const postCopy = [];
-  const bucket = (scope, inHead) => (isPostText(scope, inHead) ? postCopy : copy);
+  const bucket = (scope, inHead, el) => (isPostText(scope, inHead, el) ? postCopy : copy);
   for (const t of doc.texts) {
-    langProblems(t.text, t.lang, t.dir, `<${t.el?.name ?? '?'}> text`, isPostText(t.scope, t.inHead));
-    bucket(t.scope, t.inHead).push(t.text);
+    langProblems(t.text, t.lang, t.dir, `<${t.el?.name ?? '?'}> text`, isPostText(t.scope, t.inHead, t.el));
+    bucket(t.scope, t.inHead, t.el).push(t.text);
   }
   for (const el of doc.elements) {
     const texts = [];
@@ -188,8 +195,8 @@ for (const page of pages) {
     for (const [a, v] of el.attrs) if (a.startsWith('data-i18n-')) texts.push([a, v]);
     if (el.name === 'meta' && META_TEXT.test(el.attrs.get('name') ?? el.attrs.get('property') ?? '')) texts.push(['content', el.attrs.get('content') ?? '']);
     for (const [a, v] of texts) {
-      langProblems(v, el.lang, el.dir, `<${el.name} ${a}>`, isPostText(el.scope, el.inHead));
-      bucket(el.scope, el.inHead).push(v);
+      langProblems(v, el.lang, el.dir, `<${el.name} ${a}>`, isPostText(el.scope, el.inHead, el));
+      bucket(el.scope, el.inHead, el).push(v);
     }
   }
 
@@ -683,7 +690,7 @@ for (const page of pages) {
   for (const img of doc.elements.filter((e) => e.name === 'img' && inBody(e))) {
     if (!(img.attrs.get('alt') ?? '').trim()) g.fail(`${file}: an image in the post body has no alt text (${img.attrs.get('src') ?? '?'}) — write ![what it shows](…)`);
   }
-  // every table keeps display: table inside a named, focusable scroll region (src/lib/rehype-tables.ts)
+  // every table keeps display: table inside a named, focusable scroll region (src/lib/post-tables.ts)
   for (const table of doc.elements.filter((e) => e.name === 'table' && inBody(e))) {
     const w = table.parent;
     const ok = w?.name === 'div' && classesOf(w).includes('table-wrap') && w.attrs.get('role') === 'region' && (w.attrs.get('aria-label') ?? '').trim() && w.attrs.get('tabindex') === '0';

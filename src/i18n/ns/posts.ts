@@ -37,7 +37,7 @@ const zh = {
   'posts.updated': { zh: '更新', cls: 'F' },
   'posts.sources': { zh: '來源', cls: 'F' },
   'posts.feed': { zh: 'RSS 訂閱', cls: 'F' },
-  // aria-label of the scroll region around each table in a post (src/lib/rehype-tables.ts); {n} counts from 1
+  // aria-label of the scroll region around each table in a post (src/lib/post-tables.ts); {n} counts from 1
   'posts.table': { zh: '表格 {n}', cls: 'F' },
   // the link to the same post in the other locale, written in that locale (like lang.switch)
   'posts.other': { zh: [{ lang: 'en', text: 'Read this in English' }], cls: 'F' },
@@ -69,7 +69,7 @@ const zh = {
   'llms.articles': { zh: 'lijiabao.dev 編輯整理（非本人觀點）', cls: 'F', src: 'owner decision 2026-10-07' },
   'llms.articles.note': { zh: '由 lijiabao.dev 編輯整理的文章，不代表李家宝本人的觀點，也不是他的第一人稱。', cls: 'F' },
   // the credit in the URL line of every article .md (and the /articles/ index .md)
-  'llms.articles.credit': { zh: '由 lijiabao.dev 編輯整理，不是李家宝本人的觀點', cls: 'F', src: 'owner decision 2026-10-07' },
+  'llms.articles.credit': { zh: '由 lijiabao.dev 編輯整理，不是李家宝本人的觀點', cls: 'F', src: 'lead wording (content review item 7) of the owner decision 2026-10-07: articles are not his views' },
 } satisfies Record<string, ZhEntry>;
 
 const en = {

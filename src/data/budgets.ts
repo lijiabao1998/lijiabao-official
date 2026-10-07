@@ -8,7 +8,9 @@ export const budgets = {
   html: {
     /** HTML per page including inline CSS, JSON-LD and tables. */
     home: 36,
-    case: 32,
+    /** 32 → 33 (2026-10-07): once /articles/ or /views/ have posts the shared header carries their two nav links
+     *  and the no-JS fallback CSS; the Frontier page (the largest case page) reached 32.0. */
+    case: 33,
     /**
      * Content sections (2026-10-07). The chrome of a post page measures 14.7–16.3 KB (fixture build: the 404 is
      * 14.2), so a post keeps ≈ 32 KB for its own body (a long tutorial with code), and an index ≈ 25 KB for its list

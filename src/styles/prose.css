@@ -195,6 +195,29 @@
 .prose :is(p, figure) > img {
   margin-block: 0.4em;
 }
+/* a post figure links to its full-size image (scripts/post-figures.mjs): a dense diagram stays legible on a phone */
+.prose .fig-zoom {
+  display: block;
+  margin-block: 0.4em;
+  cursor: zoom-in;
+  text-decoration: none;
+}
+.prose .fig-zoom > img {
+  display: block;
+}
+.prose .fig-zoom::after {
+  display: none;
+  content: attr(data-hint) ' ↗';
+  margin-top: 0.4em;
+  color: var(--fg-3);
+  font-family: var(--ff-mono);
+  font-size: var(--fs-mono);
+}
+@media (max-width: 767.98px) {
+  .prose .fig-zoom::after {
+    display: block;
+  }
+}
 .prose hr {
   margin-block: 2.6em;
 }

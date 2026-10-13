@@ -92,6 +92,11 @@ describe('mainToMarkdown: posts', () => {
     expect(md('<pre><code>a ``` b</code></pre>')).toBe('~~~~\na ``` b\n~~~~\n');
   });
 
+  it('writes a post figure linked to its full size (scripts/post-figures.mjs) as the image alone', () => {
+    const body = '<div data-post-body><p><a class="fig-zoom" href="/_astro/f.webp" data-hint="點圖看原尺寸"><img src="/_astro/f.webp" alt="A diagram"></a></p></div>';
+    expect(md(body)).toBe('![A diagram](https://lijiabao.dev/_astro/f.webp)\n');
+  });
+
   it('keeps a post\'s rules and images, and skips images everywhere else', () => {
     const body = '<div data-post-body><p>One</p><hr><p><img src="/_astro/a.png" alt="A chart"></p></div>';
     expect(md(body)).toBe('One\n\n---\n\n![A chart](https://lijiabao.dev/_astro/a.png)\n');

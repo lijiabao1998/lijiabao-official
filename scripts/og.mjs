@@ -436,11 +436,28 @@ const lineX = (line, x, size) => (HANG.test(line) ? x - size * 0.5 : x);
  * Greedy wrap into lines no wider than `maxWidth`: CJK breaks between characters, Latin between words.
  * Returns null when it needs more than `maxLines`.
  */
+/**
+ * Break units: CJK by WORD (Intl.Segmenter, so 「完整」「指南」 never split), Latin words with their trailing space,
+ * a no-break space glueing its neighbours ("Li Jiabao"). Falls back to one unit per CJK character.
+ */
+function units(str) {
+  const s = keepNames(str);
+  if (typeof Intl.Segmenter !== 'function') return s.match(UNIT_RE) ?? [];
+  const out = [];
+  for (const { segment } of new Intl.Segmenter('zh-Hant', { granularity: 'word' }).segment(s)) {
+    const prev = out.length ? out[out.length - 1] : null;
+    const glue = /^[ \t\n]+$/.test(segment) || segment.startsWith(' ') || prev?.endsWith(' ');
+    if (prev !== null && glue) out[out.length - 1] = prev + segment;
+    else out.push(segment);
+  }
+  return out;
+}
+
 async function wrap(str, style, maxWidth, maxLines) {
-  const units = keepNames(str).match(UNIT_RE) ?? [];
+  const units_ = units(str);
   const lines = [];
   let line = '';
-  for (const u of units) {
+  for (const u of units_) {
     const next = line + u;
     if (!line || NO_START.test(u) || (await measure(next.trimEnd(), style)) <= maxWidth) {
       line = next;

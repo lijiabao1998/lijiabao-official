@@ -367,7 +367,9 @@ export function mainToMarkdown(html, site) {
         const l = links.pop();
         if (l && l.start !== null && cellBuf === null && !chip) {
           const label = squash(buf.slice(l.start));
-          if (label && l.href && !l.href.startsWith('javascript:')) {
+          // a link whose whole content is one image (a post figure linked to its full size): the image alone
+          const imageOnly = /^!\[[^\]]*\]\([^)\s]+\)$/.test(label);
+          if (label && l.href && !imageOnly && !l.href.startsWith('javascript:')) {
             buf = `${buf.slice(0, l.start)}[${labelEscape(label)}](${new URL(l.href, site).href})`;
           }
         }

@@ -39,6 +39,8 @@ const zh = {
   'posts.feed': { zh: 'RSS 訂閱', cls: 'F' },
   // aria-label of the scroll region around each table in a post (src/lib/post-tables.ts); {n} counts from 1
   'posts.table': { zh: '表格 {n}', cls: 'F' },
+  // shown under a post figure on narrow screens; the figure links to its full-size image (scripts/post-figures.mjs)
+  'posts.figure.zoom': { zh: '點圖看原尺寸', cls: 'F' },
   // the link to the same post in the other locale, written in that locale (like lang.switch)
   'posts.other': { zh: [{ lang: 'en', text: 'Read this in English' }], cls: 'F' },
   // the language switch's sr-only sentence when THIS page has no version in the other locale (LangSwitch.astro),
@@ -96,6 +98,7 @@ const en = {
   'posts.sources': 'Sources',
   'posts.feed': 'RSS feed',
   'posts.table': 'Table {n}',
+  'posts.figure.zoom': 'Tap for full size',
   'posts.other': [{ lang: 'zh-Hant', text: '以中文閱讀這一篇' }],
   'lang.switch.post.articles': [{ lang: 'zh-Hant', text: '這篇文章沒有中文版，前往中文文章列表' }],
   'lang.switch.post.views': [{ lang: 'zh-Hant', text: '這篇觀點沒有中文版，前往中文觀點列表' }],

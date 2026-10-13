@@ -276,7 +276,8 @@ for (const { file, text, posts: isPost } of checked) {
   for (const v of hits) g.fail(`${rel(file)}: ${v.id} "${v.match}" — ${v.why}`);
 }
 for (const { file, text } of written) {
-  for (const m of text.matchAll(/https?:\/\/[^\s)>\]]+/g)) {
+  // A quote or `<` ends the URL: a post may quote HTML (href="…") or an HTTP Link header in a code block.
+  for (const m of text.matchAll(/https?:\/\/[^\s)>\]"<]+/g)) {
     const u = new URL(m[0]);
     if (u.host !== host) continue;
     let p = decodeURIComponent(u.pathname);

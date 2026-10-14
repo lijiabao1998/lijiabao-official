@@ -2,6 +2,7 @@
 title: llms.txt 是什麼？讓 AI 讀懂網站的完整指南
 description: llms.txt 是 2024 年提出、給 AI 讀的 Markdown 網站索引。本文說明格式與寫法、和 robots.txt 的差別、Google 的立場，並附本站真實範例。
 date: 2026-10-13
+updated: 2026-10-14
 tags: [llms.txt, SEO, GEO, robots.txt, AI 爬蟲]
 draft: false
 sources:
@@ -175,6 +176,8 @@ Sitemap: https://example.com/sitemap.xml
 注意：`Google-Extended` 同時控制 Gemini 的訓練與 grounding，擋掉它也會讓內容不被 Gemini 拿來即時引用；它不影響 Google Search。
 
 兩點提醒。第一，[RFC 9309](https://www.rfc-editor.org/rfc/rfc9309) 寫明 robots.txt 的規則「不是一種存取授權」，真的要擋得靠登入或防火牆。第二，Google 的 robots.txt [只支援](https://developers.google.com/crawling/docs/robots-txt/robots-txt-spec) `user-agent`、`allow`、`disallow`、`sitemap` 四個欄位，`Content-Signal` 會被忽略，Search Console 可能顯示「Syntax not understood」，[Cloudflare 文件](https://developers.cloudflare.com/bots/additional-configurations/managed-robots-txt/)表示沒有觀察到對抓取或 SEO 的影響。本站查核的 OpenAI、Anthropic、Google、Perplexity 爬蟲文件，都沒有提到會讀取 `Content-Signal`（2026-10-13）。
+
+各家 AI 爬蟲的官方名稱、群組比對規則，以及 Google 在 2026 年新增的 AI 摘要控制項，另見本站整理的 [AI 爬蟲與 robots.txt 設定說明](https://lijiabao.dev/articles/ai-crawlers-robots-txt/)。
 
 ## 哪些 AI 真的會讀 llms.txt？目前的證據
 

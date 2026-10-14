@@ -126,7 +126,7 @@ AI 爬蟲是 AI 公司用來抓取網頁的程式，用途分成模型訓練、A
 
 robots.txt 以名稱比對，同一家公司的不同名稱原則上各自獨立（例外見下文「不照這套規則走的例外」）。OpenAI 寫得很明白：可以放行 OAI-SearchBot、同時擋 GPTBot。
 
-![AI 爬蟲的五種角色，以及 robots.txt 對各角色的效力，依各業者官方文件整理，資料截至 2026-10-14。第一是訓練資料爬蟲：蒐集內容，可能用於訓練模型，例如 GPTBot、ClaudeBot、MistralAI-Training；業者文件說明以 robots.txt 控制。第二是控制權杖，沒有自己的爬蟲：用來表態業者爬到的內容可否用於訓練，其中 Google-Extended 另含 Gemini 的 grounding，例如 Google-Extended、Applebot-Extended；只在 robots.txt 裡有作用。第三是搜尋與 AI 回答索引：建立索引，讓 AI 搜尋引用並附連結，例如 OAI-SearchBot、Claude-SearchBot、PerplexityBot、DuckAssistBot；業者表示遵守 robots.txt，擋了，在該服務 AI 搜尋的能見度可能下降。第四是使用者觸發的擷取，圖中特別標示為 robots.txt 最管不到的一類：使用者提問時即時讀網頁，例如 ChatGPT-User、Perplexity-User、Claude-User，以及沒有 robots.txt 權杖的 Google-Agent；多家業者表示 robots.txt 可能不適用或通常忽略，Anthropic、Mistral 表示遵守。第五是混合用途爬蟲：同一支爬蟲兼顧搜尋（或產品）與 AI，例如 Googlebot、Applebot、bingbot、Amazonbot；遵守 robots.txt，但擋了連搜尋（或產品）一起退出，AI 用途要用別的開關。底部註明：robots.txt 是請求，不是存取控制（RFC 9309）。](../../../assets/articles/ai-crawlers-robots-txt/fig-ai-crawler-roles.png)
+![AI 爬蟲的五種角色，以及 robots.txt 對各角色的效力，依各業者官方文件整理，資料截至 2026-10-14。第一是訓練資料爬蟲：蒐集內容，可能用於訓練模型，例如 GPTBot、ClaudeBot、MistralAI-Training；業者文件說明以 robots.txt 控制。第二是控制權杖，沒有自己的爬蟲：用來表態業者爬到的內容可否用於訓練，其中 Google-Extended 另含 Gemini 的 grounding，例如 Google-Extended、Applebot-Extended；只在 robots.txt 裡有作用。第三是搜尋與 AI 回答索引：建立索引，讓 AI 搜尋引用並附連結，例如 OAI-SearchBot、Claude-SearchBot、PerplexityBot、DuckAssistBot；業者說明以 robots.txt 控制，擋了，在該服務 AI 搜尋的能見度可能下降。第四是使用者觸發的擷取，圖中特別標示為 robots.txt 最管不到的一類：使用者提問時即時讀網頁，例如 ChatGPT-User、Perplexity-User、Claude-User，以及沒有 robots.txt 權杖的 Google-Agent；多家業者表示 robots.txt 可能不適用或通常忽略，Anthropic、Mistral 表示適用。第五是混合用途爬蟲：同一支爬蟲兼顧搜尋（或產品）與 AI，例如 Googlebot、Applebot、bingbot、Amazonbot；遵守 robots.txt，但擋了連搜尋（或產品）一起退出，AI 用途要用別的開關。底部註明：robots.txt 是請求，不是存取控制（RFC 9309）。](../../../assets/articles/ai-crawlers-robots-txt/fig-ai-crawler-roles.png)
 
 <small>AI 爬蟲的三種用途，加上控制權杖與混合用途爬蟲；robots.txt 對使用者觸發的擷取最管不到（依各業者官方文件，2026-10-14）。</small>
 
@@ -347,7 +347,7 @@ User-agent: MistralAI-User
 Disallow: /
 ```
 
-效果因業者而異：Anthropic 表示 robots.txt 適用，Mistral 說明 MistralAI-User 決定使用者請求能抓哪些網站；OpenAI、Perplexity、Meta、Amazon 的說法從可能不適用、可能繞過到通常會忽略都有（見上方清單）；Google 則沒有名稱可寫。另外，擋了 Claude-User，使用者請 Claude 讀你的網頁時，它也不會去抓。
+效果因業者而異：Anthropic 表示 robots.txt 適用，Mistral 說明 robots.txt 裡的 MistralAI-User 規則決定使用者請求能抓哪些網站；OpenAI、Perplexity、Meta、Amazon 的說法從可能不適用、可能繞過到通常會忽略都有（見上方清單）；Google 則沒有名稱可寫。另外，擋了 Claude-User，使用者請 Claude 讀你的網頁時，它也不會去抓。
 
 ### 範本四：只保護部分目錄
 
@@ -517,7 +517,7 @@ Sitemap: https://lijiabao.dev/sitemap.xml
 
 ### 擋了 GPTBot，網站還會出現在 ChatGPT 的搜尋答案裡嗎？
 
-仍可能出現：會不會出現看的是 OAI-SearchBot，不是 GPTBot；OpenAI 寫明兩者各自獨立。也要確認萬用群組沒有寫 `Disallow: /`，因為 OAI-SearchBot 沒有專屬群組時會照它走。放行也不保證會被引用。
+仍可能出現。會不會出現在搜尋答案裡，看的是 OAI-SearchBot，不是 GPTBot；OpenAI 寫明兩者各自獨立。也要確認萬用群組沒有寫 `Disallow: /`，因為 OAI-SearchBot 沒有專屬群組時會照它走。放行也不保證會被引用。
 
 ### 擋 AI 爬蟲會影響 Google 排名嗎？
 

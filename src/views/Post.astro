@@ -26,6 +26,7 @@ import { postCard } from '../components/chrome/og';
 import { allPosts, type Post } from '@lib/content';
 import { alternateOf, feedPath, hasPosts, isoDay, postPath, sectionPath } from '@lib/posts';
 import { postLd, siteOrg } from '@lib/postld';
+import { titleParts } from '@lib/words';
 import '../styles/prose.css';
 
 interface Props {
@@ -74,7 +75,9 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
     <article class:list={['post grid', `post--${section}`]} data-copy-scope="post">
       <header class="post-head lg-10">
         <PostLabel section={section} />
-        <h1 id="post--title" class="post-title">{post.title}</h1>
+        <h1 id="post--title" class="post-title">
+          {locale === 'zh-Hant' ? titleParts(post.title).map((p) => (p.word ? <span class="w" data-md-glue>{p.text}</span> : p.text)) : post.title}
+        </h1>
         <p class="post-meta t-mono">
           <span class="post-byline" data-md-after=" · ">{ts(`posts.${section}.byline`, locale)}</span>
           <span data-md-after={post.updated ? ' · ' : undefined}>{ts('posts.published', locale)}{' '}<time datetime={isoDay(post.date)}>{isoDay(post.date)}</time></span>
@@ -161,6 +164,10 @@ const hostOf = (u: string): string => new URL(u).host.replace(/^www\./, '');
     max-width: 16em;
     line-height: 1.24;
     letter-spacing: 0.01em;
+  }
+  /* a Han word stays on one line (lib/words.ts); lines break between words */
+  .post-title .w {
+    white-space: nowrap;
   }
   .post-meta {
     display: flex;

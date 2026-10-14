@@ -8,10 +8,12 @@
 //
 // Kept on purpose: the DATA / SCHEMATIC / PORTRAIT chips with their definitions, as one line — "（示意：…）" — so a
 // reader can tell a diagram from a record. Tables become Markdown tables (rowspan honoured; a table without a header
-// row gets an empty one so data stays data). Multi-block list items keep one bullet; <ol> keeps its numbers. Inside
+// row gets an empty one so data stays data; links inside cells stay links). Multi-block list items keep one bullet;
+// <ol> keeps its numbers. Inside
 // an <article>, lines that come before its heading in the DOM (a lab tile's status) are written after the heading.
 // Components can add `data-md-after="…"` to put a separator after an element (label — value) without changing
-// what the page shows.
+// what the page shows, and `data-md-glue` to an inline element whose text runs on from its neighbours (a title word
+// kept whole by lib/words.ts): it adds no seam, so 「官方」「清單」 stay 「官方清單」.
 //
 // Posts (/articles/, /views/): <pre> becomes a fenced code block, verbatim (its language from data-language or a
 // language-* class); inside the rendered Markdown of a post ([data-post-body]) <hr> becomes `---` and an <img> with
@@ -305,11 +307,12 @@ export function mainToMarkdown(html, site) {
         entry.art = { headed: false, pre: [] };
       } else if (BLOCK.has(name)) {
         flush();
-      } else if (seam || hasClass(attrs, 'sr-only')) {
+      } else if (hasClass(attrs, 'sr-only') || (seam && !attrs.has('data-md-glue'))) {
         write(cellBuf !== null || chip ? ' ' : SEP);
       }
       seam = false;
-      if (name === 'a') links.push({ href: attrs.get('href') ?? '', start: cellBuf !== null || chip ? null : buf.length });
+      // a link inside a table cell is kept too, measured in the cell's own text
+      if (name === 'a') links.push({ href: attrs.get('href') ?? '', inCell: cellBuf !== null, start: chip ? null : (cellBuf ?? buf).length });
       if (name === 'code') write('`');
       if (!isVoid) stack.push(entry);
       continue;
@@ -365,12 +368,15 @@ export function mainToMarkdown(html, site) {
         table = null;
       } else if (name === 'a') {
         const l = links.pop();
-        if (l && l.start !== null && cellBuf === null && !chip) {
-          const label = squash(buf.slice(l.start));
+        if (l && l.start !== null && l.inCell === (cellBuf !== null) && !chip) {
+          const text = cellBuf ?? buf;
+          const label = squash(text.slice(l.start));
           // a link whose whole content is one image (a post figure linked to its full size): the image alone
           const imageOnly = /^!\[[^\]]*\]\([^)\s]+\)$/.test(label);
           if (label && l.href && !imageOnly && !l.href.startsWith('javascript:')) {
-            buf = `${buf.slice(0, l.start)}[${labelEscape(label)}](${new URL(l.href, site).href})`;
+            const md = `${text.slice(0, l.start)}[${labelEscape(label)}](${new URL(l.href, site).href})`;
+            if (cellBuf !== null) cellBuf = md;
+            else buf = md;
           }
         }
       } else if (name === 'code') {
@@ -389,7 +395,7 @@ export function mainToMarkdown(html, site) {
         seam = false;
         justAfter = true;
       } else {
-        seam = !BLOCK.has(name);
+        seam = !BLOCK.has(name) && !entry.attrs?.has('data-md-glue');
         justAfter = false;
       }
       continue;

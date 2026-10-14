@@ -19,6 +19,7 @@ import { sectionCard } from '../components/chrome/og';
 import { sectionPosts } from '@lib/content';
 import { feedPath, hasPosts, isoDay, postPath, sectionPath, type PostSection } from '@lib/posts';
 import { sectionLd, siteOrg } from '@lib/postld';
+import { titleParts } from '@lib/words';
 
 interface Props {
   section: PostSection;
@@ -85,7 +86,9 @@ const page: ContentPage = {
                   </p>
                   <div class="pi-text lg-8 lg-start-5">
                     <h2 id={`pi--${p.slug}`} class="pi-name">
-                      <a class="pi-link" href={localePath(locale, postPath(section, p.slug))}>{p.title}</a>
+                      <a class="pi-link" href={localePath(locale, postPath(section, p.slug))}>
+                        {locale === 'zh-Hant' ? titleParts(p.title).map((t) => (t.word ? <span class="w" data-md-glue>{t.text}</span> : t.text)) : p.title}
+                      </a>
                     </h2>
                     <p class="pi-desc">{p.description}</p>
                   </div>
@@ -172,6 +175,10 @@ const page: ContentPage = {
     color: var(--fg);
     background: linear-gradient(currentColor, currentColor) no-repeat 100% 100% / 0 1px;
     transition: background-size var(--d-s) var(--ease-rise);
+  }
+  /* a Han word stays on one line (lib/words.ts); lines break between words */
+  .pi-link .w {
+    white-space: nowrap;
   }
   .pi-link::after {
     content: '';

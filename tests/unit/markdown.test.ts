@@ -61,6 +61,18 @@ describe('mainToMarkdown', () => {
     expect(out).toContain('|  |  |\n| --- | --- |\n| Version | v1 |');
   });
 
+  it('keeps links inside table cells (absolute URLs, escaped labels, no external-site hint)', () => {
+    const out = md(
+      '<table><thead><tr><th>Vendor</th><th>Token</th></tr></thead><tbody>' +
+        '<tr><td><a href="https://openai.com/bots">OpenAI<span class="sr-only"> (external site)</span></a></td><td>GPTBot</td></tr>' +
+        '<tr><td><a href="/articles/">Index [all]</a> and more</td><td>—</td></tr></tbody></table>',
+    );
+    expect(out).toBe(
+      '| Vendor | Token |\n| --- | --- |\n| [OpenAI](https://openai.com/bots) | GPTBot |\n' +
+        '| [Index \\[all\\]](https://lijiabao.dev/articles/) and more | — |\n',
+    );
+  });
+
   it('keeps one bullet per list item, numbers ordered lists, and quotes inside items after the bullet', () => {
     const out = md('<ol><li><p>First</p><p>— source</p></li><li>Second</li></ol><ul><li>Item<blockquote>Q</blockquote></li></ul>');
     expect(out).toBe('1. First\n   — source\n2. Second\n- Item\n   > Q\n');
@@ -74,6 +86,15 @@ describe('mainToMarkdown', () => {
   it('moves lines that precede an article heading below it', () => {
     const out = md('<article><div><span>Merged</span></div><h3>FrontierMath</h3><p>Body</p></article>');
     expect(out).toBe('#### FrontierMath\n\nMerged\n\nBody\n'); // h3 → #### (each page's h1 is ##)
+  });
+
+  it('adds no seam around data-md-glue words (a title kept whole word by word), but keeps real spaces', () => {
+    const w = (s: string): string => `<span class="w" data-md-glue>${s}</span>`;
+    expect(md(`<h2><a href="/x/">AI ${w('爬蟲')} robots.txt ${w('設定')}：與${w('官方')}${w('清單')}</a></h2>`, 'zh-Hant')).toBe(
+      '### [AI 爬蟲 robots.txt 設定：與官方清單](https://lijiabao.dev/x/)\n',
+    );
+    // without the marker two neighbouring elements stay two labels
+    expect(md('<p><span>官方</span><span>清單</span></p>', 'zh-Hant')).toBe('官方 清單\n');
   });
 
   it('glues CJK at <br> and around CJK punctuation, spaces Latin', () => {

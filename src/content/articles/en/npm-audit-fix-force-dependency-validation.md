@@ -32,13 +32,13 @@ For example, a hypothetical build-tool upgrade might remove an advisory while al
 
 ## Understand what force allows
 
-The npm audit documentation states that --force permits remediation outside the stated dependency range, including major-version changes. The option broadens what npm is allowed to install. It does not adapt application code to every new interface or run a stronger acceptance process.
+The npm audit documentation states that `--force` permits remediation outside the stated dependency range, including major-version changes. The option broadens what npm is allowed to install. It does not adapt application code to every new interface or run a stronger acceptance process.
 
 Treat a proposed forced update as a change requiring review. Know which dependency moves, why that version is proposed and what compatibility work may follow. Making a command proceed is different from understanding the condition that originally blocked it.
 
 ## Review the plan and preserve a usable baseline
 
-The documented dry-run example, npm audit fix --dry-run --json, can help inspect a proposed operation. Use commands appropriate to the project's tool versions and environment. A preview is a plan, not an installed fix or a passing verification result.
+The documented dry-run example, npm audit fix `--dry-run` `--json`, can help inspect a proposed operation. Use commands appropriate to the project's tool versions and environment. A preview is a plan, not an installed fix or a passing verification result.
 
 Keep a clear baseline and use an appropriate branch or isolated environment. Preserve unrelated local work. After making an approved change, inspect the manifest, lockfile and necessary configuration differences. Distinguish dependency changes from formatting or metadata changes instead of accepting a large diff as an indivisible block.
 

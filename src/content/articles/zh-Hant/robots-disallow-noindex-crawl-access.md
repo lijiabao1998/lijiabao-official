@@ -5,9 +5,9 @@ date: 2026-11-05
 tags: ["網頁開發", "技術SEO", "部署驗證"]
 draft: false
 sources:
-  - title: "Google Search Central"
+  - title: "Google Search Central: Block Search indexing with noindex"
     url: "https://developers.google.com/search/docs/crawling-indexing/block-indexing"
-  - title: "Google Search Central"
+  - title: "Google Search Central: Introduction to robots.txt"
     url: "https://developers.google.com/search/docs/crawling-indexing/robots/intro"
   - title: "MDN: X-Robots-Tag"
     url: "https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Robots-Tag"

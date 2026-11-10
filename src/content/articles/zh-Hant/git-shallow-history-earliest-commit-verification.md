@@ -5,11 +5,11 @@ date: 2026-11-01
 tags: ["Git", "版本控制", "工程紀錄"]
 draft: false
 sources:
-  - title: "Git official documentation"
+  - title: "Git documentation: git-rev-parse"
     url: "https://git-scm.com/docs/git-rev-parse"
-  - title: "Git official documentation"
+  - title: "Git documentation: git-fetch"
     url: "https://git-scm.com/docs/git-fetch"
-  - title: "Git official documentation"
+  - title: "Git documentation: git-rev-list"
     url: "https://git-scm.com/docs/git-rev-list"
 ---
 ## 先定義正在找哪一種最早

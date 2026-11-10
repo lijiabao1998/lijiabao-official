@@ -7,11 +7,11 @@ draft: false
 sources:
   - title: "npm audit"
     url: "https://docs.npmjs.com/cli/v11/commands/npm-audit/"
-  - title: "npm dependency documentation"
+  - title: "npm ci"
     url: "https://docs.npmjs.com/cli/v11/commands/npm-ci/"
-  - title: "npm dependency documentation"
+  - title: "npm Docs: About audit reports"
     url: "https://docs.npmjs.com/about-audit-reports/"
-  - title: "npm dependency documentation"
+  - title: "npm Docs: About semantic versioning"
     url: "https://docs.npmjs.com/about-semantic-versioning/"
 ---
 看到npm audit列出漏洞，直接執行帶`--force`的修復，報告變少就能結案嗎？需要分開看兩件事：已知風險是否被正確處理，以及更新後的專案是否仍符合需求。命令順利結束不是功能驗收，掃描沒有列出問題也不是完整安全證明。以下整理一般判讀與驗證方法，沒有替任何讀者的專案執行更新或測試。

@@ -7,11 +7,11 @@ draft: false
 sources:
   - title: "npm audit"
     url: "https://docs.npmjs.com/cli/v11/commands/npm-audit/"
-  - title: "npm dependency documentation"
+  - title: "npm ci"
     url: "https://docs.npmjs.com/cli/v11/commands/npm-ci/"
-  - title: "npm dependency documentation"
+  - title: "npm Docs: About audit reports"
     url: "https://docs.npmjs.com/about-audit-reports/"
-  - title: "npm dependency documentation"
+  - title: "npm Docs: About semantic versioning"
     url: "https://docs.npmjs.com/about-semantic-versioning/"
 ---
 A lower vulnerability count after a forced dependency update is useful information, but it is not the whole delivery result. An advisory can disappear while a build integration stops working. A successful installation can also leave important behavior untested. This article describes a review approach; it does not report an update, security assessment or test run performed for any particular repository.

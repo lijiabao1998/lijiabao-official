@@ -5,11 +5,11 @@ date: 2026-11-01
 tags: ["Git", "Version control", "Engineering records"]
 draft: false
 sources:
-  - title: "Git official documentation"
+  - title: "Git documentation: git-rev-parse"
     url: "https://git-scm.com/docs/git-rev-parse"
-  - title: "Git official documentation"
+  - title: "Git documentation: git-fetch"
     url: "https://git-scm.com/docs/git-fetch"
-  - title: "Git official documentation"
+  - title: "Git documentation: git-rev-list"
     url: "https://git-scm.com/docs/git-rev-list"
 ---
 ## Define the event you are trying to date

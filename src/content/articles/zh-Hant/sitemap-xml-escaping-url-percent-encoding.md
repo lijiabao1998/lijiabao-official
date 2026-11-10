@@ -5,13 +5,13 @@ date: 2026-11-07
 tags: ["網頁開發", "技術SEO", "部署驗證"]
 draft: false
 sources:
-  - title: "Google Search documentation: protocol.html"
+  - title: "Sitemaps.org: Protocol"
     url: "https://www.sitemaps.org/protocol.html"
-  - title: "Google Search documentation: rfc3986.html"
+  - title: "RFC 3986: Uniform Resource Identifier (URI): Generic Syntax"
     url: "https://www.rfc-editor.org/rfc/rfc3986.html"
-  - title: "Google Search documentation: toString"
+  - title: "MDN: URLSearchParams toString() method"
     url: "https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/toString"
-  - title: "Google Search documentation: build-sitemap"
+  - title: "Google Search Central: Build and submit a sitemap"
     url: "https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap"
 ---
 ## 先分清網址與裝著網址的文件

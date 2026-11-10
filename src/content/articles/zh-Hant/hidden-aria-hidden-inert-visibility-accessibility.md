@@ -11,9 +11,9 @@ sources:
     url: "https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-hidden"
   - title: "MDN: inert"
     url: "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert"
-  - title: "HTML and accessibility primary documentation"
+  - title: "HTML Standard: Inert subtrees"
     url: "https://html.spec.whatwg.org/multipage/interaction.html#inert-subtrees"
-  - title: "HTML and accessibility primary documentation"
+  - title: "W3C ARIA Authoring Practices Guide: Read Me First"
     url: "https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/"
 ---
 ## 先問要隱藏哪一種行為

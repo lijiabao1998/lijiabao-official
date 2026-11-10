@@ -5,17 +5,17 @@ date: 2026-11-02
 tags: ["網站效能", "圖片載入", "網頁開發"]
 draft: false
 sources:
-  - title: "Web platform primary documentation"
+  - title: "web.dev: Optimize Largest Contentful Paint"
     url: "https://web.dev/articles/optimize-lcp"
-  - title: "Web platform primary documentation"
+  - title: "MDN: HTML img element"
     url: "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img"
-  - title: "Web platform primary documentation"
+  - title: "MDN: HTMLImageElement fetchPriority property"
     url: "https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/fetchPriority"
-  - title: "Web platform primary documentation"
+  - title: "Chrome for Developers: LCP request discovery"
     url: "https://developer.chrome.com/docs/performance/insights/lcp-discovery"
-  - title: "Web platform primary documentation"
+  - title: "MDN: rel=preload"
     url: "https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/preload"
-  - title: "Web platform primary documentation"
+  - title: "web.dev: Browser-level image lazy loading for the web"
     url: "https://web.dev/articles/browser-level-image-lazy-loading"
 ---
 ## 先找到真正的LCP元素

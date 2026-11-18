@@ -32,6 +32,10 @@ export const FORBIDDEN = [
     re: /\bjobTitle\b|\bdata\s+scientists?\b|資料科學家|數據科學家|数据科学家|\b(?:CEO|CTO|COO|CFO|CIO)\b|\bco-?founder\b|\bfounder\b|創辦人|创始人|創始人|執行長|首席執行官|工程師|工程师|\b(?:software|data|ml|ai|research)\s+engineer\b|\bresearcher\b|研究員|研究员|\bscientist\b|\bdeveloper\b|開發者|開發人員|\bdesigner\b|設計師/iu,
     why: 'overrides §1: no job title anywhere',
   },
+  // the owner, 2026-11-18: 「不要寫工作方式…不能涉及到工作」. The site's own copy (dictionary, chrome) never uses the
+  // word; it shows the projects, the method and the record instead. Posts are exempt (POST_RULES): an article may
+  // say 工作流程.
+  { id: 'owner.work', re: /工作/u, why: 'owner 2026-11-18: site copy never says 「工作」 (say 作品, 方法, 成果)' },
   // the owner's style rule: no seals, stamps, dossiers or file numbers (spec §2.5, §4.0)
   {
     id: 'seal',

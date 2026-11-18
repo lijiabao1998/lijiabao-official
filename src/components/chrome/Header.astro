@@ -18,7 +18,7 @@ interface Props {
 const { page } = Astro.props;
 const locale = localeOf(Astro);
 const home = localePath(locale, '/');
-const sections = ['about', 'work', 'skills', 'method', 'contact'] as const;
+const sections = ['about', 'projects', 'skills', 'method', 'contact'] as const;
 const content = await navSections(locale);
 const here = isContent(page) && page.kind === 'section' ? page.section : null;
 ---

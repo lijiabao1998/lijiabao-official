@@ -45,7 +45,7 @@ const zh = {
   },
   'fr.stage.5': { zh: ['獨立核查', '作者不能簽核自己的獨立驗證。'], cls: 'F' },
   'fr.stage.6': { zh: ['記錄', '結果與失敗都留下；紀錄只能新增，不能刪除。'], cls: 'R', src: '[frontierA] GATE_CONTRACT.md' },
-  'fr.stage.7': { zh: ['審核合併', '作者不合自己的工作；業主決定。'], cls: 'F' },
+  'fr.stage.7': { zh: ['審核合併', '作者不合併自己的成果；業主決定。'], cls: 'F' },
   'fr.shelf.title': { zh: '已記錄的失敗', cls: 'F', display: true },
   // fr.shelf.N = [lab, item, status words]; render the status with <Status> (same weight as a pass)
   'fr.shelf.1': { zh: ['物理', '凍結的 E3', '未通過・已記錄'], cls: 'R', src: '[frontierA] FrontierPhysics PR #4' },
@@ -147,13 +147,13 @@ const zh = {
 } satisfies Record<string, ZhEntry>;
 
 const en = {
-  'fr.label': 'Work · Research governance',
+  'fr.label': 'Projects · Research governance',
   'fr.title': 'Frontier Lab',
   'fr.quote':
     '"This repository manages the research process. It does not decide what is true about nature or mathematics." — FrontierLab-Governance README',
   'fr.lead':
     "Frontier Lab takes the same method to open science. No model is exempt from checks because of its brand, and two models agreeing is not independent verification. The tooling is the Python standard library only, and each round's default budget is ${fr.budgetUsd}. Status is shown as it is: most problems are still OPEN; the Physics, Biology and Chemistry results are still in review; Math has one merged round of evidence and claims no resolution.",
-  'fr.notbench': 'It is not a benchmark or a Q&A set. It is a multi-model research workflow under strict governance.',
+  'fr.notbench': 'It is not a benchmark or a Q&A set. It is a multi-model research process under strict governance.',
   'fr.chips': ['{fr.govRepos} governance repo', '{fr.labs} labs', '{fr.cards} problem cards', 'Python standard library', '${fr.budgetUsd} default per round'],
   'fr.dates': 'The whole program was set up between 2026-09-27 and 2026-09-29.',
   'fr.matrix.caption': "Governance on the left; one row per lab, one cell per problem card. ◆ marks each lab's first-round problem.",
@@ -170,14 +170,14 @@ const en = {
   ],
   'fr.stage.1': [
     "Check whether it's solved",
-    'a fresh four-way search within {fr.searchHours} hours of starting: general, discipline, solution, criticism. If an outside solution exists, it is recorded as COMPLETED_EXTERNAL and the work stops.',
+    'a fresh four-way search within {fr.searchHours} hours of starting: general, discipline, solution, criticism. If an outside solution exists, it is recorded as COMPLETED_EXTERNAL and the round stops.',
   ],
   'fr.stage.2': ['Reproduce', 'reproduce the known result first.'],
   'fr.stage.3': ['Freeze', 'the problem and its verifier are frozen first.'],
   'fr.stage.4': ['Bounded exploration', 'default budget per round: {fr.budgetMinutes} minutes, ${fr.budgetUsd}, {fr.budgetTries} tries.'],
   'fr.stage.5': ['Independent verification', 'no author signs off their own independent verification.'],
   'fr.stage.6': ['Record', 'results and failures both stay; records can be added to, never deleted.'],
-  'fr.stage.7': ['Reviewed merge', 'authors never merge their own work; the owner decides.'],
+  'fr.stage.7': ['Reviewed merge', 'authors never merge their own results; the owner decides.'],
   'fr.shelf.title': 'Failures on record',
   'fr.shelf.1': ['Physics', 'frozen E3', 'Failed · recorded'],
   'fr.shelf.2': ['Biology', 'an unverified PASS', 'Withdrawn · kept on record'],
@@ -231,12 +231,12 @@ const en = {
     'All {fr.newLabs} new labs failed CI on their first run; the tooling was fixed and re-pinned. "The failure was not deleted or rewritten as a first-time pass."',
   'fr.gov.bp': "Branch protection is only a proposal; it isn't enabled.",
   'fr.bounds.title': "Each lab's safety limits",
-  'fr.bounds.bio': 'Biology: benign public benchmarks only; no pathogens, toxins or wet-lab work; no clinical diagnosis or treatment advice.',
+  'fr.bounds.bio': 'Biology: benign public benchmarks only; no pathogens, toxins or wet-lab experiments; no clinical diagnosis or treatment advice.',
   'fr.bounds.chem': 'Chemistry: refuses weapons, toxic agents, explosives and wet-lab execution.',
   'fr.bounds.med': 'Medicine: no diagnostic or treatment conclusions for individuals.',
   'fr.bounds.eng': 'Engineering: no connection to real grids, traffic, robots or industrial control.',
   'fr.bounds.earth': 'Earth: public data and backtests only; no real-time hazard guidance for individuals.',
-  'fr.bounds.neuro': 'Neuroscience: no invasive work, no personal neural data.',
+  'fr.bounds.neuro': 'Neuroscience: no invasive research, no personal neural data.',
   'fr.bounds.mat': 'Materials: paid DFT/GPU runs need separate authorization; the default budget is ${fr.budgetUsd}.',
 
   'fr.undone.title': "What didn't get done",

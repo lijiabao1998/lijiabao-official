@@ -1,7 +1,7 @@
 // src/i18n/ns/home.ts — the home page copy.
 //
 // Owner decision 2026-11-18: the home page reads as an introduction and job-seeking site, not as a manifesto.
-// Order: who he is (#hero) → about → work → skills → how the work is done → numbers → the commit record →
+// Order: who he is (#hero) → about → projects → skills → method → numbers → the commit record →
 // contact. Only facts already public in the repos are used: no job title, no career or education history, no
 // e-mail address (rules.mjs still forbids a job title anywhere).
 //   - about.belief is the owner's own line (APPROVED, verbatim). It was the hero line until 2026-11-18 and now
@@ -90,8 +90,8 @@ const zh = {
     cls: 'F',
   },
 
-  // ── Method: how the work is done ─────────────────────────────────────────────────────────────────────
-  'method.label': { zh: '工作方式', cls: 'F' },
+  // ── Method (never 「工作方式」: the owner's copy does not use the word 「工作」, 2026-11-18) ─────────────────
+  'method.label': { zh: '方法', cls: 'F' },
   'method.chain.title': { zh: '一輪施工', cls: 'F' },
   // list: the five steps of the → chain (arrows are drawn between them)
   'method.chain': {
@@ -170,8 +170,8 @@ const en = {
   'hero.eyebrow': 'lijiabao1998 · Taiwan',
   'hero.name': 'Li Jiabao',
   'hero.intro':
-    'Runs two public projects: GlimmerTown, a game, and Frontier Lab, a research-governance program. Builds with AI models from several vendors: acceptance criteria first, then the work, and nothing merges until every check is green.',
-  'hero.cta.work': 'See the work',
+    'Runs two public projects: GlimmerTown, a game, and Frontier Lab, a research-governance program. Builds with AI models from several vendors: acceptance criteria first, then the build, and nothing merges until every check is green.',
+  'hero.cta.work': 'See the projects',
   'hero.cta.github': 'GitHub',
   'hero.cta.articles': 'Read the articles',
   'hero.meta.repos': '{repos.count} public repos',
@@ -180,7 +180,7 @@ const en = {
   'about.label': 'About',
   'about.role': 'Sets the direction of both projects and makes the final call. Each decision is dated.',
   'about.repos': 'GitHub lijiabao1998 · {repos.count} public repos · account created 2026-09-23',
-  'about.older': "The work is older: GlimmerTown's first main-line commit is from 2026-07-12.",
+  'about.older': "The projects are older: GlimmerTown's first main-line commit is from 2026-07-12.",
   'about.belief.label': 'Belief',
   'about.belief': 'Everyone deserves a lab of their own.',
   'about.line1': [{ lang: 'zh-Hant', text: '心存善念，盡力而為' }],
@@ -189,8 +189,8 @@ const en = {
   'about.line2.gloss': "Do good; don't ask where it leads.",
   'about.caption': 'Portrait: {n} dots, set on baselines. This picture is not data.',
 
-  'work.label': 'Work',
-  'work.title': 'Two bodies of work. One method.',
+  'work.label': 'Projects',
+  'work.title': 'Two projects. One method.',
   'work.gt.title': 'GlimmerTown',
   'work.gt.kicker': 'Game · three lines of development',
   'work.gt.summary': 'An original isometric pixel-art city. One HTML file, no dependencies, works offline.',
@@ -207,7 +207,7 @@ const en = {
   'skills.lede': 'Each item below has a record behind it in the public repos.',
   'skills.1': [
     'Specs and acceptance',
-    "Measure first, and write the acceptance criteria into the task card before any work starts. GlimmerTown's main line has {gt.cards} task cards.",
+    "Measure first, and write the acceptance criteria into the task card before anything is built. GlimmerTown's main line has {gt.cards} task cards.",
     'source GlimmerTown `docs/tasks/`',
   ],
   'skills.2': [
@@ -216,8 +216,8 @@ const en = {
     'source GlimmerTown `test_fixde.js`',
   ],
   'skills.3': [
-    'Working with several models',
-    'The lab line has {gtlab.writers} model writers from different vendors, working under one written rulebook. Every merge needs a human to approve it.',
+    'Multi-model collaboration',
+    'The lab line has {gtlab.writers} model writers from different vendors, all under one written rulebook. Every merge needs a human to approve it.',
     'source GlimmerTown-lab `AGENTS.md`',
   ],
   'skills.4': [
@@ -236,17 +236,17 @@ const en = {
     "source this site's code",
   ],
 
-  'method.label': 'How the work is done',
-  'method.chain.title': 'One round of work',
+  'method.label': 'Method',
+  'method.chain.title': 'One round',
   'method.chain': [
     'Measure',
-    'write the card: acceptance criteria before the work',
+    'write the card: acceptance criteria before the build',
     'build',
     'write the guards',
     "green, and the owner's nod, before merge",
   ],
   'method.writers':
-    "Seven model writers from different vendors work on the lab line. Two can push to main; the other five each work on a branch and open PRs. Nothing merges without the owner's nod.",
+    "The lab line has seven model writers from different vendors. Two can push to main; the other five each keep to a branch and open PRs. Nothing merges without the owner's nod.",
   'method.writers.named': 'Push to main: Claude, Codex. Branch and PR: Grok, GLM, Kimi, DeepSeek, GPT.',
   'method.undone': "What didn't get done may not be left blank, and may not be dressed up.",
   'method.undone.cite': '— GlimmerTown-lab `AUTORUN.md`',

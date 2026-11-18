@@ -71,7 +71,7 @@ const en = {
   'labs.astro.desc': 'Treats catalogs and their selection functions as research objects',
   'labs.earth.desc': 'Calibrating forecasts of rare, extreme events',
   'labs.neuro.desc': 'Designs stimuli that make brain-computation models disagree',
-  'labs.econ.desc': 'Measures what AI actually does to firms, tasks and work',
+  'labs.econ.desc': 'Measures what AI actually does to firms, tasks and labour',
   'labs.eng.desc': 'Simulation-first: fault injection and uncertainty before any deployment',
   'labs.med.desc': 'Validating medical AI across hospitals and over time',
 } satisfies DictShape<typeof zh>;

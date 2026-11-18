@@ -114,12 +114,12 @@ const zh = {
 } satisfies Record<string, ZhEntry>;
 
 const en = {
-  'gt.label': 'Work · Game',
+  'gt.label': 'Projects · Game',
   'gt.title': 'GlimmerTown',
   'gt.alias': [{ lang: 'zh-Hant', text: '微光小鎮' }, ' · Glimmerville'],
   'gt.tagline': 'One city, three times.',
   'gt.lead':
-    'GlimmerTown is one original isometric city. The owner sets the direction and makes the final call; models from different vendors build under one written rulebook. Acceptance criteria come before the work, merges happen only when the guards are green, and what failed is recorded as it happened.',
+    'GlimmerTown is one original isometric city. The owner sets the direction and makes the final call; models from different vendors build under one written rulebook. Acceptance criteria come before the build, merges happen only when the guards are green, and what failed is recorded as it happened.',
   'gt.chips': ['One HTML file', 'No dependencies', 'No external assets', 'Works offline (PWA)', 'Plays on a phone'],
   'gt.pass.title': '{gt.pass} PASS',
   'gt.pass.lead': "The main line's Node test suite, `test_fixde.js`, reports PASS={gt.pass}. Each lit cell is one passing check.",

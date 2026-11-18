@@ -9,7 +9,7 @@ const zh = {
   'site.location': { zh: '台灣', cls: 'F' },
 
   'meta.home.title': { zh: '李家宝 — lijiabao.dev', cls: 'F' },
-  'meta.home.desc': { zh: '李家宝的個人網站。兩件公開作品：遊戲「微光小鎮」與研究治理專案「前沿實驗室」，還有做事的方式。每個數字都附出處。', cls: 'F' },
+  'meta.home.desc': { zh: '李家宝的個人網站。兩件公開作品：遊戲「微光小鎮」與研究治理專案「前沿實驗室」，以及背後的方法。每個數字都附出處。', cls: 'F' },
   'meta.gt.title': { zh: '微光小鎮 GlimmerTown — 李家宝', cls: 'F' },
   'meta.gt.desc': { zh: '一座原創的等距像素城市：單一 HTML 檔、零依賴、可離線。三條開發線，同一座城。', cls: 'F' },
   'meta.fr.title': { zh: '前沿實驗室 — 李家宝', cls: 'F' },
@@ -40,9 +40,9 @@ const zh = {
     cls: 'F',
   },
 
-  'nav.work': { zh: '作品', cls: 'F' },
+  'nav.projects': { zh: '作品', cls: 'F' },
   'nav.skills': { zh: '能力', cls: 'F' },
-  'nav.method': { zh: '工作方式', cls: 'F' },
+  'nav.method': { zh: '方法', cls: 'F' },
   'nav.about': { zh: '關於', cls: 'F' },
   'nav.contact': { zh: '聯絡', cls: 'F' },
   'nav.gt': { zh: '微光小鎮', cls: 'F' },
@@ -145,7 +145,7 @@ const en = {
   'site.location': 'Taiwan',
 
   'meta.home.title': 'Li Jiabao — lijiabao.dev',
-  'meta.home.desc': "Li Jiabao's personal site: two public projects, GlimmerTown (a game) and Frontier Lab (research governance), and how the work is done.",
+  'meta.home.desc': "Li Jiabao's personal site: two public projects, GlimmerTown (a game) and Frontier Lab (research governance), and the method behind them.",
   'meta.gt.title': 'GlimmerTown — Li Jiabao',
   'meta.gt.desc': 'One original isometric pixel-art city: a single HTML file, no dependencies, works offline. Three lines of development, one city.',
   'meta.fr.title': 'Frontier Lab — Li Jiabao',
@@ -155,7 +155,7 @@ const en = {
   'meta.og.gt': '{gt.pass} cells, one per passing check.',
   'meta.og.fr': 'One governance core, {fr.labs} rows of {fr.cardsPerLab} problem cards.',
   'llms.pages': 'Pages (Markdown versions)',
-  'llms.profile': '{repos.count} work repositories as of {snapshot.asOf}',
+  'llms.profile': '{repos.count} project repositories as of {snapshot.asOf}',
   'llms.site': "This website's source",
   'llms.full': 'Every page in full, zh-Hant and English',
   'llms.sitemap': 'Sitemap',
@@ -173,7 +173,7 @@ const en = {
   'a11y.fig.hint':
     'Focus the chart, then use Left and Right to step through records, Up and Down to change lanes, Enter to open on GitHub, Esc to leave. The full data is in the table below.',
 
-  'nav.work': 'Work',
+  'nav.projects': 'Projects',
   'nav.skills': 'Skills',
   'nav.method': 'Method',
   'nav.about': 'About',

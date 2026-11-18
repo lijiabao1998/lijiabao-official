@@ -1,38 +1,22 @@
 ---
-// #method (S2 · §3 row 3, §4.2 Method, §5.3): the owner's quote with its citation; one round of work as his
-// → chain (5 steps, each → a drawn hairline); the writers line (anonymous; the named variant renders only when
-// features.vendorNames is on); the "undone" rule with its citation.
-// - The quote is set in the text face (method.quote is not display-flagged: the CJK display subset stays in
-//   budget). It carries a screen-reader copy and an aria-hidden visual copy, so SplitText can split the visual
-//   characters (zh) / lines (en) without touching what assistive tech reads.
+// #method (owner decision 2026-11-18: how the work is done, stated plainly): one round of work as his → chain
+// (5 steps, each → a drawn hairline); the writers line (anonymous; the named variant renders only when
+// features.vendorNames is on); the "undone" rule with its citation; and the three verification rules, as a plain
+// list with their source (they were the pinned #not statements until 2026-11-18).
 // - The chain is an <ol>: order is in the markup; the arrows are aria-hidden hairlines. No-JS / static /
 //   reduced motion show every arrow drawn and every step lit.
-// Motion: motion/sections/method.ts (quote mask rise, chain scrub).
+// Motion: motion/sections/method.ts (chain scrub); everything else rises through the generic [data-rise] reveal.
 import Section from '@ui/Section.astro';
 import T from '@ui/T.astro';
 import { links } from '@data/links';
 import { localeOf, tl, ts } from '../chrome/i18n';
 
 const locale = localeOf(Astro);
-const quote = ts('method.quote', locale);
 const steps = tl('method.chain', locale);
+const rules = tl('method.rules', locale);
 const ext = ts('a11y.external', locale);
-// Optical margin: hang the opening quotation mark outside the text column.
-const hang = /^[「『]/u.test(quote) ? 'cjk' : /^["“‘']/u.test(quote) ? 'latin' : null;
 ---
 <Section id="method" motion="method" label="method.label" labelAs="h2">
-  <figure class="mq">
-    <blockquote class="mq-quote">
-      <p class:list={['mq-text', hang && `mq-text--hang-${hang}`]}>
-        <span class="sr-only">{quote}</span>
-        <span class="mq-vis" aria-hidden="true" data-mq-vis>{quote}</span>
-      </p>
-    </blockquote>
-    <figcaption class="mq-cite t-label" data-rise>
-      <a class="link" href={links.docs.d000Vision}><T k="method.quote.cite" /><span class="sr-only">{ext}</span></a>
-    </figcaption>
-  </figure>
-
   <div class="chain-block">
     <T k="method.chain.title" as="h3" class="chain-title t-label" id="method-chain-title" data-rise />
     <ol class="chain" aria-labelledby="method-chain-title" data-chain>
@@ -68,81 +52,21 @@ const hang = /^[「『]/u.test(quote) ? 'cjk' : /^["“‘']/u.test(quote) ? 'la
       </figcaption>
     </figure>
   </div>
+
+  <div class="m-rules">
+    <T k="method.rules.title" as="h3" class="m-rules-title t-label" id="method-rules-title" data-rise />
+    <ul class="m-rules-list" role="list" aria-labelledby="method-rules-title">
+      {rules.map((r) => <li data-rise>{r}</li>)}
+    </ul>
+    <p class="m-rules-cite t-label" data-rise>
+      <a class="link" href={links.docs.csReadme}><T k="method.rules.cite" /><span class="sr-only">{ext}</span></a>
+    </p>
+  </div>
 </Section>
 
 <style>
-  /* ---- the quote ---------------------------------------------------------------------------------------- */
-  .mq {
-    margin: 0;
-  }
-  .mq-quote {
-    margin: 0;
-  }
-  .mq-text {
-    max-width: 22em;
-    font-family: var(--ff-body);
-    font-size: var(--fs-s);
-    font-weight: 400;
-    line-height: 1.5;
-    letter-spacing: 0.02em;
-    color: var(--fg);
-    text-wrap: balance;
-  }
-  .mq-text:lang(en) {
-    max-width: 21em;
-    font-weight: 380;
-    line-height: 1.22;
-    letter-spacing: -0.015em;
-  }
-  /* the opening mark hangs in the margin; with text-spacing-trim its blank half is already trimmed */
-  .mq-text--hang-cjk {
-    text-indent: -1em;
-  }
-  @supports (text-spacing-trim: trim-start) {
-    .mq-text--hang-cjk {
-      text-indent: -0.5em;
-    }
-  }
-  .mq-text--hang-latin {
-    text-indent: -0.4em;
-  }
-  .mq-vis {
-    display: block;
-  }
-  /* SplitText wrappers (chars / masked lines) must not inherit the hang; only the first line hangs */
-  .mq-vis > :global(*) {
-    text-indent: 0;
-  }
-  .mq-text--hang-latin .mq-vis > :global(:first-child) {
-    text-indent: -0.4em;
-  }
-  .mq-cite {
-    margin-top: var(--s-6);
-    color: var(--fg-3);
-    text-transform: none;
-  }
-  .mq-cite :global(.link) {
-    color: var(--fg-2);
-  }
-  .mq-cite :global(code) {
-    font-size: 1em;
-  }
-
   /* ---- the → chain: a sentence of five steps, hairline arrows between them -------------------------- */
-  /* quote → chain → writers: 64px on phones, 96px on tablets, the full 128px from 1024px */
-  .chain-block {
-    margin-top: var(--s-8);
-  }
-  @media (min-width: 640px) {
-    .chain-block {
-      margin-top: var(--s-9);
-    }
-  }
-  @media (min-width: 1024px) {
-    .chain-block {
-      margin-top: var(--s-10);
-    }
-  }
+  /* the chain opens the section, right under its label */
   .chain-title {
     margin-bottom: var(--s-5);
     color: var(--fg-3);
@@ -299,8 +223,54 @@ const hang = /^[「『]/u.test(quote) ? 'cjk' : /^["“‘']/u.test(quote) ? 'la
     font-size: 1em;
   }
 
+  /* ---- the verification rules: three plain statements, each after a short baseline hairline -------------- */
+  .m-rules {
+    margin-top: var(--s-8);
+  }
+  @media (min-width: 640px) {
+    .m-rules {
+      margin-top: var(--s-9);
+    }
+  }
+  .m-rules :global(.m-rules-title) {
+    margin-bottom: var(--s-5);
+    color: var(--fg-3);
+  }
+  .m-rules-list {
+    display: grid;
+    gap: var(--s-3);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--fs-lede);
+    line-height: 1.5;
+    color: var(--fg);
+  }
+  .m-rules-list li {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+  }
+  .m-rules-list li::before {
+    content: '';
+    flex: none;
+    width: 16px;
+    height: 1px;
+    background: var(--line-ui);
+    transform: translateY(-0.3em);
+  }
+  .m-rules-cite {
+    margin-top: var(--s-5);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .m-rules-cite :global(.link) {
+    color: var(--fg-2);
+  }
+
   @media (forced-colors: active) {
-    .chain-line {
+    .chain-line,
+    .m-rules-list li::before {
       background: CanvasText;
     }
     .m-undone {

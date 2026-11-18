@@ -1,5 +1,5 @@
 ---
-// <Display k="hero.line" as="span" size="xl" animate hole /> — display type from the dictionary
+// <Display k="work.title" as="h2" size="m" /> — display type from the dictionary
 // (spec §2.2 CJK fit-to-line, §8 display text, §9.3).
 //
 // - Authored lines (string[]) render one block per line and fit the line to its container with no
@@ -9,7 +9,7 @@
 // - `narrow` lines (entry.narrow) replace them under 640px (`--n-narrow`); only one set is ever
 //   displayed, so assistive tech and innerText see a single copy.
 // - A single string is set in the display size and wraps (`text-wrap: balance`).
-// - `animate` (hero line, #not, manifesto: blocks that animate by character) adds an sr-only full
+// - `animate` (blocks that animate by character, e.g. the work row titles) adds an sr-only full
 //   text and marks the visual copies aria-hidden. Everything else is a single copy.
 // - `hole` → [data-gl-hole]; `weigh` → [data-weigh]. Draft builds add data-copy(-status).
 // - Only keys flagged `display: true` belong here: the display face's CJK subset is built from them.

@@ -1,24 +1,26 @@
 ---
-// Home (§3). The section order is FIXED here (F0); owners fill their components, never reorder.
-//   1 #hero (S1) · 2 #work (S2) · 3 #method (S2) · 4 #not (S2) · 5 #numbers (S2)
-//   6 #vision (S3) · 7 #about (S3) · 8 #contact (S2) · footer (F0, in Base)
+// Home. Owner decision 2026-11-18: the page reads as an introduction and job-seeking site, in this order:
+//   1 #hero (the name, a plain introduction, three ways on) · 2 #about · 3 #work · 4 #skills · 5 #method
+//   6 #numbers · 7 #record (every commit, the source of the numbers) · 8 #contact · footer (in Base)
+// The pinned #not statements are now the plain verification rules in #method, and the #vision section is gone
+// (the tier control it explained is the footer's fieldset#tier, on every page).
 import Base from '../layouts/Base.astro';
 import Hero from '../components/home/Hero.astro';
-import Work from '../components/home/Work.astro';
-import Method from '../components/home/Method.astro';
-import Not from '../components/home/Not.astro';
-import Numbers from '../components/home/Numbers.astro';
-import Vision from '../components/home/Vision.astro';
 import About from '../components/home/About.astro';
+import Work from '../components/home/Work.astro';
+import Skills from '../components/home/Skills.astro';
+import Method from '../components/home/Method.astro';
+import Numbers from '../components/home/Numbers.astro';
+import Record from '../components/home/Record.astro';
 import Contact from '../components/home/Contact.astro';
 ---
 <Base page="home">
   <Hero />
-  <Work />
-  <Method />
-  <Not />
-  <Numbers />
-  <Vision />
   <About />
+  <Work />
+  <Skills />
+  <Method />
+  <Numbers />
+  <Record />
   <Contact />
 </Base>

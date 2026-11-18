@@ -17,8 +17,8 @@ import { REPOS } from '@data/repos';
 import { LANES, laneRecords, pointOf, ROWS, type SnapshotLike } from '@gl/gen/lanes';
 import { FIELD_LOOK, SIGMA } from '@gl/gen/glimmer';
 
-const FG = '#EDEBE6';
-const GLIM = '#FFB547';
+const FG = '#14171C';
+const GLIM = '#2563EB';
 const W = 10000;
 const H = ROWS * 100;
 /** Paths the records are dealt into (more = closer to the scene's accumulation in dense runs, a few bytes more). */

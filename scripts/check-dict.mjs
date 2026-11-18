@@ -11,8 +11,9 @@
 // - a class-R entry has no `src` (research provenance);
 // - a list (non-display string[]) has a different number of parts in zh and en, or a `{fact}` placeholder
 //   names an unknown fact;
-// - the owner decisions of build-overrides §1 drift: hero.line approved and verbatim, its alt candidates gone,
-//   the X-bio / Hebrew / signature lines approved, the manifesto candidates NOT approved, X and vendor names off;
+// - the owner decisions drift (build-overrides §1; home page 2026-11-18): the owner's line (about.belief) approved
+//   and verbatim, no hero slogan, the two X-bio lines approved, the Hebrew line and the signature gone, no
+//   manifesto keys, X and vendor names off;
 // - the Noto glyph subsets exceed their budgets or src/data/glyphs.json is stale (scripts/glyphs.mjs --check).
 // Usage: node scripts/check-dict.mjs
 
@@ -157,19 +158,20 @@ const need = (cond, msg) => {
   if (!cond) g.fail(msg);
 };
 const e = (k) => dict[k];
-need(e('hero.line')?.status === 'APPROVED', 'hero.line must be APPROVED (overrides §1)');
-need(t.tStr('hero.line', 'zh-Hant') === '讓每個人，都有一座自己的實驗室。', 'hero.line (zh) must be the owner\'s line verbatim');
-need(t.tStr('hero.line', 'en') === 'Everyone deserves a lab of their own.', 'hero.line (en) must be the owner\'s line verbatim');
-need(!keys.some((k) => k.startsWith('hero.line.alt')), 'hero.line.alt* candidates must be deleted (overrides §1)');
-for (const k of ['about.line1', 'about.line2', 'about.hebrew', 'about.signature']) {
+// The owner's own line: approved, verbatim, and (since 2026-11-18) a belief in #about, not the hero.
+need(e('about.belief')?.status === 'APPROVED', 'about.belief (the owner\'s line) must be APPROVED (overrides §1)');
+need(t.tStr('about.belief', 'zh-Hant') === '讓每個人，都有一座自己的實驗室。', 'about.belief (zh) must be the owner\'s line verbatim');
+need(t.tStr('about.belief', 'en') === 'Everyone deserves a lab of their own.', 'about.belief (en) must be the owner\'s line verbatim');
+need(!keys.some((k) => k.startsWith('hero.line')), 'hero.line*: the hero is an introduction, not a slogan (owner decision 2026-11-18)');
+for (const k of ['about.line1', 'about.line2']) {
   need(e(k)?.status === 'APPROVED', `${k} must be APPROVED (overrides §1)`);
 }
-for (const k of ['manifesto.title', 'manifesto.alt1', 'manifesto.alt2', 'manifesto.date']) {
-  if (e(k)) need(e(k).status !== 'APPROVED', `${k}: the owner has not written a manifesto; it must not be APPROVED (overrides §1)`);
-}
+// The Hebrew line and the signature: the owner removed them from the site on 2026-11-18. Ask him before either returns.
+need(!e('about.hebrew') && !e('about.signature'), 'about.hebrew / about.signature: removed by the owner on 2026-11-18');
+need(!('hebrew' in features) && !('signature' in features), 'features.hebrew / features.signature: removed with their lines (2026-11-18)');
+need(!keys.some((k) => k.startsWith('manifesto.')), 'manifesto.*: the owner has not written a manifesto, and the home page carries none (2026-11-18)');
 need(features.x === false && features.xUrl === null, 'features: the X link is not approved (x: false, xUrl: null)');
 need(features.vendorNames === false, 'features.vendorNames must stay false');
-need(features.hebrew === true && features.signature === true, 'features: the Hebrew line and the signature are approved (on)');
 
 // ── glyph budgets (§2.2): the F0 script is the single source of truth ─────────────────────────────────────
 const glyphs = spawnSync(process.execPath, [join(ROOT, 'scripts', 'glyphs.mjs'), '--check'], { cwd: ROOT, encoding: 'utf8' });

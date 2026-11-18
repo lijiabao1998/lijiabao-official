@@ -1,22 +1,17 @@
-// src/motion/sections/hero.ts — #hero (spec §5.3, §5.4, §6.1). Owner: S1.
+// src/motion/sections/record.ts — #record: inspecting figure#fig-record (spec §5.4, §6.1).
 //
-// 1. Record inspect (every non-static tier, reduced motion included; the <table> stays the complete path):
-//    - fine pointer over the band: the nearest commit within 16px is picked (amber, +3px, held in place while
-//      the others part along their lane); a readout pill follows it (fig.readout.commit); click opens it;
-//    - keyboard on the focusable stage: ← → by time, ↑ ↓ lanes, Home / End, Enter opens, Esc leaves;
-//      the readout mirrors to an aria-live="polite" region, at most once per 300ms;
-//    - touch: a tap shows the nearest record (28px); tapping the readout opens it.
-// 2. Scroll-out (motion full), scrub 0.6. Over the hero (`top top` → `bottom top`) the line's characters go
-//    rest → wght 200 in a left-to-right wave (the light leaves) and lift y: −i×3%. The field's uScroll 0 → 1
-//    (points drift up 32px, alpha × 0.4) runs as the plot itself leaves (`top 12%` → `bottom top`), so records
-//    never slip off their lanes while the figure is being read. The char split is built on the first scroll,
-//    after the intro (chars locked in rest-width em slots, so no weight ever moves a line — §2.2).
+// Every non-static tier, reduced motion included; the <table> stays the complete path:
+//   - fine pointer over the band: the nearest commit within 16px is picked (amber, +3px, held in place while
+//     the others part along their lane); a readout pill follows it (fig.readout.commit); click opens it;
+//   - keyboard on the focusable stage: ← → by time, ↑ ↓ lanes, Home / End, Enter opens, Esc leaves;
+//     the readout mirrors to an aria-live="polite" region, at most once per 300ms;
+//   - touch: a tap shows the nearest record (28px); tapping the readout opens it.
+// The record sat in the hero until 2026-11-18 and thinned out as the hero scrolled away; it is now a section of
+// its own and simply stays lit.
 // No copy here: the readout template and the "open" hint come from data-i18n-readout / data-i18n-open.
 
 import type { Cleanup, MotionCtx } from '../registry';
-import { MQ } from '../registry';
-import { fill, i18n, isFocusVisible, isZh, listen, type Cleanup as DomCleanup } from '../../lib/dom';
-import { on } from '../../lib/events';
+import { fill, i18n, isFocusVisible, listen, type Cleanup as DomCleanup } from '../../lib/dom';
 import { describe, pickAt, TAP_R, type RecordInfo } from '../../gl/scenes/inspect';
 import type { StepDir } from '../../gl/types';
 
@@ -33,25 +28,14 @@ const ROWS = 20;
 const PAD_X = 16;
 const PAD_TOP = 32;
 const SAY_MS = 300;
-const NARROW = '(max-width: 639.98px)';
-/** field.vert: records drift up uScroll × 32px as the record leaves */
-const DRIFT = 32;
-
-/** The live scroll-out value (inspect picks against where records are drawn, not where they rest). */
-interface Shared {
-  scroll: number;
-}
 
 export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
-  const shared: Shared = { scroll: 0 };
-  const offInspect = bindInspect(root, ctx, shared);
-  bindScrollOut(root, ctx, shared);
-  return offInspect;
+  return bindInspect(root, ctx);
 }
 
 /* ------------------------------------------------------------------ inspect */
 
-function bindInspect(root: HTMLElement, ctx: MotionCtx, shared: Shared): Cleanup {
+function bindInspect(root: HTMLElement, ctx: MotionCtx): Cleanup {
   const field = root.querySelector<HTMLElement>('[data-field]');
   const stage = field?.closest<HTMLElement>('.fig-stage') ?? null;
   const plot = field?.querySelector<HTMLElement>('[data-field-plot]') ?? null;
@@ -117,7 +101,7 @@ function bindInspect(root: HTMLElement, ctx: MotionCtx, shared: Shared): Cleanup
     }
     pillOpen!.textContent = how === 'key' ? openHint : '';
     const x = info.x * w;
-    const y = (info.y / ROWS) * h - shared.scroll * DRIFT;
+    const y = (info.y / ROWS) * h;
     // beside the record (left of it past 62%); where that does not fit (phones), just below or above it —
     // never over the record itself. One size read per change.
     const pw = pill!.offsetWidth;
@@ -160,10 +144,10 @@ function bindInspect(root: HTMLElement, ctx: MotionCtx, shared: Shared): Cleanup
     if (info) window.open(hrefOf(info), '_blank', 'noopener');
   }
 
-  /** anchor-local rest coordinates of a client point (one rect read; undoes the scroll-out drift) */
+  /** anchor-local coordinates of a client point (one rect read) */
   function local(clientX: number, clientY: number): [number, number] {
     const r = plot!.getBoundingClientRect();
-    return [clientX - r.left + PAD_X, clientY - r.top + PAD_TOP + shared.scroll * DRIFT];
+    return [clientX - r.left + PAD_X, clientY - r.top + PAD_TOP];
   }
 
   // ---- fine pointer: nearest within 16px, once per frame --------------------------------------------------
@@ -256,119 +240,4 @@ function bindInspect(root: HTMLElement, ctx: MotionCtx, shared: Shared): Cleanup
     window.clearTimeout(sayTimer);
     hide();
   };
-}
-
-/* ------------------------------------------------------------------ scroll-out */
-
-function bindScrollOut(root: HTMLElement, ctx: MotionCtx, shared: Shared): void {
-  const display = root.querySelector<HTMLElement>('[data-weigh="scan"]');
-  if (!display) return;
-  const { gsap } = ctx;
-
-  ctx.mm.add({ full: MQ.full, narrow: NARROW }, (c, contextSafe) => {
-    const cond = (c.conditions ?? {}) as { full?: boolean; narrow?: boolean };
-    if (!cond.full) return;
-
-    let built = false;
-    const offs: (() => void)[] = [];
-
-    const build = (): void => {
-      if (built || document.documentElement.hasAttribute('data-intro')) return;
-      built = true;
-      for (const off of offs) off();
-      offs.length = 0;
-
-      const set =
-        display.querySelector<HTMLElement>(cond.narrow ? '.display__set--narrow' : '.display__set--wide') ??
-        display.querySelector<HTMLElement>('.display__set--wide');
-      if (!set) return;
-      const chars = ctx.prim.split(set, 'chars').chars as HTMLElement[];
-      if (!chars.length) return;
-
-      // one batch of reads: rest weight, font size, every glyph box, and where the line ends in the hero
-      const rest = parseFloat(getComputedStyle(display).fontWeight) || (isZh(display) ? 600 : 560);
-      const fontPx = parseFloat(getComputedStyle(set).fontSize) || 1;
-      const boxes = chars.map((el) => el.getBoundingClientRect());
-      const heroBox = root.getBoundingClientRect();
-      const setBox = set.getBoundingClientRect();
-
-      // writes: lock every glyph in its rest-width slot (em: survives fit-to-line resizes)
-      boxes.forEach((b, i) => ((chars[i] as HTMLElement).style.width = `${(b.width / fontPx).toFixed(4)}em`));
-
-      const left = setBox.left;
-      const width = setBox.width || 1;
-      const tops: number[] = [];
-      const lineOf = boxes.map((b) => {
-        let k = tops.findIndex((t) => Math.abs(t - b.top) < fontPx * 0.5);
-        if (k < 0) k = tops.push(b.top) - 1;
-        return k;
-      });
-      const idx = new Map<number, number>();
-      const inLine = lineOf.map((k) => {
-        const v = idx.get(k) ?? 0;
-        idx.set(k, v + 1);
-        return v;
-      });
-
-      // the wave finishes about when the line has left the viewport
-      const height = heroBox.height || 1;
-      const leave = Math.min(0.6, Math.max(0.2, ((setBox.bottom - heroBox.top) / height) * 0.9));
-      const dur = leave * 0.55;
-
-      const tl = gsap.timeline({
-        defaults: { ease: 'none' },
-        scrollTrigger: { trigger: root, start: 'top top', end: 'bottom top', scrub: 0.6 },
-      });
-      tl.set({}, {}, 1); // the wave's timeline spans the whole hero range
-      chars.forEach((el, i) => {
-        const b = boxes[i] as DOMRect;
-        const fx = Math.min(1, Math.max(0, (b.left - left) / width));
-        tl.fromTo(
-          el,
-          { fontVariationSettings: `"wght" ${rest}`, yPercent: 0 },
-          { fontVariationSettings: '"wght" 200', yPercent: -3 * ((inLine[i] as number) + 1), duration: dur },
-          fx * (leave - dur),
-        );
-      });
-    };
-    const safeBuild = (contextSafe ? contextSafe(build) : build) as () => void;
-
-    // The record keeps its lanes while it is being read: it drifts up and dims (the light leaves) only as the
-    // plot itself leaves under the header. (§5.3 maps uScroll to the hero range, which assumed a hero no taller
-    // than the viewport; this hero's record starts below the fold.)
-    const plot = root.querySelector<HTMLElement>('[data-field-plot]');
-    if (plot) {
-      const p = { v: 0 };
-      gsap.fromTo(
-        p,
-        { v: 0 },
-        {
-          v: 1,
-          ease: 'none',
-          scrollTrigger: { trigger: plot, start: 'top 12%', end: 'bottom top', scrub: 0.6 },
-          onUpdate: () => {
-            shared.scroll = p.v;
-            ctx.engine?.get('field')?.set('uScroll', p.v);
-          },
-        },
-      );
-    }
-
-    // build on the first scroll (and never while the intro still owns the line)
-    const onScroll = (): void => {
-      if (window.scrollY > 0) safeBuild();
-    };
-    if (window.scrollY > 0 && !document.documentElement.hasAttribute('data-intro')) safeBuild();
-    else {
-      offs.push(listen(window, 'scroll', onScroll, { passive: true }));
-      offs.push(on('lj:intro-done', () => onScroll()));
-    }
-
-    return () => {
-      for (const off of offs) off();
-      offs.length = 0;
-      shared.scroll = 0;
-      ctx.engine?.get('field')?.set('uScroll', 0);
-    };
-  });
 }

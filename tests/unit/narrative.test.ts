@@ -1,12 +1,11 @@
-// S2 · home narrative (#work, #method, #not, #numbers, #contact): the copy and data the components build from,
-// and the pure timing helpers of their motion modules.
+// Home narrative (#hero, #work, #skills, #method, #numbers, #contact): the copy and data the components build
+// from, and the pure timing helpers of their motion modules.
 import { describe, expect, it } from 'vitest';
 import { formatFact, t, tList, tStr } from '@i18n/t';
 import type { Key, Locale } from '@i18n/types';
 import { NUMBERS, facts } from '@data/facts';
 import { LABS } from '@data/labs';
 import { features } from '@data/features';
-import { beats, DIM, LIT, RESTORE, shift, THIN, TOTAL } from '@motion/sections/not';
 import { chainWindow, UNLIT } from '@motion/sections/method';
 import { columns, rowDelay } from '@motion/sections/numbers';
 import { hasHan, LEAVE_SCALE } from '@motion/sections/work';
@@ -73,41 +72,41 @@ describe('#method', () => {
   });
 });
 
-describe('#not', () => {
-  it('three statements, each X / op / Y, plus the full sentence for assistive tech', () => {
+describe('#method verification rules (the #not statements, now a plain list)', () => {
+  it('three rules in both locales', () => {
     for (const l of LOCALES) {
-      for (const n of [1, 2, 3]) {
-        for (const p of ['x', 'op', 'y']) expect(tStr(`not.${n}.${p}` as Key, l)).not.toBe('');
-      }
-      const full = tStr('not.full', l);
-      for (const n of [1, 2, 3]) {
-        expect(full).toContain(tStr(`not.${n}.y` as Key, l));
-      }
+      const rules = tList('method.rules', l);
+      expect(rules).toHaveLength(3);
+      for (const r of rules) expect(r).not.toBe('');
+      expect(tStr('method.rules.cite', l)).toContain('FrontierComputerScience');
+    }
+  });
+});
+
+describe('#hero and #skills: an introduction built from public facts', () => {
+  it('the hero introduces the two projects by name and carries no slogan', () => {
+    for (const l of LOCALES) {
+      const intro = tStr('hero.intro', l);
+      expect(intro).toContain(tStr('work.gt.title', l));
+      expect(intro).toContain(tStr('work.fr.title', l));
+      for (const k of ['work', 'github', 'articles'] as const) expect(tStr(`hero.cta.${k}` as Key, l)).not.toBe('');
     }
   });
 
-  it('phases stay inside their statement and in order (a → b → c → d)', () => {
-    for (let i = 0; i < 3; i++) {
-      const b = beats(i);
-      expect(b.x).toBe(i);
-      expect(b.bars).toBeGreaterThan(b.x);
-      expect(b.slash).toBeGreaterThan(b.bars);
-      expect(b.y).toBeGreaterThan(b.slash);
-      expect(b.weigh).toBeGreaterThanOrEqual(b.y);
-      expect(b.weigh).toBeLessThan(i + 1);
+  it('six skills, each [name, what the record says, its source], with numbers from facts', () => {
+    for (const l of LOCALES) {
+      for (let i = 1; i <= 6; i++) {
+        const parts = tList(`skills.${i}` as Key, l);
+        expect(parts, `skills.${i} ${l}`).toHaveLength(3);
+        for (const p of parts) expect(p, `skills.${i} ${l}`).not.toBe('');
+      }
+      expect(tList('skills.1', l)[1]).toContain(formatFact('gt.cards', l));
+      expect(tList('skills.2', l)[1]).toContain(formatFact('gt.pass', l));
+      expect(tList('skills.2', l)[1]).toContain(formatFact('gtlab.guards', l));
+      expect(tList('skills.3', l)[1]).toContain(formatFact('gtlab.writers', l));
+      expect(tList('skills.4', l)[1]).toContain(formatFact('gt3d.parityOps', l));
+      expect(tList('skills.5', l)[1]).toContain(formatFact('gov.tests', l));
     }
-    expect(RESTORE).toBeGreaterThan(beats(2).weigh);
-    expect(TOTAL).toBeGreaterThan(RESTORE);
-    expect(THIN).toBeLessThan(LIT);
-    expect(DIM).toBeLessThan(1);
-  });
-
-  it('the active statement always sits in the last slot', () => {
-    const tops = [0, 210, 420];
-    expect(shift(tops, 0)).toBe(420);
-    expect(shift(tops, 1)).toBe(210);
-    expect(shift(tops, 2)).toBe(0);
-    expect(shift([], 0)).toBe(0);
   });
 });
 

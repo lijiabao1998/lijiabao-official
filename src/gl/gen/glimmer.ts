@@ -14,7 +14,7 @@
 export const SIGMA = 0.24;
 
 /**
- * The hero record: scene `field` and /posters/field.svg. Sizes in CSS px. Small, fairly dim points on purpose:
+ * The home record: scene `field` and /posters/field.svg. Sizes in CSS px. Small, fairly dim points on purpose:
  * a single record still reads as a distinct point, and a busy day (up to ~100 commits within 4px of GlimmerTown's
  * lane) builds its brightness from many overlaps — a fine streak with grain at its edges, not soft lumps.
  */
@@ -23,6 +23,7 @@ export const FIELD_LOOK = {
   size: { lite: 2.6, full: 2.8 },
   /** a lane's latest commit (amber, full peak) is this much larger */
   latest: 1.25,
-  /** peak alpha of one record (the latest commit and the inspected record burn at 1) */
-  peak: 0.5,
+  /** peak alpha of one record (the latest commit and the inspected record sit at 1). 0.5 on the dark page of
+   *  2026-09; 0.72 since the light page of 2026-11-18, where a single grey dot on white needs more ink to read. */
+  peak: 0.72,
 } as const;

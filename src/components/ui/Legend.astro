@@ -1,8 +1,8 @@
 ---
 // Tier-aware legend (§1, site law 3): `1 ● = k unit`, always printing the live k (1 in every tier in v1).
 // The k value sits in [data-legend-k] so the engine side can rewrite it if k ever changes.
-// A figure-specific legend key (e.g. hero.fig.legend, gt.pass.legend) renders as-is instead; in it, an
-// `amber` glyph index marks which ● is the amber one (e.g. the hero's "latest in each repo").
+// A figure-specific legend key (e.g. record.fig.legend, gt.pass.legend) renders as-is instead; in it, an
+// `amber` glyph index marks which ● is the amber one (e.g. the record's "latest in each repo").
 import { localeOf, ts } from '../chrome/i18n';
 
 interface Props {

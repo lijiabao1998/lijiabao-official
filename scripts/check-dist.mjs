@@ -2,7 +2,7 @@
 // scripts/check-dist.mjs — what actually ships (spec §8 budgets and headers, §9.5 items 1, 14, 15; §3 routes and
 // head; build-overrides §1–3). Run after `npm run build` (postbuild has written dist/_headers).
 //
-// Budgets (src/data/budgets.ts, the same numbers `tier.cap` prints; KB = 1024 B, gzip -9 unless raw):
+// Budgets (src/data/budgets.ts; KB = 1024 B, gzip -9 unless raw):
 //   HTML per page · head boot script · Geist latin / Geist Mono / Noto hero / Noto display (woff2, raw) ·
 //   JS static tier (entry scripts + their static imports) · JS lite/full (+ the motion runtime and the page's
 //   section modules) · GL engine + scenes · commits.bin · portrait bins (raw) · field poster · portrait AVIF ·
@@ -340,7 +340,6 @@ const chunkName = (r) => basename(r).split('.')[0];
 // registry keys → section chunk names (motion/registry.ts is TypeScript with extensionless imports: read it)
 const registrySrc = readFileSync(join(ROOT, 'src/motion/registry.ts'), 'utf8');
 const SECTION = new Map([...registrySrc.matchAll(/['"]?([\w-]+)['"]?\s*:\s*\(\)\s*=>\s*import\(\s*['"]\.\/sections\/([\w-]+)['"]\s*\)/g)].map((m) => [m[2], m[1]]));
-const INTRO = 'intro';
 const GL_NAMES = new Set(['engine', 'field', 'portrait', 'grid', 'inspect']);
 const DEV_ONLY = new Set(['mock']);
 
@@ -366,7 +365,6 @@ function entries(page) {
 function jsSets(page) {
   const motion = new Set(page.doc.elements.filter((e) => e.attrs.has('data-motion')).map((e) => e.attrs.get('data-motion')));
   const wantSection = (name) => {
-    if (name === INTRO) return page.kind === 'home';
     const key = SECTION.get(name);
     return key === 'reveal' || motion.has(key);
   };
@@ -386,7 +384,7 @@ function jsSets(page) {
         glRoots.add(d);
         continue;
       }
-      if ((SECTION.has(name) || name === INTRO) && !wantSection(name)) continue;
+      if (SECTION.has(name) && !wantSection(name)) continue;
       for (const x of staticClosure([d])) {
         if (!lite.has(x)) {
           lite.add(x);

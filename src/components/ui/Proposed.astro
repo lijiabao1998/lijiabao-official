@@ -1,5 +1,5 @@
 ---
-// <Proposed k="manifesto.reading" as="div"> …block… </Proposed>
+// <Proposed k="about.belief" as="div"> …block… </Proposed>
 // Wraps a block whose copy is gated by a P/PE key (spec §4.0):
 // - resolve(k) is null (not approved, `fallback: null`, or feature off) → renders nothing;
 // - production, approved or falling back to a fact → renders the wrapper with the slot;
@@ -37,7 +37,7 @@ const Tag = as;
 <style>
   .proposed {
     position: relative;
-    outline: 1px dashed var(--glim, #ffb547);
+    outline: 1px dashed var(--glim, #2563eb);
     outline-offset: 6px;
   }
   .proposed__tag {
@@ -46,10 +46,10 @@ const Tag = as;
     left: 0;
     translate: 0 -100%;
     padding: 2px 8px;
-    border: 1px solid var(--glim, #ffb547);
+    border: 1px solid var(--glim, #2563eb);
     border-radius: 999px;
-    background: var(--bg, #0b0b0c);
-    color: var(--glim, #ffb547);
+    background: var(--bg, #ffffff);
+    color: var(--glim, #2563eb);
     font: 500 0.75rem/1.4 var(--ff-mono, ui-monospace, monospace);
     letter-spacing: 0.06em;
     white-space: nowrap;

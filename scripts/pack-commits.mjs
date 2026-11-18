@@ -9,7 +9,7 @@
 //   sorted by lane (gen/lanes.ts order), then time. No subjects, no authors.
 //
 // Ordinal fallback (spec §6.1): if the snapshot is missing or malformed, every lane gets its facts.ts commit
-// count with no dates and no shas (axis mode 1); the page then says so (hero.fig.ordinal) and never estimates
+// count with no dates and no shas (axis mode 1); the page then says so (record.fig.ordinal) and never estimates
 // a date. With a valid snapshot, every lane must match facts.ts exactly (else exit 1: the record and the copy
 // would disagree).
 //

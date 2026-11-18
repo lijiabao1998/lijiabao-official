@@ -1,16 +1,15 @@
 // src/motion/sections/method.ts — S2 · §5.3 #method.
 //
-// Quote (`top 75%`, once): SplitText on the aria-hidden visual copy — characters for zh, lines for en — each in
-// a mask, yPercent 105 → 0, 1.0s lj.rise; chars 0.012s apart, lines 0.07s (total capped at 0.6s).
 // Chain (`top 70%` → `top 30%`, scrub 0.5): five equal sub-ranges. In each, the → hairline draws from the left
 // (scaleX), its chevron draws when the line lands (stroke-dashoffset on pathLength = 1), and the step it leads
 // into lights (opacity; body text never changes weight, §2.2). Step 1 has no arrow: it lights on its own.
 // Reduced motion: nothing moves. Anything already on screen when this runs keeps its resting state.
+// (The owner's quote and its character rise left the section on 2026-11-18.)
 
 import type { Cleanup, MotionCtx } from '../registry';
 import { MQ } from '../registry';
-import { EASE, STAGGER, stagger } from '../eases';
-import { isZh, qs, qsa } from '../../lib/dom';
+import { EASE } from '../eases';
+import { qs, qsa } from '../../lib/dom';
 
 /** Opacity of a step before it is lit (the step exists before its arrow reaches it). */
 export const UNLIT = 0.22;
@@ -29,60 +28,14 @@ export function chainWindow(i: number, hasArrow: boolean): ChainWindow {
 }
 
 export function setup(root: HTMLElement, ctx: MotionCtx): Cleanup {
-  const vis = qs('[data-mq-vis]', root);
   const chain = qs('[data-chain]', root);
-  const { gsap, prim } = ctx;
+  const { gsap } = ctx;
 
   ctx.mm.add({ full: MQ.full, reduce: MQ.reduce }, (c) => {
     if (!(c.conditions as { full?: boolean } | undefined)?.full) return;
-
-    // one batch of reads before any write
-    const vh = window.innerHeight;
-    const quoteFresh = !!vis && vis.getBoundingClientRect().top >= vh;
-    const chainFresh = !!chain && chain.getBoundingClientRect().top >= vh;
-
-    if (vis && quoteFresh) quote(vis);
-    if (chain && chainFresh) steps(chain);
+    // a chain already on screen keeps its resting state
+    if (chain && chain.getBoundingClientRect().top >= window.innerHeight) steps(chain);
   });
-
-  // The split wraps like the plain text while it animates (prim.split: CJK units / masked lines) and is reverted
-  // when the rise ends, so the resting quote is the server HTML again.
-  function quote(el: HTMLElement): void {
-    const trigger: ScrollTrigger.Vars = { trigger: el, start: 'top 75%', once: true };
-    if (isZh(el)) {
-      const split = prim.split(el, 'chars', { mask: true });
-      const chars = split.chars;
-      gsap.fromTo(
-        chars,
-        { yPercent: 105 },
-        {
-          yPercent: 0,
-          duration: 1,
-          ease: EASE.rise,
-          stagger: stagger(STAGGER.charMin, chars.length),
-          scrollTrigger: trigger,
-          onComplete: () => split.revert(),
-        },
-      );
-      return;
-    }
-    prim.split(el, 'lines', {
-      autoSplit: true,
-      onSplit: (self) =>
-        gsap.fromTo(
-          self.lines,
-          { yPercent: 105 },
-          {
-            yPercent: 0,
-            duration: 1,
-            ease: EASE.rise,
-            stagger: stagger(STAGGER.line, self.lines.length),
-            scrollTrigger: { ...trigger },
-            onComplete: () => self.revert(),
-          },
-        ),
-    });
-  }
 
   function steps(list: HTMLElement): void {
     const items = qsa('[data-chain-step]', list);

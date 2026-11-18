@@ -12,7 +12,7 @@
 import type { EngineFactory, Runtime } from './boot';
 import { on, type TierDetail } from '../lib/events';
 import { markPageStart, MQ, mq } from '../lib/dom';
-import { endIntro, getTier, lockStatic, restoreSession } from '../lib/prefs';
+import { getTier, lockStatic, restoreSession } from '../lib/prefs';
 
 /** <html> attributes that must survive a swap (§5.5); everything else comes from the new document. */
 const KEEP = ['data-tier', 'data-motion', 'data-gl', 'data-js'] as const;
@@ -64,22 +64,17 @@ async function step(): Promise<void> {
       rt = null;
     }
     inited = null;
-    endIntro();
     return;
   }
   if (!rt) {
     const r = await bootRuntime();
-    if (!r) {
-      endIntro();
-      return;
-    }
+    if (!r) return;
     rt = r;
     if (r.glFailed) lockStatic('noWebgl'); // WebGL2 unusable: static for the session (HUD: tier.noWebgl)
     if (getTier() === 'static') {
       rt.destroy();
       rt = null;
       inited = null;
-      endIntro();
       return;
     }
   }
@@ -112,7 +107,6 @@ function onBeforeSwap(e: Event): void {
       if (v === null) to.removeAttribute(name);
       else to.setAttribute(name, v);
     }
-    to.removeAttribute('data-intro'); // the intro only ever plays on a full load
     for (const c of from.classList) if (c.startsWith('lenis')) to.classList.add(c);
   }
   rt?.teardownPage();

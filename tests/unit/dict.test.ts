@@ -28,9 +28,18 @@ describe('dictionary', () => {
     }
   });
 
-  it('the owner-approved hero line ships on both locales', () => {
-    expect(tStr('hero.line', 'zh-Hant')).toBe('讓每個人，都有一座自己的實驗室。');
-    expect(tStr('hero.line', 'en')).toBe('Everyone deserves a lab of their own.');
+  it("the owner's own line ships verbatim on both locales, as a belief in #about (the hero is an introduction)", () => {
+    expect(tStr('about.belief', 'zh-Hant')).toBe('讓每個人，都有一座自己的實驗室。');
+    expect(tStr('about.belief', 'en')).toBe('Everyone deserves a lab of their own.');
+    expect(entries.some(([k]) => k.startsWith('hero.line'))).toBe(false);
+  });
+
+  it('the Hebrew line and the signature are gone (the owner removed them on 2026-11-18)', () => {
+    const all = JSON.stringify(entries);
+    const gone: string[] = ['about.hebrew', 'about.signature'];
+    expect(entries.some(([k]) => gone.includes(k))).toBe(false);
+    expect(all.includes('現在，由我來定義')).toBe(false);
+    expect(/[֐-׿]/.test(all)).toBe(false);
   });
 
   it('never publishes the forbidden lines', () => {

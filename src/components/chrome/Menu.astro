@@ -16,7 +16,7 @@ interface Props {
 const { page } = Astro.props;
 const locale = localeOf(Astro);
 const home = localePath(locale, '/');
-const sections = ['work', 'method', 'vision', 'about', 'contact'] as const;
+const sections = ['about', 'work', 'skills', 'method', 'contact'] as const;
 const here = isContent(page) && page.kind === 'section' ? page.section : null;
 const content = await navSections(locale);
 // with content links the inline nav gives way to this menu below 1024px too (Header .hdr--more)

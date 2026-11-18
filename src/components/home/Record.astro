@@ -1,0 +1,44 @@
+---
+// #record: figure#fig-record — every default-branch commit on its repo lane (GL `field`, DATA), with the 19-row
+// table as the complete path. It sat in the hero until 2026-11-18; the hero is now an introduction, and the
+// record follows the numbers it is the source of.
+// Motion and inspection: motion/sections/record.ts (pointer, keyboard and touch readout; the table stays whole).
+import Section from '@ui/Section.astro';
+import T from '@ui/T.astro';
+import Figure from '@ui/Figure.astro';
+import RecordField from './RecordField.astro';
+import CommitTable from './CommitTable.astro';
+import { SNAPSHOT } from '@data/facts';
+import { laneRecords, type SnapshotLike } from '@gl/gen/lanes';
+
+// the figure caption: the ordinal fallback says so (spec §6.1)
+const snap = Object.values(
+  import.meta.glob<SnapshotLike>('../../data/snapshot.json', { eager: true, import: 'default' }),
+)[0];
+const timed = laneRecords(snap, {}).mode === 'time';
+---
+<Section id="record" motion="record" label="record.label" labelAs="h2">
+  <Figure
+    id="fig-record"
+    kind="DATA"
+    title="record.fig.title"
+    legend="record.fig.legend"
+    legendAmber={1}
+    caption={timed ? 'record.fig.caption' : 'record.fig.ordinal'}
+    table={CommitTable}
+    interactive
+    date={SNAPSHOT.asOf}
+    class="rec-fig"
+    stageClass="rec-stage"
+  >
+    <RecordField />
+    {timed && <T k="record.fig.note" as="p" slot="foot" class="rec-note t-small" />}
+  </Figure>
+</Section>
+
+<style>
+  #record :global(.rec-note) {
+    color: var(--fg-3);
+    max-width: 38em;
+  }
+</style>

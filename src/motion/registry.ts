@@ -102,13 +102,11 @@ export interface SplitOpts {
 
 /** One entry per section module in §9.1 (+ the generic reveal). Owners edit their file, never this map. */
 export const sections: Record<string, () => Promise<SectionModule>> = {
-  hero: () => import('./sections/hero'),
+  record: () => import('./sections/record'),
   work: () => import('./sections/work'),
   method: () => import('./sections/method'),
-  not: () => import('./sections/not'),
   numbers: () => import('./sections/numbers'),
   contact: () => import('./sections/contact'),
-  vision: () => import('./sections/vision'),
   about: () => import('./sections/about'),
   'gt-hero': () => import('./sections/gt-hero'),
   'gt-pass': () => import('./sections/gt-pass'),
@@ -122,9 +120,6 @@ export const sections: Record<string, () => Promise<SectionModule>> = {
   nf: () => import('./sections/nf'),
   reveal: () => import('./sections/reveal'),
 };
-
-/** §5.2 intro (S1). Same shape as a section; run once per full load when html[data-intro] is set on home. */
-export const intro = (): Promise<SectionModule> => import('./intro');
 
 /* ------------------------------------------------------------------ runner (used by boot.ts) */
 

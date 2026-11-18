@@ -172,14 +172,14 @@ for (const section of ['views', 'articles']) {
 }
 
 // ── llms.txt ────────────────────────────────────────────────────────────────────────────────────────────────
-const heroZh = line('hero.line', 'zh-Hant');
-const heroEn = line('hero.line', 'en');
-// The summary blockquote is ONE line describing the site (parsers keep only the first `>` line); the owner's line
-// follows as prose, in both languages.
+const introZh = line('hero.intro', 'zh-Hant');
+const introEn = line('hero.intro', 'en');
+// The summary blockquote is ONE line describing the site (parsers keep only the first `>` line); the home page's
+// introduction follows as prose, in both languages.
 const header =
   `# ${tStr('site.name', 'zh-Hant')} ${tStr('site.name', 'en')} — ${new URL(SITE_URL).host}\n\n` +
   `> ${tStr('meta.home.desc', 'zh-Hant')} ${tStr('meta.home.desc', 'en')}\n\n` +
-  `${heroZh}\n${heroEn}\n\n` +
+  `${introZh}\n${introEn}\n\n` +
   `${tStr('llms.snapshot', 'zh-Hant')} ${tStr('llms.snapshot', 'en')}\n` +
   `${tStr('llms.policy', 'zh-Hant')} ${tStr('llms.policy', 'en')}\n`;
 
@@ -285,7 +285,7 @@ for (const { file, text } of written) {
     if (!existsSync(join(DIST, p)) && !existsSync(join(DIST, `${p}.html`))) g.fail(`${rel(file)}: ${m[0]} does not resolve in dist`);
   }
 }
-if (!heroZh || !heroEn) g.fail('hero.line is empty');
+if (!introZh || !introEn) g.fail('hero.intro is empty');
 
 const nPosts = posts.length;
 const nIndexes = content.views.filter((e) => e.kind === 'section').length + content.articles.filter((e) => e.kind === 'section').length;

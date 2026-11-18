@@ -1,5 +1,5 @@
-// src/gl/scenes/inspect.ts — the CPU side of the hero record (spec §5.4 #fig-record, §6.1 picking). Shared by
-// the field scene (decode, pick, step) and motion/sections/hero.ts (readout data for a picked record), so both
+// src/gl/scenes/inspect.ts — the CPU side of the home record (spec §5.4 #fig-record, §6.1 picking). Shared by
+// the field scene (decode, pick, step) and motion/sections/record.ts (readout data for a picked record), so both
 // read the same decoded commits. No copy and no URLs: labels are repo names, dates and shas (data); the page
 // supplies the readout template (data-i18n-*) and the GitHub URL templates (data-commit-url / data-repo-url,
 // built from src/data/links.ts at build time).

@@ -228,14 +228,20 @@ describe('committed portrait bins', () => {
         const y = dv.getUint16(i * 6 + 2, true) / 65535;
         const r = Math.round(y * a.rows - 0.5);
         expect(Math.abs(y - (r + 0.5) / a.rows)).toBeLessThan(1e-4); // exactly on a baseline
+        if (dv.getUint8(i * 6 + 5) === PT.ACCENT) accents++;
+        // the fixed rim points lead bin a (they are in every prefix by design), so they are not part of the share
+        if (isA && i < meta.fixed) continue;
         rows[r]++;
         if (isA) rowsA[r]++;
-        if (dv.getUint8(i * 6 + 5) === PT.ACCENT) accents++;
       }
     }
     expect(accents).toBe(meta.accents);
     expect(accents).toBeLessThan((PT.A + PT.B) * 0.01);
-    // the lite prefix keeps each well-populated row near a third of its points (fixed rim points sit on top)
+    expect(meta.fixed).toBeGreaterThan(0);
+    expect(meta.fixed).toBeLessThan(PT.A * 0.1);
+    // the lite prefix keeps each well-populated row near a third of its sampled points. (The fixed rim points are
+    // counted apart: since the ink portrait of 2026-11-18 the lit face carries few sampled points, so on the rows
+    // that cross the glasses the rims would otherwise dominate the share.)
     for (let r = 0; r < a.rows; r++) {
       const all = rows[r] as number;
       if (all < 30) continue;

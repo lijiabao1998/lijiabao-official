@@ -1,8 +1,7 @@
 /* ==========================================================================
-   motion.css — §5.1 fail-open rule, §5.2 intro before-states, §5.5 view
-   transitions. CSS never hides content without a way back: every "before"
-   state set under html[data-intro] carries an animation that returns it to
-   rest after 2.5s, even if no script ever runs.
+   motion.css — §5.1 fail-open rule, §5.5 view transitions. CSS never hides
+   content without a way back: every "before" state carries an animation
+   that returns it to rest after 2.5s, even if no script ever runs.
    ========================================================================== */
 
 /* ---- fail-open ------------------------------------------------------------ */
@@ -13,32 +12,6 @@
     clip-path: none;
     font-variation-settings: normal;
   }
-}
-
-/* §5.2 intro before-states. Only while html[data-intro] is present (the head boot sets it,
-   motion/intro.ts removes it at 1.4s or on skip). Contract for S1:
-   - [data-weigh="scan"]   : the hero line starts dim (wght 160) and weighs in as the head passes;
-   - [data-intro-line]     : the hairline under line 1 starts at scaleX(0) from the left;
-   - [data-intro-rise]     : sub / meta lines start masked below (mask-rise);
-   - [data-intro-dot]      : the 6px amber scan head (hidden until the intro moves it). */
-html[data-intro] [data-weigh='scan'] {
-  font-variation-settings: 'wght' var(--w-dim);
-  animation: lj-failopen 0s linear 2.5s forwards;
-}
-html[data-intro] [data-intro-line] {
-  transform: scaleX(0);
-  transform-origin: 0 50%;
-  animation: lj-failopen 0s linear 2.5s forwards;
-}
-html[data-intro] [data-intro-rise] {
-  transform: translateY(105%);
-  animation: lj-failopen 0s linear 2.5s forwards;
-}
-html[data-intro] [data-intro-dot] {
-  opacity: 0;
-}
-html:not([data-intro]) [data-intro-dot] {
-  display: none;
 }
 
 /* ---- view transitions (§5.5) --------------------------------------------- */

@@ -1,10 +1,10 @@
-// src/gl/scenes/field.ts — scene `field`: the record on the home hero (spec §6.1). DATA: one point per
+// src/gl/scenes/field.ts — scene `field`: the record in the home page's #record (spec §6.1). DATA: one point per
 // default-branch commit (all of them, in every tier; k = 1), on 19 repo lanes along a broken time axis.
 //
-// The anchor (HeroField's [data-gl-scene="field"]) overhangs the plot band by PAD so records sliding along a
-// lane or drifting up on scroll are never cut by the scissor; HeroField.astro sets the same insets in CSS.
-// Handles (motion/intro.ts, motion/sections/hero.ts): set('uScan' | 'uScroll' | 'uPicked', v), pick(x, y),
-// step(dir). Defaults: uScan 1.1 (lit: repeat visits and the no-intro path), uScroll 0, uPicked -1.
+// The anchor (RecordField's [data-gl-scene="field"]) overhangs the plot band by PAD so records sliding along a
+// lane are never cut by the scissor; RecordField.astro sets the same insets in CSS.
+// Handles (motion/sections/record.ts): set('uPicked', v), pick(x, y), step(dir). Defaults: uScan 1.1 (every
+// record lit), uScroll 0, uPicked -1; nothing drives uScan or uScroll since the opening sequence went (2026-11-18).
 // Look: gen/glimmer.ts FIELD_LOOK (one soft gaussian glimmer per record; /posters/field.svg draws the same).
 
 import type { Frame, RecordRef, SceneDef, StepDir, Tier } from '../types';
@@ -24,7 +24,7 @@ import {
   type FieldData,
 } from './inspect';
 
-/** Anchor overhang around the plot band, CSS px (= HeroField.astro `.field-anchor` insets). */
+/** Anchor overhang around the plot band, CSS px (= RecordField.astro `.field-anchor` insets). */
 export const PAD = { x: 16, top: 32, bottom: 8 } as const;
 
 interface ManifestEntry {

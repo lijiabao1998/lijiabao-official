@@ -1,20 +1,17 @@
 ---
-// HeroField — the inside of figure#fig-record (spec §3 row 1, §6.1, §5.4): 19 repo lanes on 20 rows (DOM labels
+// RecordField — the inside of figure#fig-record in #record (spec §6.1, §5.4): 19 repo lanes on 20 rows (DOM labels
 // in the left gutter), the plot band (lane rules, the axis break, the GL anchor with its poster), the time axis
 // (DOM ticks) and the inspect readout. Rendered inside <Figure interactive>'s stage.
 //
 // Tiers: the poster (/posters/field.svg, same generators as the scene) is the whole figure in the static tier,
 // with no JS, on GL loss and under forced colours; GL draws the same dots at the same places once live.
-// During the §5.2 intro the poster starts unlit (10%) and a second, lit copy is revealed left → right by the
-// scan (`--field-scan`), so a late engine still sees light arrive from the left; both fail open at 2.5s.
 // DOM contract: [data-gl-scene="field"][data-gl-src="field"] (engine anchor, overhangs the band by
-// gl/scenes/field.ts PAD), [data-field-plot] (band; data-latest-x/y = GlimmerTown's latest commit, the intro's
-// landing point), [data-field-readout], [data-field-live], data-i18n-readout / -open (runtime copy templates),
+// gl/scenes/field.ts PAD), [data-field-plot] (band), [data-field-readout], [data-field-live], data-i18n-readout / -open (runtime copy templates),
 // data-commit-url / data-repo-url (GitHub URL templates from src/data/links.ts).
 import { facts, type RepoName } from '@data/facts';
 import { commitUrl, repoUrl } from '@data/links';
 import { REPOS } from '@data/repos';
-import { LANES, laneRecords, pointOf, ROWS, type SnapshotLike } from '@gl/gen/lanes';
+import { LANES, laneRecords, ROWS, type SnapshotLike } from '@gl/gen/lanes';
 import { BREAK, TICKS } from '@gl/gen/time-axis';
 import { localeOf, tpl, ts } from '../chrome/i18n';
 
@@ -26,12 +23,8 @@ const rec = laneRecords(
   snap,
   Object.fromEntries(REPOS.map((r) => [r.id, r.commits])),
 );
-if (rec.count !== facts['commits.total'].value) throw new Error('[HeroField] record count differs from facts.ts');
+if (rec.count !== facts['commits.total'].value) throw new Error('[RecordField] record count differs from facts.ts');
 const timed = rec.mode === 'time';
-
-// GlimmerTown's latest commit: where the intro's scan head comes to rest (the amber point of the first lane).
-const gt = rec.lanes[0];
-const land = gt && gt.minutes.length ? pointOf(rec.mode, gt, gt.minutes.length - 1) : { x: 1, y: 0.5 };
 
 const rows = Array.from({ length: ROWS }, (_, row) => LANES.find((l) => l.row === row) ?? null);
 const POSTER = '/posters/field.svg';
@@ -69,14 +62,11 @@ const repoTpl = repoUrl('{repo}' as RepoName);
   <div
     class="field-plot"
     data-field-plot
-    data-latest-x={land.x.toFixed(5)}
-    data-latest-y={land.y.toFixed(5)}
   >
     <span class="field-rules field-rules--gt" aria-hidden="true"></span>
     <span class="field-rules field-rules--fr" aria-hidden="true"></span>
     <div class="field-anchor" data-gl-scene="field" data-gl-src="field">
       <img class="poster field-poster" src={POSTER} alt="" width="1000" height="200" decoding="async" />
-      <img class="field-lit" src={POSTER} alt="" width="1000" height="200" decoding="async" aria-hidden="true" />
     </div>
     <a class="field-readout" data-field-readout data-gl-hole data-parity-ignore tabindex="-1" rel="noopener">
       <span class="field-readout-text" data-field-readout-text></span>
@@ -101,18 +91,18 @@ const repoTpl = repoUrl('{repo}' as RepoName);
           ))}
           <span class="axis-note axis-note--break" style={`--x:${BREAK[0]}`}>
             <span class="axis-break-mark" aria-hidden="true" />
-            {ts('hero.fig.break', locale)}
+            {ts('record.fig.break', locale)}
           </span>
           {accountTick && (
             <span class="axis-note axis-note--account" style={`--x:${accountTick.x.toFixed(5)}`}>
-              {words(ts('hero.fig.tick.account', locale)).map((w, i) => (
+              {words(ts('record.fig.tick.account', locale)).map((w, i) => (
                 <Fragment>{i > 0 && ' '}<span class="nw">{w}</span></Fragment>
               ))}
             </span>
           )}
         </Fragment>
       ) : (
-        <span class="axis-note axis-note--ordinal">{ts('hero.fig.ordinal', locale)}</span>
+        <span class="axis-note axis-note--ordinal">{ts('record.fig.ordinal', locale)}</span>
       )
     }
   </div>
@@ -208,31 +198,13 @@ const repoTpl = repoUrl('{repo}' as RepoName);
     inset: -32px -16px -8px;
     pointer-events: none;
   }
-  .field-anchor .field-poster,
-  .field-anchor .field-lit {
+  .field-anchor .field-poster {
     position: absolute;
     inset: 32px 16px 8px;
     width: calc(100% - 32px);
     height: calc(100% - 40px);
     max-width: none;
     object-fit: fill;
-  }
-  .field-lit {
-    display: none;
-  }
-  /* §5.2 intro: records exist before they are lit — dim base, lit copy revealed by the scan */
-  :global(html[data-intro]) .field-anchor .field-poster {
-    opacity: 0.1;
-    animation: lj-failopen 0s linear 2.5s forwards;
-  }
-  :global(html[data-intro]) .field-anchor:not([data-gl-live]) .field-lit {
-    display: block;
-    clip-path: inset(0 calc((1 - var(--field-scan, 0)) * 100%) 0 0);
-    animation: lj-failopen 0s linear 2.5s forwards;
-  }
-  :global(html[data-gl='ok']) .field-anchor[data-gl-live] .field-lit,
-  :global(html[data-tier='static']) .field-lit {
-    display: none;
   }
 
   /* ---- readout: follows the inspected record; opaque, so no glimmer sits under its text ------- */

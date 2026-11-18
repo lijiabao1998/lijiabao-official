@@ -1,10 +1,10 @@
-// src/gl/gen/time-axis.ts — the hero record's honest, visibly broken time axis (spec §6.1). Pure, deterministic,
-// Node-safe: shared by the field scene (GPU x), the static poster (/posters/field.svg), HeroField's DOM ticks,
+// src/gl/gen/time-axis.ts — the home record's honest, visibly broken time axis (spec §6.1). Pure, deterministic,
+// Node-safe: shared by the field scene (GPU x), the static poster (/posters/field.svg), RecordField's DOM ticks,
 // CommitTable's dates, scripts/pack-commits.mjs and tests/unit/time-axis.test.ts.
 //
 // Time is Asia/Taipei (UTC+8, no DST). Minutes are counted from 2026-07-12 00:00 +08:00.
 //   Segment A  2026-07-12 → 2026-09-13 (63 days)  → x ∈ [0, 0.22]      (compressed: GlimmerTown's early history)
-//   break      x ∈ [0.225, 0.245]                  (two slanted hairlines + hero.fig.break)
+//   break      x ∈ [0.225, 0.245]                  (two slanted hairlines + record.fig.break)
 //   Segment B  2026-09-13 → 2026-10-01 (18 days)  → x ∈ [0.25, 1.0]
 // Ordinal fallback (no snapshot): x = (i + 0.5) / n within each lane; no date is ever estimated.
 
@@ -76,7 +76,7 @@ export interface Tick {
   /** mono tick label, 'MM-DD' */
   label: string;
   x: number;
-  /** the account-creation tick (labelled with hero.fig.tick.account) */
+  /** the account-creation tick (labelled with record.fig.tick.account) */
   account?: boolean;
   /** dropped under 640px so labels never collide */
   minor?: boolean;

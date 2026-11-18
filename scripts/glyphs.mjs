@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // scripts/glyphs.mjs — dictionary → Noto Sans TC glyph subsets (spec §2.2) → src/data/glyphs.json.
 //
-//   hero    = every CJK character of the zh `site.name`, `hero.name` and `hero.line` as they render in
-//             production (P/PE gating applied: hero.line is APPROVED, so its fallback is not included).
+//   hero    = every CJK character of the zh `site.name` and `hero.name` (the wordmark and the home h1) as they render in
+//             production.
 //   display = every CJK character of the zh entries flagged `display: true` (production values,
 //             narrow lines included), minus the hero set.
 //
@@ -18,7 +18,7 @@ import { dirname, resolve } from 'node:path';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = resolve(ROOT, 'src/data/glyphs.json');
-const HERO_KEYS = ['site.name', 'hero.name', 'hero.line'];
+const HERO_KEYS = ['site.name', 'hero.name'];
 const LOCALE = 'zh-Hant';
 
 const imp = (p) => import(pathToFileURL(resolve(ROOT, p)).href);
@@ -71,7 +71,7 @@ const out = {
   heroCount: heroSet.size,
   displayCount: displaySet.size,
   budget: { hero: MAX_HERO, display: MAX_DISPLAY },
-  source: 'scripts/glyphs.mjs (zh production values of site.name, hero.name, hero.line; display:true entries)',
+  source: 'scripts/glyphs.mjs (zh production values of site.name, hero.name; display:true entries)',
 };
 
 const report = `hero ${heroSet.size}/${MAX_HERO}: ${hero}\ndisplay ${displaySet.size}/${MAX_DISPLAY}: ${display}\n`;

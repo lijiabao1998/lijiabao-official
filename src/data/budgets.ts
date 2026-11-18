@@ -1,8 +1,5 @@
 // src/data/budgets.ts — byte and glyph budgets (spec §8). Read by the CI checks (check-dist,
-// glyphs) and by the page (`tier.cap`). Sizes are KB (1 KB = 1024 B), gzipped unless marked raw.
-
-export type Tier = 'full' | 'lite' | 'static';
-export type BudgetLocale = 'zh-Hant' | 'en';
+// glyphs). Sizes are KB (1 KB = 1024 B), gzipped unless marked raw.
 
 export const budgets = {
   html: {
@@ -39,7 +36,7 @@ export const budgets = {
      * RFC integration 2026-10-01: 11 → 12. S3's TierCards (the way out of static) and the portrait caption
      * sync are static-tier component scripts on home: 11.8 KB measured.
      * liteHomeGt RFC integration 2026-10-01: 82 → 84 (home measured 83.5 KB after S1–S3).
-     * The first-view totals below are held at their published values (they are what `tier.cap` prints);
+     * The first-view totals below are held at their published values;
      * measured today: zh lite 241, zh static 145, en lite 194, en static 97.
      */
     static: 12,
@@ -81,10 +78,3 @@ export const budgets = {
     display: 140,
   },
 } as const;
-
-/** The first-view cap shown by `tier.cap` ({kb}) for the home page in a locale and tier. */
-export function firstViewCap(locale: BudgetLocale, tier: Tier): number {
-  const fv = budgets.firstView;
-  if (tier === 'static') return locale === 'en' ? fv.enHomeStatic : fv.zhHomeStatic;
-  return locale === 'en' ? fv.enHomeLite : fv.zhHomeLite;
-}

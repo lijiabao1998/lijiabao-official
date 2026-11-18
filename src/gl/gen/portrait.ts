@@ -45,7 +45,8 @@ export const LOOK = {
   lite: [1.8, 3.6],
   full: [1.6, 3.2],
   alpha0: 0.3,
-  peak: { lite: 0.7, full: 0.6 },
+  // ink on white (2026-11-18): a little more than the 0.7 / 0.6 of the dark page, so the stipple reads as a drawing
+  peak: { lite: 0.85, full: 0.75 },
 } as const;
 
 /** Points drawn per tier (spec §6.2 counts). */

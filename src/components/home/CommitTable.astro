@@ -31,12 +31,12 @@ const rows = rec.lanes.map((l) => {
   ];
 });
 const total = facts['commits.total'].value as number;
-const foot = [[ts('hero.table.total', locale), '', total, '', '']];
+const foot = [[ts('record.table.total', locale), '', total, '', '']];
 ---
 <DataTable
-  id="hero-table"
-  caption="hero.table.caption"
-  colsKey="hero.table.cols"
+  id="record-table"
+  caption="record.table.caption"
+  colsKey="record.table.cols"
   rows={rows}
   foot={foot}
   numeric={[2]}

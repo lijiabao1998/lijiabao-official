@@ -1,30 +1,16 @@
 ---
-// #about (§3 row 7, §4.2): the glimmer portrait on the left (weight sits on the left), and beside it, in order:
-// role → repos → his two X-bio lines (with English glosses on /en/) → the Hebrew line (lang="he" dir="rtl") →
-// the two art rules this site follows → the small signature line. Every line is his own or a plain fact; the
-// Hebrew line and the signature are owner-approved (features.hebrew / features.signature) and vanish if switched off.
+// #about (owner decision 2026-11-18: an introduction): the dot portrait on the left (weight sits on the left), and
+// beside it, in order: what he does on the two projects → the account facts → 信念 (the owner's own line, which
+// was the hero line until 2026-11-18, then his two X-bio lines, with English glosses on /en/).
+// Every line is his own or a plain fact. (The Hebrew line and the signature were removed by the owner, 2026-11-18.)
 // The text column rises through the generic [data-rise] reveal; the portrait's assembly is motion/sections/about.ts.
 import Section from '@ui/Section.astro';
 import T from '@ui/T.astro';
 import Portrait from './Portrait.astro';
 import type { Key } from '@i18n/types';
-import { localeOf, tl, ts, tv } from '../chrome/i18n';
+import { localeOf, ts } from '../chrome/i18n';
 
 const locale = localeOf(Astro);
-
-// the Hebrew line: [he segment, ' · ', gloss] → the line and its gloss set on two lines
-const he = tv('about.hebrew', locale);
-let heLine = '';
-let heGloss = '';
-if (Array.isArray(he)) {
-  for (const s of he) {
-    if (typeof s === 'object' && s !== null && 'lang' in s && s.lang === 'he') heLine += s.text;
-    else if (typeof s === 'string') heGloss += s;
-    else if (typeof s === 'object' && s !== null) heGloss += s.text;
-  }
-  heGloss = heGloss.replace(/^\s*·\s*/, '').trim();
-}
-const rules = tl('about.rules', locale);
 const lines = [1, 2].map((i) => ({ line: `about.line${i}` as Key, gloss: `about.line${i}.gloss` as Key }));
 ---
 <Section id="about" motion="about" label="about.label" labelAs="h2">
@@ -40,37 +26,20 @@ const lines = [1, 2].map((i) => ({ line: `about.line${i}` as Key, gloss: `about.
         <T k="about.older" as="p" />
       </div>
 
-      <ul class="ab-lines" role="list">
-        {
-          lines.map((l) => (
-            <li class="ab-line" data-rise>
-              <T k={l.line} as="p" class="ab-motto" />
-              <T k={l.gloss} as="p" class="ab-gloss" />
-            </li>
-          ))
-        }
-      </ul>
-
-      {
-        heLine && (
-          <div class="ab-he" data-rise>
-            <p class="ab-he-line" lang="he" dir="rtl">
-              {heLine}
-            </p>
-            {heGloss && <p class="ab-gloss">{heGloss}</p>}
-          </div>
-        )
-      }
-
-      <div class="ab-rules" data-rise>
-        <h3 class="ab-sub t-label">{ts('about.rules.title', locale)}</h3>
-        <ol class="ab-rule-list" role="list">
-          {rules.map((r) => <li>{r}</li>)}
-        </ol>
-        <T k="about.rules.note" as="p" class="ab-note" />
+      <div class="ab-beliefs">
+        <h3 class="ab-sub t-label" data-rise>{ts('about.belief.label', locale)}</h3>
+        <T k="about.belief" as="p" class="ab-belief" data-rise />
+        <ul class="ab-lines" role="list">
+          {
+            lines.map((l) => (
+              <li class="ab-line" data-rise>
+                <T k={l.line} as="p" class="ab-motto" />
+                <T k={l.gloss} as="p" class="ab-gloss" />
+              </li>
+            ))
+          }
+        </ul>
       </div>
-
-      <T k="about.signature" as="p" class="ab-sig" data-rise />
     </div>
   </div>
 </Section>
@@ -118,87 +87,45 @@ const lines = [1, 2].map((i) => ({ line: `about.line${i}` as Key, gloss: `about.
     color: var(--fg-2);
   }
 
-  .ab-lines {
-    list-style: none;
-    padding: 0;
-    display: grid;
-    gap: var(--s-5);
-  }
-  .ab-line {
-    padding-top: var(--s-5);
-    border-top: 1px solid var(--line);
-  }
-  .ab-text :global(.ab-motto),
-  .ab-he-line {
-    font-family: var(--ff-body);
-    font-size: var(--fs-h3);
-    font-weight: 500;
-    line-height: 1.35;
-    letter-spacing: 0.04em;
-    color: var(--fg);
-  }
-  .ab-he-line {
-    letter-spacing: 0;
-    text-align: left;
-  }
-  .ab-text :global(.ab-gloss),
-  .ab-gloss {
-    margin-top: var(--s-2);
-    font-size: var(--fs-small);
-    color: var(--fg-3);
-  }
-  .ab-he {
-    padding-top: var(--s-5);
-    border-top: 1px solid var(--line);
-  }
-
+  /* ---- 信念: his own line first (display face: its glyphs are in the subset), then the two X-bio lines ---- */
   .ab-sub {
     color: var(--fg-3);
     margin-bottom: var(--s-4);
   }
-  .ab-rule-list {
+  .ab-text :global(.ab-belief) {
+    font-family: var(--ff-display);
+    font-size: var(--fs-h3);
+    font-weight: 560;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+    color: var(--fg);
+    text-wrap: balance;
+  }
+  .ab-text :global(.ab-belief:lang(zh)) {
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: 0.04em;
+  }
+  .ab-lines {
     list-style: none;
+    margin-top: var(--s-5);
     padding: 0;
     display: grid;
-    gap: var(--s-1);
-    font-size: var(--fs-lede);
-    line-height: 1.45;
-    color: var(--fg);
+    gap: var(--s-4);
   }
-  .ab-rule-list li {
-    display: flex;
-    align-items: baseline;
-    gap: var(--s-3);
+  .ab-line {
+    padding-top: var(--s-4);
+    border-top: 1px solid var(--line);
   }
-  /* each rule sits after a short baseline hairline (no light: hairlines are the only marks, §2.5) */
-  .ab-rule-list li::before {
-    content: '';
-    flex: none;
-    width: 16px;
-    height: 1px;
-    background: var(--line-ui);
-    transform: translateY(-0.3em);
-  }
-  .ab-text :global(.ab-note) {
-    margin-top: var(--s-4);
-    max-width: 30em;
-    font-size: var(--fs-small);
+  .ab-text :global(.ab-motto) {
+    font-size: var(--fs-body);
+    line-height: 1.5;
+    letter-spacing: 0.04em;
     color: var(--fg-2);
   }
-
-  .ab-text :global(.ab-sig) {
-    display: flex;
-    align-items: center;
-    gap: var(--s-3);
+  .ab-text :global(.ab-gloss) {
+    margin-top: var(--s-2);
     font-size: var(--fs-small);
-    letter-spacing: 0.06em;
-    color: var(--fg-2);
-  }
-  .ab-text :global(.ab-sig)::before {
-    content: '';
-    flex: none;
-    width: 24px;
-    height: 1px;
-    background: var(--line-ui);
+    color: var(--fg-3);
   }
 </style>

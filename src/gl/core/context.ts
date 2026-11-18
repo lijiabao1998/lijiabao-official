@@ -39,8 +39,8 @@ export function clearAll(gl: WebGL2RenderingContext): void {
   gl.enable(gl.SCISSOR_TEST);
 }
 
-const FG: RGB = [0xed / 255, 0xeb / 255, 0xe6 / 255];
-const GLIM: RGB = [1, 0xb5 / 255, 0x47 / 255];
+const FG: RGB = [0x14 / 255, 0x17 / 255, 0x1c / 255];
+const GLIM: RGB = [0x25 / 255, 0x63 / 255, 0xeb / 255];
 
 function hex(v: string, fallback: RGB): RGB {
   const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v.trim());

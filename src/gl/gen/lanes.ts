@@ -1,5 +1,5 @@
-// src/gl/gen/lanes.ts — the hero record's 20 rows (spec §6.1). Pure, deterministic, Node-safe: shared by the
-// field scene, the static poster, HeroField (DOM lane labels), CommitTable, scripts/pack-commits.mjs and tests.
+// src/gl/gen/lanes.ts — the home record's 20 rows (spec §6.1). Pure, deterministic, Node-safe: shared by the
+// field scene, the static poster, RecordField (DOM lane labels), CommitTable, scripts/pack-commits.mjs and tests.
 //
 // Rows: the 3 GlimmerTown lanes, one spacer, FrontierLab-Governance, then the 15 labs in brief order
 // (= REPOS order in src/data/repos.ts; tests/unit/lanes.test.ts keeps the two in step). Each commit sits on its

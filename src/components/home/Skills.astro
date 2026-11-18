@@ -1,0 +1,135 @@
+---
+// #skills (owner decision 2026-11-18): what the public record shows he can do, six items. Each is
+// [name, what the record says, its source] (skills.1 … skills.6); the source links to the file, folder or repo it
+// names, so nothing here is a claim without a place to check it. Numbers come from facts.ts through the copy.
+// Markup: a list of <article>s, each named by its h3. Motion: the generic [data-rise] reveal only.
+import Section from '@ui/Section.astro';
+import T from '@ui/T.astro';
+import { GITHUB_PROFILE, links, repoUrl } from '@data/links';
+import { runsOf } from '@i18n/t';
+import type { Key } from '@i18n/types';
+import { localeOf, ts, tv } from '../chrome/i18n';
+
+const locale = localeOf(Astro);
+const ext = ts('a11y.external', locale);
+
+/** where each item's source lives (same order as skills.1 … skills.6) */
+const SOURCES = [
+  `${repoUrl('GlimmerTown')}/tree/main/docs/tasks`,
+  links.docs.gtTests,
+  links.docs.labAgents,
+  links.docs.d011,
+  links.docs.govStatus,
+  `${GITHUB_PROFILE}/lijiabao-official`,
+] as const;
+
+const items = SOURCES.map((href, i) => {
+  const key = `skills.${i + 1}` as Key;
+  const val = tv(key, locale);
+  if (!Array.isArray(val) || val.length !== 3 || !val.every((p) => typeof p === 'string')) {
+    throw new Error(`[Skills] ${key} must be [name, body, source]`);
+  }
+  const [name, body, source] = val as string[];
+  return { id: `skill-${i + 1}`, name: name ?? '', body: runsOf(body ?? ''), source: runsOf(source ?? ''), href };
+});
+---
+<Section id="skills" label="skills.label" labelAs="h2">
+  <T k="skills.lede" as="p" class="sk-lede t-lede" data-rise />
+  <ul class="sk-list" role="list">
+    {
+      items.map((it) => (
+        <li class="sk-item" data-rise>
+          <article class="sk-card" aria-labelledby={it.id}>
+            <h3 id={it.id} class="sk-name">
+              {it.name}
+            </h3>
+            <p class="sk-body">{it.body.map((r) => (r.code ? <code>{r.text}</code> : r.text))}</p>
+            <p class="sk-src t-label">
+              <a class="link" href={it.href}>
+                {it.source.map((r) => (r.code ? <code>{r.text}</code> : r.text))}
+                <span class="sr-only">{ext}</span>
+              </a>
+            </p>
+          </article>
+        </li>
+      ))
+    }
+  </ul>
+</Section>
+
+<style>
+  #skills :global(.sk-lede) {
+    max-width: 30em;
+    color: var(--fg-2);
+  }
+  .sk-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-5);
+    margin: var(--s-8) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  @media (min-width: 640px) {
+    .sk-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1024px) {
+    .sk-list {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--s-6);
+    }
+  }
+  .sk-item {
+    display: flex;
+    min-width: 0;
+  }
+  .sk-card {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    padding: var(--s-5);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--bg-2);
+  }
+  .sk-name {
+    font-family: var(--ff-body);
+    font-size: var(--fs-h3);
+    font-weight: 560;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    color: var(--fg);
+  }
+  .sk-name:lang(zh) {
+    font-weight: 600;
+    line-height: 1.35;
+    letter-spacing: 0.02em;
+  }
+  .sk-body {
+    margin-top: var(--s-3);
+    color: var(--fg-2);
+  }
+  .sk-body :global(code),
+  .sk-src :global(code) {
+    font-size: 0.92em;
+  }
+  /* the source sits on the card's bottom edge, so a row of cards lines its sources up */
+  .sk-src {
+    margin-top: auto;
+    padding-top: var(--s-5);
+    color: var(--fg-3);
+    text-transform: none;
+  }
+  .sk-src :global(.link) {
+    color: var(--fg-2);
+  }
+
+  @media (forced-colors: active) {
+    .sk-card {
+      border-color: CanvasText;
+    }
+  }
+</style>

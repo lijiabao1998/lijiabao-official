@@ -1,6 +1,9 @@
 /* ==========================================================================
-   tokens.css — §2 visual system. Dark only, one accent. Flat surfaces;
-   all depth comes from points of light. Nothing here renders by itself.
+   tokens.css — §2 visual system. Light only, one accent (owner decision
+   2026-11-18: the palette of an introduction and job-seeking site). Ink on
+   white paper, cool neutral greys, one blue for what is active, selected or
+   latest. Flat surfaces: no gradients, no glow, no shadows. Every point a
+   figure draws is a dot of ink. Nothing here renders by itself.
    ========================================================================== */
 
 @property --tk {
@@ -11,22 +14,22 @@
 @property --tc {
   syntax: '<color>';
   inherits: true;
-  initial-value: #827f79;
+  initial-value: #666d7a;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* ---- colour (§2.1; ratios vs --bg / --bg-2) ---------------------------- */
-  --bg: #0b0b0c;
-  --bg-2: #131315;
-  --fg: #edebe6;      /* 16.51 / 15.58 */
-  --fg-2: #a8a59e;    /*  8.00 /  7.55 */
-  --fg-3: #827f79;    /*  4.93 /  4.65  — >= 12px only */
-  --line: #2a2a2d;    /* decorative hairlines; never the only carrier of meaning */
-  --line-ui: #6a6964; /* control borders (WCAG 1.4.11) */
-  --glim: #ffb547;    /* the glimmer: scan head, focus, selected, latest commit */
-  --on-glim: #0b0b0c;
+  /* ---- colour (§2.1; contrast ratios vs --bg / --bg-2) ------------------- */
+  --bg: #ffffff;      /* the page */
+  --bg-2: #f4f5f7;    /* surfaces: cards, code, menus */
+  --fg: #14171c;      /* 17.9 / 16.4  ink: headings, body, the points of a figure */
+  --fg-2: #4a5160;    /*  7.9 /  7.3  secondary text */
+  --fg-3: #666d7a;    /*  5.2 /  4.8  labels and sources, >= 12px only */
+  --line: #e2e5ea;    /* decorative hairlines; never the only carrier of meaning */
+  --line-ui: #7b8290; /*  3.9 /  3.5  control borders (WCAG 1.4.11) */
+  --glim: #2563eb;    /*  5.2 /  4.7  the one accent: focus, selected, latest commit (the token keeps its old name) */
+  --on-glim: #ffffff;
   --gl-alpha: 1;      /* multiplied into GL output (prefers-contrast halves it) */
 
   /* ---- families (§2.2) ---------------------------------------------------- */

@@ -1,11 +1,11 @@
 {
-  "hero": "。一人個宝室家實己座有李每的自讓都驗，",
-  "display": "、七三下不中主事什以件作併做先光全兩公凍出分則前力功卡可各合同否品型城失套字守安宣審小工已平張微心思意成所打技探敗數文方施是時查核條模權沒治沿法測焦照獨現理生界研科種稱究立章紀索結綠線編聚能般衛規觀解計記評證譯輪這道邊重量錄鎮開間關頁高麼點（）／：",
-  "heroCount": 19,
-  "displayCount": 124,
+  "hero": "宝家李",
+  "display": "、。一七三下不中主事人什以件作併個做先光全兩凍出分到則前卡可各合同否品城失套字守安宣室實審小工己已座張微心思意成打找探敗數文方施是時有查核條每沒治沿法測焦照獨現理生界的研種稱究立章索結綠線聚自衛規觀解計記評讓輪這道邊都重量錄鎮開間關面頁驗麼點（），：",
+  "heroCount": 3,
+  "displayCount": 125,
   "budget": {
     "hero": 40,
     "display": 140
   },
-  "source": "scripts/glyphs.mjs (zh production values of site.name, hero.name, hero.line; display:true entries)"
+  "source": "scripts/glyphs.mjs (zh production values of site.name, hero.name; display:true entries)"
 }

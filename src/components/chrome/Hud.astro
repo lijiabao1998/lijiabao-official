@@ -83,7 +83,7 @@ const ssrAria = aria.replace('{tier}', label.static).replace('{n}', n0);
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const fill = (t: string, v: Record<string, string>) => t.replace(/\{(\w+)\}/g, (m, k: string) => v[k] ?? m);
 
-  /** Rebuild the readout from its template so [data-hud-tier] / [data-hud-n] exist for the intro tick. */
+  /** Rebuild the readout from its template ({tier}, and {n} when the template has one). */
   function paint(host: HTMLElement, template: string, tier: string, n: string) {
     const out: (Node | string)[] = [];
     for (const part of template.split(/(\{tier\}|\{n\})/)) {

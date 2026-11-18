@@ -5,8 +5,9 @@
 // of THIS machine's build (Geist, Geist Mono) plus the system Noto Sans TC, which CI does not have.
 //
 // Every mark on a card is a record, as on the site (law 1 「先有紀錄，才有光」):
-//   home — every default-branch commit of snapshot.json on its repo lane, placed by time (the axis is compressed
-//          before 2026-09-13, marked with a break), the latest commit of each lane amber;
+//   home — the two bodies of work by name, over every default-branch commit of snapshot.json on its repo lane,
+//          placed by time (the axis is compressed before 2026-09-13, marked with a break), the latest commit of
+//          each lane amber;
 //   gt   — the 12,513 PASS cells as the isometric lattice of the site (cell i at (i mod 112, i div 112));
 //   fr   — the governance core and 15 rows × 10 problem cards, ◆ on each lab's first-round card.
 // Every word comes from the dictionary (src/i18n) and every number from facts.ts / the snapshot. No seal, no
@@ -47,20 +48,20 @@ const M = 64; // side margin (--s-8)
 
 // tokens.css (§2.1)
 const C = {
-  bg: '#0B0B0C',
-  fg: '#EDEBE6',
-  fg2: '#A8A59E',
-  fg3: '#827F79',
-  line: '#2A2A2D',
-  lineUi: '#6A6964',
-  glim: '#FFB547',
+  bg: '#FFFFFF',
+  fg: '#14171C',
+  fg2: '#4A5160',
+  fg3: '#666D7A',
+  line: '#E2E5EA',
+  lineUi: '#7B8290',
+  glim: '#2563EB',
 };
 const FAMILY = {
   sans: 'Geist, Noto Sans TC',
   mono: 'Geist Mono, Noto Sans TC',
 };
 
-const { t, tStr, tList } = await imp('src/i18n/t.ts');
+const { tStr, tList } = await imp('src/i18n/t.ts');
 const { facts, SNAPSHOT } = await imp('src/data/facts.ts');
 const { REPOS } = await imp('src/data/repos.ts');
 const { LABS } = await imp('src/data/labs.ts');
@@ -145,21 +146,6 @@ async function measure(str, { size, weight = 400, family = FAMILY.sans, ls = 0 }
 
 function text(x, y, str, { size, weight = 400, fill = C.fg, family = FAMILY.sans, ls = 0, anchor = 'start', lang } = {}) {
   return `<text x="${r2(x)}" y="${r2(y)}" font-family="${esc(family)}" font-size="${size}" font-weight="${weight}"${ls ? ` letter-spacing="${r2(ls)}"` : ''} fill="${fill}"${anchor !== 'start' ? ` text-anchor="${anchor}"` : ''}${lang ? ` xml:lang="${lang}"` : ''}>${esc(str)}</text>`;
-}
-
-/** Two or three balanced lines (like `text-wrap: balance`) for a Latin display string. */
-async function balance(str, style, maxWidth) {
-  const words = str.split(/\s+/).filter(Boolean);
-  const full = await measure(str, style);
-  if (full <= maxWidth || words.length < 2) return [str];
-  let best = null;
-  for (let i = 1; i < words.length; i++) {
-    const a = words.slice(0, i).join(' ');
-    const b = words.slice(i).join(' ');
-    const w = Math.max(await measure(a, style), await measure(b, style));
-    if (w <= maxWidth && (!best || w < best.w)) best = { w, lines: [a, b] };
-  }
-  return best ? best.lines : [str];
 }
 
 /** The site's wordmark: 李家宝● / Li Jiabao● (amber dot on the baseline, §3). */
@@ -258,7 +244,7 @@ const frame = (body) =>
 // ── home: the record ──────────────────────────────────────────────────────────────────────────────────────
 const TZ_OFFSET = '+08:00'; // Asia/Taipei (snapshot.tz)
 const AXIS_START = Date.parse(`2026-07-12T00:00:00${TZ_OFFSET}`);
-const AXIS_BREAK = Date.parse(`2026-09-13T00:00:00${TZ_OFFSET}`); // hero.fig.caption: compressed before this day
+const AXIS_BREAK = Date.parse(`2026-09-13T00:00:00${TZ_OFFSET}`); // record.fig.caption: compressed before this day
 const BREAK_AT = 0.3; // share of the axis given to the compressed segment
 
 function hash32(s) {
@@ -308,17 +294,16 @@ async function home(locale) {
     text(bx, ay + 22, day(AXIS_BREAK), { size: 13, family: FAMILY.mono, fill: C.fg3, ls: 0.4, anchor: 'middle' }) +
     text(x1, ay + 22, SNAPSHOT.asOf, { size: 13, family: FAMILY.mono, fill: C.fg3, ls: 0.4, anchor: 'end' });
 
-  // the owner's line (authored lines in zh; balanced in en)
+  // the two bodies of work by name, one per line: the card introduces the site and carries no slogan
   const zh = locale === 'zh-Hant';
   const style = zh ? { size: 70, weight: 600, ls: 0 } : { size: 74, weight: 560, ls: -3.4 };
-  const value = t('hero.line', locale);
-  const lines = zh && Array.isArray(value) ? value : await balance(tStr('hero.line', locale), style, W - 2 * M);
+  const lines = [tStr('work.gt.title', locale), tStr('work.fr.title', locale)];
   const lh = zh ? 80 : 74;
   const y1 = zh ? 184 : 180;
   const title = lines.map((l, i) => text(M, y1 + i * lh, l, style)).join('');
 
   // zh writes 「（預設分支）· ●…」 with no space before the dot, so split on the dot, not on ' · '
-  const legendParts = tStr('hero.fig.legend', locale).split(/\s*·\s*/);
+  const legendParts = tStr('record.fig.legend', locale).split(/\s*·\s*/);
   const amberNote = legendParts[1] ?? '';
 
   return frame(

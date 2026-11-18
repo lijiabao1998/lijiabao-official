@@ -496,7 +496,7 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
     }
 
     // Events (scroll, resize, fonts, observers) raise layoutDirty. Content ABOVE an anchor can still move it
-    // without any of them firing — e.g. a web-font swap before the engine mounted, or the intro's end — which
+    // without any of them firing — e.g. a web-font swap before the engine mounted — which
     // left the first-view record drawn ~3 lanes below its labels until the first scroll. So while anything
     // draws, visible anchors are also re-read every 500 ms; only a real move forces a redraw.
     const forced = layoutDirty > 0;
@@ -811,7 +811,7 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
         layoutDirty = 2;
         if (anyVisible()) wake();
       };
-      // Layout can settle after the engine mounts without a scroll/resize (fonts, images, the intro ending).
+      // Layout can settle after the engine mounts without a scroll/resize (fonts, images).
       // Re-read on those moments; when the loop is asleep (reduced motion, a still frame) a 1 Hz check catches
       // anything else — ≤ 2 getBoundingClientRect calls, and a wake only when an anchor really moved.
       void document.fonts?.ready.then(relayout);
@@ -834,7 +834,6 @@ export function createEngine(opts: EngineOptions): GlimmerEngine {
       offs = [
         () => window.clearInterval(settleTimer),
         listen(window, 'load', relayout),
-        listen(document, 'lj:intro-done', relayout),
         listen(document, 'astro:page-load', relayout),
         () => fineMq.removeEventListener('change', updatePointerMode),
         watchLoss(canvas, onLost, onRestored),

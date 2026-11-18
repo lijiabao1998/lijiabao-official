@@ -2,7 +2,6 @@
 //
 //   'lj:tier'       {tier, src, count, reason?}  tier changed, OR the live glimmer count changed (same tier,
 //                                                src 'auto', no reason). HUD + TierFieldset listen to this.
-//   'lj:intro-done' null                         the §5.2 intro ended (played, skipped or cut short).
 //   'lj:gl'         {state, count}               GL runtime state (mirrors html[data-gl]) or count changed.
 //
 // UI never imports the engine; it listens here and reads <html> data attributes.
@@ -28,7 +27,6 @@ export interface GlDetail {
 
 export interface LjEventMap {
   'lj:tier': TierDetail;
-  'lj:intro-done': null;
   'lj:gl': GlDetail;
 }
 export type LjEvent = keyof LjEventMap;
@@ -36,7 +34,6 @@ export type LjEvent = keyof LjEventMap;
 declare global {
   interface DocumentEventMap {
     'lj:tier': CustomEvent<TierDetail>;
-    'lj:intro-done': CustomEvent<null>;
     'lj:gl': CustomEvent<GlDetail>;
   }
 }

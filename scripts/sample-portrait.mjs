@@ -9,15 +9,16 @@
 //   public/gl/portrait-a.<hash>.bin   the first 4,096 points (lite; the start of every tier)
 //   public/gl/portrait-b.<hash>.bin   the next 8,192 points (full tier only)
 //   src/data/gl-manifest.json         read-modify-write: keys "portrait" (a) and "portrait-b" (b); other keys kept
-//   src/data/portrait-meta.json       rows, aspect, counts, accent count, poster size
+//   src/data/portrait-meta.json       rows, aspect, counts, accent and fixed-point counts, poster size
 //   src/assets/generated/portrait-dots.{avif,webp}   the static poster: the first 6,144 points as soft glimmers,
 //                                                    rendered at 880px wide with the scene's own shader maths
 // Fails (exit 1) when an output exceeds its cap in src/data/budgets.ts.
 //
 // Pipeline (art direction below; the numeric core is src/gl/gen/portrait.ts):
 //   head-and-shoulders crop (553 × 720) → perceptual luma → the person's silhouette (a hand-set polygon for this
-//   photo, feathered: the background wall stays black, so glimmers only ever form the person) → p2–p98 stretch
-//   inside it → local contrast → structural edges (+ fine edges in the curly hair) → density = tone^1.5 + edges +
+//   photo, feathered: the background wall stays empty, so points only ever form the person) → p2–p98 stretch
+//   inside it → inverted (since 2026-11-18 the page is light and a point is a dot of ink, so tone = darkness: the
+//   hair and coat carry the dots, the lit face stays open) → local contrast → structural edges (+ fine edges in the curly hair) → density = tone^1.5 + edges +
 //   a floor (the "even mapping" of §6.2: the dark hair and coat still read through their edges and highlights,
 //   never a lit face out of black) → 180 baselines, stratified inverse-CDF x, a per-row spacing cap (dots never merge
 //   into dashes) → the round glasses' rims as fixed points that lead every tier → prefix-stable order.
@@ -128,6 +129,10 @@ const luma = G.lumaOf(new Uint8Array(px.buffer, px.byteOffset, px.length), W, H,
 const hard = G.polygonMask(SILHOUETTE, W, H);
 const mask = G.blur(hard, W, H, 3); // ≈ 9px feather
 const flat = G.stretch(luma, 0.02, 0.98, hard);
+// Ink on a light page (2026-11-18): a point is a dot of ink, so tone means darkness from here on. The dark hair and
+// coat carry the dots and the lit face stays open, as in a stipple drawing; drawn the other way round on a light
+// page the same points would read as a photographic negative.
+for (let i = 0; i < flat.length; i++) flat[i] = 1 - flat[i];
 // local contrast (unsharp mask) so eyes, brows, nostrils and the mouth line survive the baseline sampling
 const soft = G.blur(flat, W, H, 10);
 const lum = new Float32Array(W * H);
@@ -266,16 +271,16 @@ writeFileSync(MANIFEST, `${JSON.stringify(sorted, null, 2)}\n`);
 // The scene's own maths on the CPU (gl/shaders/portrait.vert + point.frag at rest, uAssemble = 1): every point is a
 // gaussian glimmer, σ = SIGMA × mix(size0, size1, lum) CSS px, alpha = peak × mix(alpha0, 1, lum) × the twinkle's
 // mean, windowed to 0 at 2.4σ, composited premultiplied "over" in draw order (the engine's ONE, ONE_MINUS_SRC_ALPHA)
-// and then over --bg (a pixel-for-pixel check against the GL scene at the same size differs by ~1 grey level on
+// and then over --bg (white since 2026-11-18; a pixel-for-pixel check against the GL scene at the same size differs by ~1 grey level on
 // average: the twinkle). The GL points keep their CSS size on any stage while the poster scales with it, so it is drawn
 // for a POSTER_STAGE-wide stage, between a phone's ≈340px and a desktop's ≈560–660px: the poster → canvas handoff
 // shows the same soft light at the same brightness within a few percent. No halo (the lite look).
 const POSTER_STAGE = 450;
 const PH = Math.round((POSTER_W * H) / W);
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-const BG = hex('#0B0B0C');
-const FG = hex('#EDEBE6');
-const GLIM = hex('#FFB547');
+const BG = hex('#FFFFFF');
+const FG = hex('#14171C');
+const GLIM = hex('#2563EB');
 /** portrait.vert's twinkle, .9 + .1 sin(…), averages .9 */
 const TWINKLE = 0.9;
 const mix = (a, b, t) => a + (b - a) * t;
@@ -325,7 +330,7 @@ const dots = renderDots(POSTER_POINTS, POSTER_W, POSTER_W / POSTER_STAGE, G.LOOK
 const raster = sharp(dots.data, { raw: { width: dots.width, height: dots.height, channels: 3 } });
 
 mkdirSync(GEN_DIR, { recursive: true });
-const avif = await raster.clone().avif({ quality: 44, effort: 9, chromaSubsampling: '4:2:0' }).toBuffer();
+const avif = await raster.clone().avif({ quality: 34, effort: 9, chromaSubsampling: '4:2:0' }).toBuffer();
 const webp = await raster.clone().webp({ quality: 64, effort: 6 }).toBuffer();
 writeFileSync(resolve(GEN_DIR, 'portrait-dots.avif'), avif);
 writeFileSync(resolve(GEN_DIR, 'portrait-dots.webp'), webp);
@@ -339,6 +344,8 @@ const meta = {
   b: PT.B,
   poster: { points: POSTER_POINTS, width: POSTER_W, height: PH },
   accents,
+  /** fixed rim points: the first records of bin a, in every prefix */
+  fixed: fixed.length,
   seed: `0x${PT.SEED.toString(16).toUpperCase()}`,
 };
 writeFileSync(META, `${JSON.stringify(meta, null, 2)}\n`);

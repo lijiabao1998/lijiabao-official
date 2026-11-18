@@ -1,49 +1,53 @@
-// src/i18n/ns/home.ts — spec §4.2 (home), with build-overrides §1 applied:
-// hero.line is the owner's own line (APPROVED; the alt candidates are deleted), the X-bio lines,
-// the Hebrew line and the signature are APPROVED, X stays off, the manifesto ships its factual
-// fallback, and the site's reading ships labelled as the site's reading.
+// src/i18n/ns/home.ts — the home page copy.
+//
+// Owner decision 2026-11-18: the home page reads as an introduction and job-seeking site, not as a manifesto.
+// Order: who he is (#hero) → about → work → skills → how the work is done → numbers → the commit record →
+// contact. Only facts already public in the repos are used: no job title, no career or education history, no
+// e-mail address (rules.mjs still forbids a job title anywhere).
+//   - about.belief is the owner's own line (APPROVED, verbatim). It was the hero line until 2026-11-18 and now
+//     sits small in #about, as a belief.
+//   - The Hebrew line and the 「現在，由我來定義。」 signature are removed (the owner, 2026-11-18: 「去掉好了」).
+//   - The #not statements are now the plain verification rules in #method; the #vision section is gone.
+//   - X stays off.
 import { defineNs, type DictShape, type ZhEntry } from '../types.ts';
 
-const HE = 'לראות את הבלתי יאומן, לעשות את הבלתי אפשרי';
-
 const zh = {
-  // ── Hero ─────────────────────────────────────────────────────────────────────────────────
+  // ── Hero: the name, a plain introduction, three ways on ──────────────────────────────────────────────
   'hero.eyebrow': { zh: 'lijiabao1998 · 台灣', cls: 'F' },
   'hero.name': { zh: '李家宝', cls: 'F', display: true },
-  'hero.line': {
-    zh: ['讓每個人，', '都有一座自己的實驗室。'],
-    narrow: { zh: ['讓每個人，', '都有一座', '自己的實驗室。'] },
-    cls: 'P',
-    status: 'APPROVED',
-    fallback: 'hero.line.fallback',
-    display: true,
-    src: "owner-decisions.md 1 (his own choice, confirmed in chat 2026-09-30); the site's thesis",
+  'hero.intro': {
+    zh: '主持兩件公開作品：遊戲「微光小鎮」，以及研究治理專案「前沿實驗室」。與多家廠商的 AI 模型協作開發：先寫驗收條件，再動工，檢查全過才合併。',
+    cls: 'F',
+    src: 'the two bodies of work; GlimmerTown-lab AUTORUN.md and AGENTS.md (the round of work, the writers)',
   },
-  // Typed fallback only: never renders while hero.line is APPROVED (kept for the P/PE contract).
-  'hero.line.fallback': { zh: ['成文規則。', '多家模型。', '公開紀錄。'], cls: 'F' },
-  'hero.sub': { zh: '一個業主，多家廠商的模型，同一套成文規則。兩件作品：微光小鎮、前沿實驗室。', cls: 'F' },
+  'hero.cta.work': { zh: '看作品', cls: 'F' },
+  'hero.cta.github': { zh: 'GitHub', cls: 'F' },
+  'hero.cta.articles': { zh: '讀文章', cls: 'F' },
   'hero.meta.repos': { zh: '{repos.count} 個公開倉庫', cls: 'F' },
   'hero.meta.snapshot': { zh: '資料快照 {snapshot.asOf}', cls: 'F' },
-  'hero.quick.gt': { zh: '→ 微光小鎮', cls: 'F' },
-  'hero.quick.fr': { zh: '→ 前沿實驗室', cls: 'F' },
-  'hero.cue': { zh: '↓ 作品', cls: 'F' },
-  'hero.fig.title': { zh: '紀錄', cls: 'F' },
-  // The second ● is amber (latest commit per lane).
-  'hero.fig.legend': { zh: '1 ●＝1 個 commit（預設分支）· ● 各倉庫最新一筆', cls: 'F' },
-  'hero.fig.caption': {
-    zh: '{repos.count} 個公開倉庫、預設分支上的 {commits.total} 個 commit，2026-07-12 → 2026-09-30。每一點是一個 commit；2026-09-13 之前的時間軸已壓縮。',
-    cls: 'F',
-  },
-  'hero.fig.break': { zh: '軸線壓縮', cls: 'F' },
-  'hero.fig.ordinal': { zh: '位置＝提交順序，不是時間。', cls: 'F', src: 'only if the snapshot is unavailable (§6.1)' },
-  'hero.fig.tick.account': { zh: '帳號建立 2026-09-23', cls: 'F' },
-  'hero.fig.note': { zh: '早於帳號建立的 commit，是帶進來的較早歷史。', cls: 'F' },
-  'hero.table.caption': { zh: '{repos.count} 個公開倉庫的 commit 數（預設分支，快照 {snapshot.asOf}）', cls: 'F' },
-  // list: column headers
-  'hero.table.cols': { zh: ['倉庫', '名稱', 'Commits', '首次', '最近'], cls: 'F' },
-  'hero.table.total': { zh: '合計', cls: 'F' },
 
-  // ── Work ─────────────────────────────────────────────────────────────────────────────────
+  // ── About ────────────────────────────────────────────────────────────────────────────────────────────
+  'about.label': { zh: '關於', cls: 'F' },
+  'about.role': { zh: '負責兩件作品的方向與最後決定，每個決定都寫上日期。', cls: 'F' },
+  'about.repos': { zh: 'GitHub lijiabao1998 · {repos.count} 個公開倉庫 · 帳號建立於 2026-09-23', cls: 'F' },
+  'about.older': { zh: '作品更早：微光小鎮主線的第一個 commit 是 2026-07-12。', cls: 'F' },
+  'about.belief.label': { zh: '信念', cls: 'F' },
+  'about.belief': {
+    zh: '讓每個人，都有一座自己的實驗室。',
+    cls: 'P',
+    status: 'APPROVED',
+    fallback: null,
+    display: true,
+    src: 'owner-decisions.md 1 (his own choice, confirmed in chat 2026-09-30); moved from the hero to #about on 2026-11-18',
+  },
+  // His X-bio lines (APPROVED). The zh gloss is empty on purpose: omit the gloss element when ''.
+  'about.line1': { zh: '心存善念，盡力而為', cls: 'O', status: 'APPROVED', src: 'X bio [voice]' },
+  'about.line1.gloss': { zh: '', cls: 'T', src: 'our English gloss of an O line' },
+  'about.line2': { zh: '但行好事，勿問前程', cls: 'O', status: 'APPROVED', src: 'X bio [voice]' },
+  'about.line2.gloss': { zh: '', cls: 'T', src: 'our English gloss of an O line' },
+  'about.caption': { zh: '肖像：{n} 個點，沿基線排成。這張圖不是資料。', cls: 'F' },
+
+  // ── Work ─────────────────────────────────────────────────────────────────────────────────────────────
   'work.label': { zh: '作品', cls: 'F' },
   'work.title': { zh: '兩件作品，同一套方法。', cls: 'F', display: true },
   'work.gt.title': { zh: '微光小鎮', cls: 'F', display: true },
@@ -58,16 +62,36 @@ const zh = {
   'work.fr.stat': { zh: '{fr.cards} 張問題卡 · 每輪預設預算 {fr.budgetUsd} 美元', cls: 'F' },
   'work.cta': { zh: '看案例 →', cls: 'F' },
 
-  // ── Method ───────────────────────────────────────────────────────────────────────────────
-  'method.label': { zh: '方法', cls: 'F' },
-  'method.quote': {
-    zh: '「直接做吧，就跟 lab 線一樣，開始是美術好看，後來長出了自己的標準。」',
-    cls: 'O',
-    // Not display-flagged: set in the text face (mask rise only, no weight morph). Flagging it
-    // would add 19 unique glyphs and leave the 140-glyph display subset with no headroom.
-    src: 'GlimmerTown3D-lab docs/D000-vision.md, 2026-09-25 [voice]; en is T',
+  // ── Skills: what the public record shows. Each item is [name, what the record says, its source]. ─────
+  'skills.label': { zh: '能力', cls: 'F' },
+  'skills.lede': { zh: '下面每一項，在公開倉庫裡都有紀錄可查。', cls: 'F' },
+  'skills.1': {
+    zh: ['規格與驗收', '動手之前先量測，先把驗收條件寫進任務卡。微光小鎮主線累積了 {gt.cards} 張任務卡。', '出處 GlimmerTown `docs/tasks/`'],
+    cls: 'F',
   },
-  'method.quote.cite': { zh: '— 業主，GlimmerTown3D-lab `docs/D000-vision.md`，2026-09-25', cls: 'F' },
+  'skills.2': {
+    zh: ['測試與守衛', '主線測試套件 {gt.pass} 項 PASS；實驗線有 {gtlab.guards} 支像素守衛，全綠才合併。', '出處 GlimmerTown `test_fixde.js`'],
+    cls: 'F',
+  },
+  'skills.3': {
+    zh: ['多模型協作', '實驗線有 {gtlab.writers} 個來自不同廠商的模型寫入者，照同一份成文規則分工；每一次合併都要人工核可。', '出處 GlimmerTown-lab `AGENTS.md`'],
+    cls: 'F',
+  },
+  'skills.4': {
+    zh: ['遊戲與圖形', '一座原創的等距像素城市：一個 HTML 檔，零依賴，可離線。3D 線的 {gt3d.parityOps} 筆操作與 2D 程式逐位對拍，全部相等。', '出處 GlimmerTown3D-lab D011'],
+    cls: 'F',
+  },
+  'skills.5': {
+    zh: ['研究流程治理', '{fr.labs} 個學科實驗室、{fr.cards} 張問題卡，共用一套治理規則。治理工具 `frontier.py` 只用標準庫，有 {gov.tests} 個測試。', '出處 FrontierLab-Governance `STATUS.md`'],
+    cls: 'F',
+  },
+  'skills.6': {
+    zh: ['網站製作', '這個網站是 Astro 靜態輸出，手寫 WebGL2，中英雙語。關掉 JavaScript 也能讀完每一個字；沒有追蹤器，沒有 cookie。', '出處 本站原始碼'],
+    cls: 'F',
+  },
+
+  // ── Method: how the work is done ─────────────────────────────────────────────────────────────────────
+  'method.label': { zh: '工作方式', cls: 'F' },
   'method.chain.title': { zh: '一輪施工', cls: 'F' },
   // list: the five steps of the → chain (arrows are drawn between them)
   'method.chain': {
@@ -88,27 +112,14 @@ const zh = {
   },
   'method.undone': { zh: '「沒做成的事」不准空著，也不准美化。', cls: 'OD', src: 'GlimmerTown-lab AUTORUN.md; en is T' },
   'method.undone.cite': { zh: '— GlimmerTown-lab `AUTORUN.md`', cls: 'F' },
-
-  // ── Is not ───────────────────────────────────────────────────────────────────────────────
-  'not.label': { zh: '不是', cls: 'F' },
-  'not.1.x': { zh: '編譯成功', cls: 'OD', display: true, src: 'FrontierComputerScience README; en is T' },
-  'not.1.op': { zh: '不是', cls: 'OD', display: true },
-  'not.1.y': { zh: 'correctness', cls: 'OD', display: true },
-  'not.2.x': { zh: 'benchmark 高分', cls: 'OD', display: true },
-  'not.2.op': { zh: '不是', cls: 'OD', display: true },
-  'not.2.y': { zh: '一般能力', cls: 'OD', display: true },
-  'not.3.x': { zh: '兩個模型同意', cls: 'OD', display: true },
-  'not.3.op': { zh: '不是', cls: 'OD', display: true },
-  'not.3.y': { zh: '獨立驗證', cls: 'OD', display: true },
-  // sr-only full sentence for the kinetic ≠ block
-  'not.full': {
-    zh: '編譯成功不是 correctness，benchmark 高分不是一般能力，兩個模型同意不是獨立驗證。',
+  'method.rules.title': { zh: '驗證原則', cls: 'F' },
+  // list: three statements (the #not statements until 2026-11-18, now a plain list)
+  'method.rules': {
+    zh: ['編譯成功，不是 correctness。', 'benchmark 高分，不是一般能力。', '兩個模型同意，不是獨立驗證。'],
     cls: 'OD',
     src: 'FrontierComputerScience README; en is T',
   },
-  'not.cite': { zh: '— FrontierComputerScience README', cls: 'F' },
-  'not.coda': { zh: '程式通過、模型共識、業主批准，都不等於科學命題成立。', cls: 'OD', src: 'FrontierLab-Governance README; en is T' },
-  'not.coda.cite': { zh: '— FrontierLab-Governance README', cls: 'F' },
+  'method.rules.cite': { zh: '— FrontierComputerScience README', cls: 'F' },
 
   // ── Numbers ── each num.N is a list of parts: [value, label, source]; the value part is the
   // formatted fact (see NUMBERS in src/data/facts.ts for the fact behind each odometer).
@@ -129,91 +140,25 @@ const zh = {
   'num.5': { zh: ['{fr.cards}', '張問題卡，{fr.labs} 個實驗室', '出處 FrontierLab-Governance `STATUS.md`'], cls: 'F' },
   'num.6': { zh: ['{fr.budgetUsd}', '美元：每輪預設預算', '出處 FrontierLab-Governance'], cls: 'F' },
 
-  // ── Vision ───────────────────────────────────────────────────────────────────────────────
-  'vision.label': { zh: '願景', cls: 'F' },
-  'vision.title': { zh: 'LLM 平權／科技平權', cls: 'OB', display: true, src: "the owner's brief to us" },
-  // The owner has not written a manifesto: the P candidates never render; manifesto.fallback ships.
-  'manifesto.title': {
-    zh: ['實驗室不該只屬於', '買得起最貴模型的人。'],
-    cls: 'P',
-    fallback: 'manifesto.fallback',
-    display: true,
+  // ── The record: every default-branch commit on its repo lane (figure#fig-record) ─────────────────────
+  'record.label': { zh: '紀錄', cls: 'F' },
+  'record.fig.title': { zh: '公開紀錄', cls: 'F' },
+  // The second ● is amber (latest commit per lane).
+  'record.fig.legend': { zh: '1 ●＝1 個 commit（預設分支）· ● 各倉庫最新一筆', cls: 'F' },
+  'record.fig.caption': {
+    zh: '{repos.count} 個公開倉庫、預設分支上的 {commits.total} 個 commit，2026-07-12 → 2026-09-30。每一點是一個 commit；2026-09-13 之前的時間軸已壓縮。',
+    cls: 'F',
   },
-  'manifesto.alt1': {
-    zh: ['規則寫在動手之前。', '驗證不看品牌。', '紀錄對每個人公開。'],
-    cls: 'P',
-    fallback: 'manifesto.fallback',
-    display: true,
-  },
-  'manifesto.alt2': {
-    zh: ['任何模型，照同一套規則，都能蓋城、做研究；', '任何人，都能重跑每一個結果。'],
-    cls: 'P',
-    fallback: 'manifesto.fallback',
-    display: true,
-  },
-  'manifesto.fallback': { zh: '規則 → 驗證 → 公開紀錄', cls: 'F', display: true },
-  'manifesto.date': { zh: '業主 2026-__-__ 定案', cls: 'PE', fallback: null },
-  'manifesto.reading.label': { zh: '本站的解讀', cls: 'F' },
-  'manifesto.reading': {
-    zh: '兩件作品指向同一件事：能力來自規則、驗證與公開紀錄，而不只靠最貴的單一模型。在對的規則下，任何模型都能蓋城、做研究；任何人都能重跑每一個結果。',
-    cls: 'P',
-    status: 'APPROVED',
-    fallback: null,
-    src: "INTERPRETATION: ships only under manifesto.reading.label (build-overrides §1); never his quote",
-  },
-  'vision.ev.title': { zh: '作品裡寫著的', cls: 'F' },
-  'vision.ev.1': { zh: '「不因品牌給任意 agent 免驗證權」 — 前沿實驗室 `AGENTS.md`', cls: 'OD', src: 'Frontier AGENTS.md; en is T' },
-  'vision.ev.2': { zh: '「兩個模型同意不算獨立實驗」 — 前沿實驗室 `AGENTS.md`', cls: 'OD', src: 'Frontier AGENTS.md; en is T' },
-  'vision.ev.3': { zh: '工具只用 Python 標準庫；每輪預設預算 {fr.budgetUsd} 美元。 — FrontierLab-Governance', cls: 'F' },
-  'vision.ev.4': { zh: '遊戲是一個 HTML 檔：零依賴、可離線、手機直接能玩。 — GlimmerTown README', cls: 'F' },
-  'vision.ev.5': {
-    zh: '驗收條件寫在動手之前；守衛全綠才合併。 — GlimmerTown-lab `AUTORUN.md`',
-    cls: 'OD',
-    src: 'GlimmerTown-lab AUTORUN.md; en is T',
-  },
-  'vision.site.title': { zh: '這個網站也照做', cls: 'F' },
-  'vision.site.1': { zh: '預設「微光」：每台裝置先拿到同樣的內容。', cls: 'F' },
-  'vision.site.2': { zh: '每一層都畫出全部 {commits.total} 個 commit。變的是動畫，不是紀錄。', cls: 'F' },
-  'vision.site.3': { zh: '關掉 JavaScript，也能讀完每一個字。', cls: 'F' },
-  'vision.site.4': { zh: '中文與 English，同一份內容。', cls: 'F' },
-  'vision.site.5': { zh: '每個數字都附出處與日期。沒有追蹤器，沒有 cookie。', cls: 'F' },
-  'vision.tiers.title': { zh: '三種層級，同一份紀錄', cls: 'F' },
-  'vision.tiers.use': { zh: '使用這一層', cls: 'F' },
-  'vision.tiers.current': { zh: '目前使用中', cls: 'F' },
-  'vision.measured.title': { zh: '這一頁實際花了多少', cls: 'F' },
+  'record.fig.break': { zh: '軸線壓縮', cls: 'F' },
+  'record.fig.ordinal': { zh: '位置＝提交順序，不是時間。', cls: 'F', src: 'only if the snapshot is unavailable (§6.1)' },
+  'record.fig.tick.account': { zh: '帳號建立 2026-09-23', cls: 'F' },
+  'record.fig.note': { zh: '早於帳號建立的 commit，是帶進來的較早歷史。', cls: 'F' },
+  'record.table.caption': { zh: '{repos.count} 個公開倉庫的 commit 數（預設分支，快照 {snapshot.asOf}）', cls: 'F' },
+  // list: column headers
+  'record.table.cols': { zh: ['倉庫', '名稱', 'Commits', '首次', '最近'], cls: 'F' },
+  'record.table.total': { zh: '合計', cls: 'F' },
 
-  // ── About and contact ────────────────────────────────────────────────────────────────────
-  'about.label': { zh: '關於', cls: 'F' },
-  'about.role': { zh: '業主。定方向，做最後決定，決定寫上日期。', cls: 'F' },
-  'about.repos': { zh: 'GitHub lijiabao1998 · {repos.count} 個公開倉庫 · 帳號建立於 2026-09-23', cls: 'F' },
-  'about.older': { zh: '作品更早：微光小鎮主線的第一個 commit 是 2026-07-12。', cls: 'F' },
-  // His X-bio lines (APPROVED). The zh gloss is empty on purpose: omit the gloss element when ''.
-  'about.line1': { zh: '心存善念，盡力而為', cls: 'O', status: 'APPROVED', src: 'X bio [voice]' },
-  'about.line1.gloss': { zh: '', cls: 'T', src: 'our English gloss of an O line' },
-  'about.line2': { zh: '但行好事，勿問前程', cls: 'O', status: 'APPROVED', src: 'X bio [voice]' },
-  'about.line2.gloss': { zh: '', cls: 'T', src: 'our English gloss of an O line' },
-  // Seg run: [Hebrew (rtl), separator, gloss]. Gloss wording per build-overrides §1.
-  'about.hebrew': {
-    zh: [{ lang: 'he', dir: 'rtl', text: HE }, ' · ', '看見難以置信之事，完成不可能之事。'],
-    cls: 'PE',
-    status: 'APPROVED',
-    fallback: null,
-    feature: 'hebrew',
-    src: 'X bio [voice]; approved by the owner 2026-09-30',
-  },
-  'about.rules.title': { zh: '本站遵守的兩條美術規則', cls: 'F' },
-  // lines: his two GlimmerTown art rules
-  'about.rules': { zh: ['光從左邊來。', '先有燈具，才有光。'], cls: 'O', src: 'GlimmerTown art rules [voice, glimmer]; en is T' },
-  'about.rules.note': { zh: '所以這裡的光從左邊掃過；每一點光都對應一筆紀錄，或標明是示意、肖像。', cls: 'F' },
-  'about.caption': { zh: '肖像：{n} 個光點，沿基線排成。這一區的光不是資料。', cls: 'F' },
-  'about.signature': {
-    zh: '現在，由我來定義。',
-    cls: 'PE',
-    status: 'APPROVED',
-    fallback: null,
-    feature: 'signature',
-    src: 'O: his principle [voice]; approved for light use (small signature line in #about only)',
-  },
+  // ── Contact ──────────────────────────────────────────────────────────────────────────────────────────
   'contact.label': { zh: '聯絡', cls: 'F' },
   'contact.lede': { zh: '程式碼、任務卡、失敗紀錄，都在 GitHub。', cls: 'F' },
   'contact.github': { zh: 'GitHub · lijiabao1998 ↗', cls: 'F' },
@@ -224,25 +169,25 @@ const zh = {
 const en = {
   'hero.eyebrow': 'lijiabao1998 · Taiwan',
   'hero.name': 'Li Jiabao',
-  'hero.line': 'Everyone deserves a lab of their own.',
-  'hero.line.fallback': 'Written rules. Many models. A public record.',
-  'hero.sub': 'One owner. Models from many vendors. One written rulebook. Two bodies of work: GlimmerTown and Frontier Lab.',
+  'hero.intro':
+    'Runs two public projects: GlimmerTown, a game, and Frontier Lab, a research-governance program. Builds with AI models from several vendors: acceptance criteria first, then the work, and nothing merges until every check is green.',
+  'hero.cta.work': 'See the work',
+  'hero.cta.github': 'GitHub',
+  'hero.cta.articles': 'Read the articles',
   'hero.meta.repos': '{repos.count} public repos',
   'hero.meta.snapshot': 'Data snapshot {snapshot.asOf}',
-  'hero.quick.gt': '→ GlimmerTown',
-  'hero.quick.fr': '→ Frontier Lab',
-  'hero.cue': '↓ Work',
-  'hero.fig.title': 'The record',
-  'hero.fig.legend': '1 ● = 1 commit (default branch) · ● latest in each repo',
-  'hero.fig.caption':
-    '{commits.total} default-branch commits across {repos.count} public repos, 2026-07-12 → 2026-09-30. Each point is one commit; the time axis is compressed before 2026-09-13.',
-  'hero.fig.break': 'Axis compressed',
-  'hero.fig.ordinal': 'Position = commit order, not time.',
-  'hero.fig.tick.account': 'Account created 2026-09-23',
-  'hero.fig.note': 'Commits older than the account are earlier history brought in with the repos.',
-  'hero.table.caption': 'Commits in {repos.count} public repos (default branch, snapshot {snapshot.asOf})',
-  'hero.table.cols': ['Repo', 'Name', 'Commits', 'First', 'Latest'],
-  'hero.table.total': 'Total',
+
+  'about.label': 'About',
+  'about.role': 'Sets the direction of both projects and makes the final call. Each decision is dated.',
+  'about.repos': 'GitHub lijiabao1998 · {repos.count} public repos · account created 2026-09-23',
+  'about.older': "The work is older: GlimmerTown's first main-line commit is from 2026-07-12.",
+  'about.belief.label': 'Belief',
+  'about.belief': 'Everyone deserves a lab of their own.',
+  'about.line1': [{ lang: 'zh-Hant', text: '心存善念，盡力而為' }],
+  'about.line1.gloss': 'Keep good intentions; do your best.',
+  'about.line2': [{ lang: 'zh-Hant', text: '但行好事，勿問前程' }],
+  'about.line2.gloss': "Do good; don't ask where it leads.",
+  'about.caption': 'Portrait: {n} dots, set on baselines. This picture is not data.',
 
   'work.label': 'Work',
   'work.title': 'Two bodies of work. One method.',
@@ -258,9 +203,40 @@ const en = {
   'work.fr.stat': '{fr.cards} problem cards · default budget ${fr.budgetUsd} per round',
   'work.cta': 'Read the case →',
 
-  'method.label': 'Method',
-  'method.quote': '"Just build it — like the lab line: first it looked good, then it grew its own standard."',
-  'method.quote.cite': '— the owner, GlimmerTown3D-lab `docs/D000-vision.md`, 2026-09-25',
+  'skills.label': 'Skills',
+  'skills.lede': 'Each item below has a record behind it in the public repos.',
+  'skills.1': [
+    'Specs and acceptance',
+    "Measure first, and write the acceptance criteria into the task card before any work starts. GlimmerTown's main line has {gt.cards} task cards.",
+    'source GlimmerTown `docs/tasks/`',
+  ],
+  'skills.2': [
+    'Tests and guards',
+    "{gt.pass} PASS in the main line's test suite; {gtlab.guards} pixel guards on the lab line, and nothing merges until all of them are green.",
+    'source GlimmerTown `test_fixde.js`',
+  ],
+  'skills.3': [
+    'Working with several models',
+    'The lab line has {gtlab.writers} model writers from different vendors, working under one written rulebook. Every merge needs a human to approve it.',
+    'source GlimmerTown-lab `AGENTS.md`',
+  ],
+  'skills.4': [
+    'Game and graphics',
+    'An original isometric pixel-art city: one HTML file, no dependencies, works offline. On the 3D line, {gt3d.parityOps} operations were checked exactly against the 2D code, and all were equal.',
+    'source GlimmerTown3D-lab D011',
+  ],
+  'skills.5': [
+    'Research governance',
+    '{fr.labs} discipline labs and {fr.cards} problem cards share one set of governance rules. The governance tool `frontier.py` uses the standard library only and has {gov.tests} tests.',
+    'source FrontierLab-Governance `STATUS.md`',
+  ],
+  'skills.6': [
+    'Websites',
+    'This site is static Astro output with hand-written WebGL2, in Chinese and English. With JavaScript off you can still read every word. No trackers, no cookies.',
+    "source this site's code",
+  ],
+
+  'method.label': 'How the work is done',
   'method.chain.title': 'One round of work',
   'method.chain': [
     'Measure',
@@ -274,22 +250,13 @@ const en = {
   'method.writers.named': 'Push to main: Claude, Codex. Branch and PR: Grok, GLM, Kimi, DeepSeek, GPT.',
   'method.undone': "What didn't get done may not be left blank, and may not be dressed up.",
   'method.undone.cite': '— GlimmerTown-lab `AUTORUN.md`',
-
-  'not.label': 'Is not',
-  'not.1.x': 'Compiling',
-  'not.1.op': 'is not',
-  'not.1.y': 'correctness',
-  'not.2.x': 'A high benchmark score',
-  'not.2.op': 'is not',
-  'not.2.y': 'general ability',
-  'not.3.x': 'Two models agreeing',
-  'not.3.op': 'is not',
-  'not.3.y': 'independent verification',
-  'not.full':
-    'Compiling is not correctness, a high benchmark score is not general ability, and two models agreeing is not independent verification.',
-  'not.cite': '— FrontierComputerScience README',
-  'not.coda': "Passing code, model consensus, the owner's approval: none of them makes a scientific claim true.",
-  'not.coda.cite': '— FrontierLab-Governance README',
+  'method.rules.title': 'Verification rules',
+  'method.rules': [
+    'Compiling is not correctness.',
+    'A high benchmark score is not general ability.',
+    'Two models agreeing is not independent verification.',
+  ],
+  'method.rules.cite': '— FrontierComputerScience README',
 
   'num.label': 'Numbers',
   'num.title': 'Numbers, as they are.',
@@ -305,48 +272,19 @@ const en = {
   'num.5': ['{fr.cards}', 'problem cards across {fr.labs} labs', 'source FrontierLab-Governance `STATUS.md`'],
   'num.6': ['${fr.budgetUsd}', 'default budget per round', 'source FrontierLab-Governance'],
 
-  'vision.label': 'Vision',
-  'vision.title': 'LLM equality / tech equality',
-  'manifesto.title': "A lab shouldn't belong only to those who can afford the most expensive model.",
-  'manifesto.alt1': 'Rules written before the work. Checks that ignore the brand. A record open to everyone.',
-  'manifesto.alt2': 'Any model, under the same rules, can build a city or do research. Anyone can rerun every result.',
-  'manifesto.fallback': 'Rules → verification → a public record',
-  'manifesto.date': 'Decided by the owner, 2026-__-__',
-  'manifesto.reading.label': "This site's reading",
-  'manifesto.reading':
-    'Both bodies of work point to one idea: capability comes from rules, verification and a public record, not only from the most expensive single model. Under the right rules, any model can help build a city or do research, and anyone can rerun every result.',
-  'vision.ev.title': 'What the work itself says',
-  'vision.ev.1': '"No agent is exempt from verification because of its brand." — Frontier `AGENTS.md`',
-  'vision.ev.2': '"Two models agreeing is not an independent experiment." — Frontier `AGENTS.md`',
-  'vision.ev.3': 'Tooling is the Python standard library only; the default budget per round is ${fr.budgetUsd}. — FrontierLab-Governance',
-  'vision.ev.4': 'The game is one HTML file: no dependencies, works offline, plays on a phone. — GlimmerTown README',
-  'vision.ev.5': 'Acceptance criteria come before the work; merges happen only when the guards are green. — GlimmerTown-lab `AUTORUN.md`',
-  'vision.site.title': 'This site does the same',
-  'vision.site.1': 'Glimmer by default: every device gets the same content first.',
-  'vision.site.2': 'Every tier draws all {commits.total} commits. What changes is the animation, not the record.',
-  'vision.site.3': 'Turn JavaScript off and you can still read every word.',
-  'vision.site.4': 'Chinese and English, the same content.',
-  'vision.site.5': 'Every number has a source and a date. No trackers, no cookies.',
-  'vision.tiers.title': 'Three tiers, one record',
-  'vision.tiers.use': 'Use this tier',
-  'vision.tiers.current': 'In use now',
-  'vision.measured.title': 'What this page actually cost',
+  'record.label': 'Record',
+  'record.fig.title': 'The public record',
+  'record.fig.legend': '1 ● = 1 commit (default branch) · ● latest in each repo',
+  'record.fig.caption':
+    '{commits.total} default-branch commits across {repos.count} public repos, 2026-07-12 → 2026-09-30. Each point is one commit; the time axis is compressed before 2026-09-13.',
+  'record.fig.break': 'Axis compressed',
+  'record.fig.ordinal': 'Position = commit order, not time.',
+  'record.fig.tick.account': 'Account created 2026-09-23',
+  'record.fig.note': 'Commits older than the account are earlier history brought in with the repos.',
+  'record.table.caption': 'Commits in {repos.count} public repos (default branch, snapshot {snapshot.asOf})',
+  'record.table.cols': ['Repo', 'Name', 'Commits', 'First', 'Latest'],
+  'record.table.total': 'Total',
 
-  'about.label': 'About',
-  'about.role': 'The owner. Sets the direction, makes the final call, dates the decision.',
-  'about.repos': 'GitHub lijiabao1998 · {repos.count} public repos · account created 2026-09-23',
-  'about.older': "The work is older: GlimmerTown's first main-line commit is from 2026-07-12.",
-  'about.line1': [{ lang: 'zh-Hant', text: '心存善念，盡力而為' }],
-  'about.line1.gloss': 'Keep good intentions; do your best.',
-  'about.line2': [{ lang: 'zh-Hant', text: '但行好事，勿問前程' }],
-  'about.line2.gloss': "Do good; don't ask where it leads.",
-  'about.hebrew': [{ lang: 'he', dir: 'rtl', text: HE }, ' · ', 'To see the unbelievable, to do the impossible.'],
-  'about.rules.title': 'Two art rules this site follows',
-  'about.rules': ['Light comes from the left.', 'No light without a lamp.'],
-  'about.rules.note':
-    'So light here sweeps in from the left, and every point of light maps to a record, or is labelled schematic or portrait.',
-  'about.caption': 'Portrait: {n} points of light, set on baselines. The light here is not data.',
-  'about.signature': 'Now — I define it.',
   'contact.label': 'Contact',
   'contact.lede': 'Code, task cards and failure records all live on GitHub.',
   'contact.github': 'GitHub · lijiabao1998 ↗',

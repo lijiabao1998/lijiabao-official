@@ -26,10 +26,10 @@ import Lenis from 'lenis';
 import type { Clock, EngineOptions, GlimmerEngine, Tier } from '../gl/types';
 import type { TierSrc } from '../lib/events';
 import { isFine, isMobile, listen, locale, MQ, mq, pageAge, type Cleanup } from '../lib/dom';
-import { endIntro, getTier, isReduced } from '../lib/prefs';
+import { getTier, isReduced } from '../lib/prefs';
 import { registerEases } from './eases';
 import { createPrimitives } from './primitives';
-import { intro, load, run, runModule, type BaseCtx, type PageMotion, type Primitives } from './registry';
+import { load, run, type BaseCtx, type PageMotion, type Primitives } from './registry';
 import { settle } from './settle';
 
 /** §5.1 fail-open: 2.5s after astro:page-load, nothing in or above the viewport stays in a before-state. */
@@ -47,7 +47,7 @@ export interface Runtime {
   readonly engine: GlimmerEngine | null;
   /** true → WebGL2 unusable here; lifecycle then locks the session to static. */
   readonly glFailed: boolean;
-  /** astro:page-load: engine.attachAll(main) → intro (first load, home) → sections → reveal → refresh. */
+  /** astro:page-load: engine.attachAll(main) → sections → reveal → refresh. */
   initPage(main: HTMLElement): Promise<void>;
   /** astro:before-swap: every section cleanup, stray ScrollTriggers, engine.detachAll(), Lenis inertia. */
   teardownPage(): void;
@@ -84,7 +84,6 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
   let engine: GlimmerEngine | null = null;
   let glFailed = false;
   let page: PageMotion | null = null;
-  let introCleanup: Cleanup | null = null;
   let seq = 0;
   let refreshTimer = 0;
   let failTimer = 0;
@@ -216,19 +215,9 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
     async initPage(main: HTMLElement): Promise<void> {
       const my = ++seq;
       engine?.attachAll(main); // before the sections, so their setup can already take engine.get() handles
-      const root = document.documentElement;
-      const home = main.dataset.layout === 'home';
-      const wantIntro = root.hasAttribute('data-intro') && home;
-      if (!home) endIntro();
-      const [introMod, jobs] = await Promise.all([
-        wantIntro ? intro().catch(() => null) : Promise.resolve(null),
-        load(main),
-      ]);
+      const jobs = await load(main);
       if (my !== seq || !main.isConnected) return;
-      const base = baseCtx();
-      if (introMod && root.hasAttribute('data-intro')) introCleanup = runModule(introMod, main, base);
-      else endIntro();
-      page = run(jobs, base);
+      page = run(jobs, baseCtx());
       remeasure(); // entrances whose start is already behind enter now (a late webfont: 'loadingdone' below)
       // the fail-open (§5.1), 2.5s after page-load
       failTimer = window.setTimeout(() => my === seq && settlePage(), Math.max(600, FAIL_OPEN_MS - pageAge()));
@@ -239,9 +228,6 @@ export async function boot(createEngine?: EngineFactory): Promise<Runtime> {
       window.clearTimeout(refreshTimer);
       window.clearTimeout(failTimer);
       if (lenis) lenis.scrollTo(lenis.actualScroll, { immediate: true, force: true }); // kill inertia
-      introCleanup?.();
-      introCleanup = null;
-      endIntro();
       page?.cleanup();
       page = null;
       // anything created outside a context (should be none) must not leak into the next page

@@ -4,7 +4,7 @@
 //
 //   data-rise           soft rise: y 24px → 0, opacity 0 → 1 (0.8s lj.rise)
 //   data-rise="mask"    mask rise: yPercent 105 → 0 inside its [data-mask] parent (0.9s lj.rise)
-//   data-rise="clip"    clip left → right: inset(0 100% 0 0) → inset(0) (0.48s lj.rise; #vision lists)
+//   data-rise="clip"    clip left → right: inset(0 100% 0 0) → inset(0) (0.48s lj.rise)
 //   data-rise="fade"    opacity only (0.48s)
 //
 // Never hides content that is already on screen: items in the first viewport are left alone unless CSS has

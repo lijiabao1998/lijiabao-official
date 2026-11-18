@@ -1,11 +1,10 @@
-// src/lib/prefs.ts — tier + intro preferences (§7, §5.2, §9.3). Static-tier safe (no GSAP, no engine).
+// src/lib/prefs.ts — tier preferences (§7, §9.3). Static-tier safe (no GSAP, no engine).
 //
 // The tier lives on <html data-tier>. setTier/clearTier write it, persist it, and emit 'lj:tier';
 // motion/lifecycle.ts reacts (boots the motion core + engine, or tears them down). No reload is needed.
 //
 // Storage (every access is try/catch; private windows may throw):
 //   localStorage   lj.tier   the user's explicit choice (read by the head boot before first paint)
-//   localStorage   lj.v      intro seen (falls back to sessionStorage)
 //   sessionStorage lj.auto   the last automatic decision: 'full' (probe promoted) | 'lite' (guard demoted)
 //   sessionStorage lj.probe  the upgrade probe already ran this session
 //   sessionStorage lj.lock   static for the session (two context losses in 60s, or no usable WebGL2)
@@ -15,7 +14,6 @@ import { emit, last, type TierReason, type TierSrc } from './events';
 
 const TIERS: readonly string[] = ['full', 'lite', 'static'];
 const K_TIER = 'lj.tier';
-const K_INTRO = 'lj.v';
 const K_AUTO = 'lj.auto';
 const K_PROBE = 'lj.probe';
 const K_LOCK = 'lj.lock';
@@ -83,14 +81,6 @@ export function clearTier(): void {
   write('local', K_TIER, null);
   write('session', K_LOCK, null);
   apply(autoTier(), 'user', 'cleared');
-}
-
-export function introSeen(): boolean {
-  return read('local', K_INTRO) !== null || read('session', K_INTRO) !== null;
-}
-
-export function markIntro(): void {
-  if (!write('local', K_INTRO, '1')) write('session', K_INTRO, '1');
 }
 
 /* ---------------------------------------------------------------- F0+ */
@@ -172,18 +162,6 @@ export function restoreSession(): boolean {
   return true;
 }
 
-/**
- * End the §5.2 intro: remove html[data-intro], remember it (lj.v) and emit 'lj:intro-done'.
- * Idempotent: does nothing when the intro is not running. intro.ts calls it; the runtime calls it
- * as a safety net on teardown, tier → static, or boot failure.
- */
-export function endIntro(): void {
-  const h = html();
-  if (!h.hasAttribute('data-intro')) return;
-  h.removeAttribute('data-intro');
-  markIntro();
-  emit('lj:intro-done', null);
-}
 
 function apply(t: Tier, src: TierSrc, reason: TierReason | undefined): void {
   html().dataset.tier = t;
